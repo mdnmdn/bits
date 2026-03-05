@@ -20,7 +20,7 @@ var rootCmd = &cobra.Command{
 	Version: version,
 	Run: func(cmd *cobra.Command, args []string) {
 		display.PrintLogo()
-		cmd.Help()
+		display.PrintWelcomeBox()
 	},
 }
 
