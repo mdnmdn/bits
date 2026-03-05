@@ -13,15 +13,15 @@ import (
 )
 
 var (
-	ErrInvalidAPIKey = fmt.Errorf("invalid API key — check your key with `cg status` or set a new one with `cg auth`")
+	ErrInvalidAPIKey  = fmt.Errorf("invalid API key — check your key with `cg status` or set a new one with `cg auth`")
 	ErrPlanRestricted = fmt.Errorf("this endpoint requires a paid plan — upgrade at https://www.coingecko.com/en/api/pricing")
-	ErrRateLimited   = fmt.Errorf("rate limited — please wait and try again")
+	ErrRateLimited    = fmt.Errorf("rate limited — please wait and try again")
 )
 
 type Client struct {
-	http     *http.Client
-	baseURL  string
-	cfg      *config.Config
+	http    *http.Client
+	baseURL string
+	cfg     *config.Config
 }
 
 func NewClient(cfg *config.Config) *Client {

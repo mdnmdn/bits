@@ -35,8 +35,8 @@ type SearchCoin struct {
 
 type TrendingResponse struct {
 	Coins      []TrendingCoinWrapper `json:"coins"`
-	NFTs       []TrendingNFT        `json:"nfts"`
-	Categories []TrendingCategory   `json:"categories"`
+	NFTs       []TrendingNFT         `json:"nfts"`
+	Categories []TrendingCategory    `json:"categories"`
 }
 
 type TrendingCoinWrapper struct {
@@ -52,16 +52,16 @@ type TrendingCoin struct {
 }
 
 type TrendingNFT struct {
-	ID                   string `json:"id"`
-	Name                 string `json:"name"`
-	Symbol               string `json:"symbol"`
+	ID                   string  `json:"id"`
+	Name                 string  `json:"name"`
+	Symbol               string  `json:"symbol"`
 	FloorPriceInUSD24hPC float64 `json:"floor_price_24h_percentage_change"`
 }
 
 type TrendingCategory struct {
-	ID                   int     `json:"id"`
-	Name                 string  `json:"name"`
-	MarketCap1hChange    float64 `json:"market_cap_1h_change"`
+	ID                int     `json:"id"`
+	Name              string  `json:"name"`
+	MarketCap1hChange float64 `json:"market_cap_1h_change"`
 }
 
 type HistoricalData struct {

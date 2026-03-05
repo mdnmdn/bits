@@ -25,6 +25,9 @@ func init() {
 
 func runSearch(cmd *cobra.Command, args []string) error {
 	limit, _ := cmd.Flags().GetInt("limit")
+	if limit < 0 {
+		limit = 0
+	}
 
 	cfg, err := config.Load()
 	if err != nil {

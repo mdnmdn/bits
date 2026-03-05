@@ -9,8 +9,8 @@ import (
 
 func (c *Client) SimplePrice(ctx context.Context, ids []string, vsCurrency string) (PriceResponse, error) {
 	params := url.Values{
-		"ids":                {strings.Join(ids, ",")},
-		"vs_currencies":     {vsCurrency},
+		"ids":                 {strings.Join(ids, ",")},
+		"vs_currencies":       {vsCurrency},
 		"include_24hr_change": {"true"},
 	}
 	var result PriceResponse
@@ -90,8 +90,8 @@ func (c *Client) TopGainersLosers(ctx context.Context, vsCurrency, duration stri
 
 func (c *Client) CoinDetail(ctx context.Context, id string) (*CoinDetail, error) {
 	params := url.Values{
-		"localization":  {"false"},
-		"tickers":       {"false"},
+		"localization":   {"false"},
+		"tickers":        {"false"},
 		"community_data": {"false"},
 		"developer_data": {"false"},
 	}

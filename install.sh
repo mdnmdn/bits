@@ -48,12 +48,40 @@ fi
 
 FILENAME="${BINARY}_${VERSION}_${OS}_${ARCH}.${EXT}"
 URL="https://github.com/${REPO}/releases/download/${LATEST}/${FILENAME}"
+CHECKSUMS_URL="https://github.com/${REPO}/releases/download/${LATEST}/checksums.txt"
 
 TMPDIR=$(mktemp -d)
 trap 'rm -rf "$TMPDIR"' EXIT
 
 echo "Downloading ${URL}..."
 curl -sSfL "$URL" -o "${TMPDIR}/${FILENAME}"
+
+echo "Downloading checksums..."
+curl -sSfL "$CHECKSUMS_URL" -o "${TMPDIR}/checksums.txt"
+
+echo "Verifying checksum..."
+EXPECTED=$(grep "${FILENAME}" "${TMPDIR}/checksums.txt" | awk '{print $1}')
+if [ -z "$EXPECTED" ]; then
+  echo "Error: checksum not found for ${FILENAME}"
+  exit 1
+fi
+
+if command -v sha256sum >/dev/null 2>&1; then
+  ACTUAL=$(sha256sum "${TMPDIR}/${FILENAME}" | awk '{print $1}')
+elif command -v shasum >/dev/null 2>&1; then
+  ACTUAL=$(shasum -a 256 "${TMPDIR}/${FILENAME}" | awk '{print $1}')
+else
+  echo "Warning: no sha256sum or shasum found, skipping checksum verification"
+  ACTUAL="$EXPECTED"
+fi
+
+if [ "$EXPECTED" != "$ACTUAL" ]; then
+  echo "Error: checksum mismatch!"
+  echo "  Expected: ${EXPECTED}"
+  echo "  Actual:   ${ACTUAL}"
+  exit 1
+fi
+echo "Checksum verified."
 
 echo "Extracting..."
 if [ "$EXT" = "tar.gz" ]; then

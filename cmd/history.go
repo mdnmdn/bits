@@ -110,37 +110,37 @@ func historyOHLC(ctx context.Context, client *api.Client, coinID, vs string, day
 	}
 
 	headers := []string{"Date", "Open", "High", "Low", "Close"}
-	rows := make([][]string, len(data))
-	for i, d := range data {
+	var rows [][]string
+	for _, d := range data {
 		if len(d) < 5 {
 			continue
 		}
 		ts := time.UnixMilli(int64(d[0]))
-		rows[i] = []string{
+		rows = append(rows, []string{
 			ts.UTC().Format("2006-01-02 15:04"),
 			display.FormatPrice(d[1]),
 			display.FormatPrice(d[2]),
 			display.FormatPrice(d[3]),
 			display.FormatPrice(d[4]),
-		}
+		})
 	}
 
 	display.PrintTable(headers, rows)
 
 	if exportPath != "" {
-		csvRows := make([][]string, len(data))
-		for i, d := range data {
+		var csvRows [][]string
+		for _, d := range data {
 			if len(d) < 5 {
 				continue
 			}
 			ts := time.UnixMilli(int64(d[0]))
-			csvRows[i] = []string{
+			csvRows = append(csvRows, []string{
 				ts.UTC().Format(time.RFC3339),
 				fmt.Sprintf("%.8f", d[1]),
 				fmt.Sprintf("%.8f", d[2]),
 				fmt.Sprintf("%.8f", d[3]),
 				fmt.Sprintf("%.8f", d[4]),
-			}
+			})
 		}
 		if err := export.ExportCSV(exportPath, headers, csvRows); err != nil {
 			return err
@@ -173,31 +173,31 @@ func historyRange(ctx context.Context, client *api.Client, coinID, vs, fromStr, 
 	}
 
 	headers := []string{"Date", "Price"}
-	rows := make([][]string, len(data.Prices))
-	for i, p := range data.Prices {
+	var rows [][]string
+	for _, p := range data.Prices {
 		if len(p) < 2 {
 			continue
 		}
 		ts := time.UnixMilli(int64(p[0]))
-		rows[i] = []string{
+		rows = append(rows, []string{
 			ts.UTC().Format("2006-01-02 15:04"),
 			display.FormatPrice(p[1]),
-		}
+		})
 	}
 
 	display.PrintTable(headers, rows)
 
 	if exportPath != "" {
-		csvRows := make([][]string, len(data.Prices))
-		for i, p := range data.Prices {
+		var csvRows [][]string
+		for _, p := range data.Prices {
 			if len(p) < 2 {
 				continue
 			}
 			ts := time.UnixMilli(int64(p[0]))
-			csvRows[i] = []string{
+			csvRows = append(csvRows, []string{
 				ts.UTC().Format(time.RFC3339),
 				fmt.Sprintf("%.8f", p[1]),
-			}
+			})
 		}
 		if err := export.ExportCSV(exportPath, headers, csvRows); err != nil {
 			return err

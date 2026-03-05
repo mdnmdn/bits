@@ -71,7 +71,7 @@ func Save(cfg *Config) error {
 		return err
 	}
 
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return fmt.Errorf("failed to create config directory: %w", err)
 	}
 
@@ -79,7 +79,10 @@ func Save(cfg *Config) error {
 	viper.Set("tier", cfg.Tier)
 
 	path := filepath.Join(dir, "config.yaml")
-	return viper.WriteConfigAs(path)
+	if err := viper.WriteConfigAs(path); err != nil {
+		return err
+	}
+	return os.Chmod(path, 0o600)
 }
 
 func (c *Config) BaseURL() string {

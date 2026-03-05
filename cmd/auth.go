@@ -30,6 +30,7 @@ func runAuth(cmd *cobra.Command, args []string) error {
 		if err := huh.NewInput().
 			Title("API Key").
 			Description("Enter your CoinGecko API key").
+			EchoMode(huh.EchoModePassword).
 			Value(&key).
 			Run(); err != nil {
 			return err
