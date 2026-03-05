@@ -123,12 +123,6 @@ func (c *Client) handleError(resp *http.Response) error {
 			if secs, err := strconv.Atoi(retry); err == nil && secs > 0 {
 				return fmt.Errorf("rate limited — retry after %d seconds", secs)
 			}
-			// Try HTTP-date format (RFC1123, RFC850, ANSI C asctime).
-			if t, err := http.ParseTime(retry); err == nil {
-				if wait := time.Until(t).Seconds(); wait > 0 {
-					return fmt.Errorf("rate limited — retry after %.0f seconds", wait)
-				}
-			}
 		}
 		return ErrRateLimited
 

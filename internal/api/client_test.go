@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
 	"github.com/coingecko/coingecko-cli/internal/config"
 
@@ -184,20 +183,6 @@ func TestSuccessResponseDecodes(t *testing.T) {
 	err := c.get(context.Background(), "/test", &result)
 	require.NoError(t, err)
 	assert.Equal(t, float64(50000), result["bitcoin"]["usd"])
-}
-
-func TestRetryAfterHTTPDate(t *testing.T) {
-	futureTime := time.Now().Add(60 * time.Second).UTC().Format(http.TimeFormat)
-	c, srv := testClient(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Retry-After", futureTime)
-		w.WriteHeader(429)
-	})
-	defer srv.Close()
-
-	var result map[string]any
-	err := c.get(context.Background(), "/test", &result)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "retry after")
 }
 
 func TestRetryAfterInvalidFallback(t *testing.T) {
