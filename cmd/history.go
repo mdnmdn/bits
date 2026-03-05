@@ -64,7 +64,7 @@ func runHistory(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	client := api.NewClient(cfg)
-	ctx := context.Background()
+	ctx := cmd.Context()
 
 	switch {
 	case dateStr != "":
@@ -93,8 +93,7 @@ func historyDate(ctx context.Context, client *api.Client, coinID, dateStr, vs st
 	}
 
 	if jsonOut {
-		printJSONRaw(data)
-		return nil
+		return printJSONRaw(data)
 	}
 
 	headers := []string{"Metric", "Value"}
@@ -116,8 +115,7 @@ func historyOHLC(ctx context.Context, client *api.Client, coinID, vs string, day
 	}
 
 	if jsonOut {
-		printJSONRaw(data)
-		return nil
+		return printJSONRaw(data)
 	}
 
 	headers := []string{"Date", "Open", "High", "Low", "Close"}
@@ -184,8 +182,7 @@ func historyRange(ctx context.Context, client *api.Client, coinID, vs, fromStr, 
 	}
 
 	if jsonOut {
-		printJSONRaw(data)
-		return nil
+		return printJSONRaw(data)
 	}
 
 	headers := []string{"Date", "Price"}

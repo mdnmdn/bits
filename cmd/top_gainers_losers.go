@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
@@ -51,7 +50,7 @@ func runTopGainersLosers(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	client := api.NewClient(cfg)
-	ctx := context.Background()
+	ctx := cmd.Context()
 
 	resp, err := client.TopGainersLosers(ctx, vs, duration, topCoins)
 	if err != nil {
@@ -59,8 +58,7 @@ func runTopGainersLosers(cmd *cobra.Command, args []string) error {
 	}
 
 	if jsonOut {
-		printJSONRaw(resp)
-		return nil
+		return printJSONRaw(resp)
 	}
 
 	coins := resp.TopGainers

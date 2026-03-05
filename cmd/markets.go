@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
@@ -41,7 +40,7 @@ func runMarkets(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	client := api.NewClient(cfg)
-	ctx := context.Background()
+	ctx := cmd.Context()
 
 	var allCoins []api.MarketCoin
 	perPage := 250
@@ -64,8 +63,7 @@ func runMarkets(cmd *cobra.Command, args []string) error {
 	}
 
 	if jsonOut {
-		printJSONRaw(allCoins)
-		return nil
+		return printJSONRaw(allCoins)
 	}
 
 	headers := []string{"Rank", "Name", "Symbol", "Price", "Market Cap", "Volume", "24h Change"}

@@ -1,7 +1,8 @@
 package api
 
-// Simple price response: map[coinID]map[currency]float64
-type PriceResponse map[string]map[string]interface{}
+// Simple price response: map[coinID]map[field]value
+// Fields include currency price (float64) and 24h change (float64).
+type PriceResponse map[string]map[string]float64
 
 type MarketCoin struct {
 	ID                       string  `json:"id"`

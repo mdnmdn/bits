@@ -31,6 +31,7 @@ func runPrice(cmd *cobra.Command, args []string) error {
 	symbolsStr, _ := cmd.Flags().GetString("symbols")
 	vs, _ := cmd.Flags().GetString("vs")
 	jsonOut := outputJSON(cmd)
+	ctx := cmd.Context()
 
 	if idsStr == "" && symbolsStr == "" {
 		return fmt.Errorf("provide --ids or --symbols")
@@ -41,7 +42,6 @@ func runPrice(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	client := api.NewClient(cfg)
-	ctx := context.Background()
 
 	var ids []string
 	if idsStr != "" {
@@ -67,8 +67,7 @@ func runPrice(cmd *cobra.Command, args []string) error {
 	}
 
 	if jsonOut {
-		printJSONRaw(prices)
-		return nil
+		return printJSONRaw(prices)
 	}
 
 	headers := []string{"Coin", "Price", "24h Change"}
@@ -76,11 +75,11 @@ func runPrice(cmd *cobra.Command, args []string) error {
 	for _, id := range ids {
 		data, ok := prices[id]
 		if !ok {
+			warnf("Warning: no data returned for %q\n", id)
 			continue
 		}
-		price, _ := toFloat(data[vs])
-		changeKey := vs + "_24h_change"
-		change, _ := toFloat(data[changeKey])
+		price := data[vs]
+		change := data[vs+"_24h_change"]
 		rows = append(rows, []string{
 			id,
 			display.FormatPrice(price),
@@ -127,15 +126,4 @@ func splitTrim(s string) []string {
 		}
 	}
 	return result
-}
-
-func toFloat(v interface{}) (float64, bool) {
-	switch n := v.(type) {
-	case float64:
-		return n, true
-	case int:
-		return float64(n), true
-	default:
-		return 0, false
-	}
 }

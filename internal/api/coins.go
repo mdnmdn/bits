@@ -49,7 +49,7 @@ func (c *Client) SearchTrending(ctx context.Context) (*TrendingResponse, error) 
 func (c *Client) CoinHistory(ctx context.Context, id, date string) (*HistoricalData, error) {
 	params := url.Values{"date": {date}, "localization": {"false"}}
 	var result HistoricalData
-	err := c.get(ctx, fmt.Sprintf("/coins/%s/history?%s", id, params.Encode()), &result)
+	err := c.get(ctx, fmt.Sprintf("/coins/%s/history?%s", url.PathEscape(id), params.Encode()), &result)
 	return &result, err
 }
 
@@ -59,7 +59,7 @@ func (c *Client) CoinOHLC(ctx context.Context, id, vsCurrency string, days int) 
 		"days":        {fmt.Sprintf("%d", days)},
 	}
 	var result OHLCData
-	err := c.get(ctx, fmt.Sprintf("/coins/%s/ohlc?%s", id, params.Encode()), &result)
+	err := c.get(ctx, fmt.Sprintf("/coins/%s/ohlc?%s", url.PathEscape(id), params.Encode()), &result)
 	return result, err
 }
 
@@ -70,7 +70,7 @@ func (c *Client) CoinMarketChartRange(ctx context.Context, id, vsCurrency string
 		"to":          {fmt.Sprintf("%d", to)},
 	}
 	var result MarketChartResponse
-	err := c.get(ctx, fmt.Sprintf("/coins/%s/market_chart/range?%s", id, params.Encode()), &result)
+	err := c.get(ctx, fmt.Sprintf("/coins/%s/market_chart/range?%s", url.PathEscape(id), params.Encode()), &result)
 	return &result, err
 }
 
@@ -96,6 +96,6 @@ func (c *Client) CoinDetail(ctx context.Context, id string) (*CoinDetail, error)
 		"developer_data": {"false"},
 	}
 	var result CoinDetail
-	err := c.get(ctx, fmt.Sprintf("/coins/%s?%s", id, params.Encode()), &result)
+	err := c.get(ctx, fmt.Sprintf("/coins/%s?%s", url.PathEscape(id), params.Encode()), &result)
 	return &result, err
 }

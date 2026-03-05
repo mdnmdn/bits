@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 
 	"coingecko-cli/internal/api"
@@ -29,7 +28,7 @@ func runTrending(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	client := api.NewClient(cfg)
-	ctx := context.Background()
+	ctx := cmd.Context()
 
 	resp, err := client.SearchTrending(ctx)
 	if err != nil {
@@ -37,8 +36,7 @@ func runTrending(cmd *cobra.Command, args []string) error {
 	}
 
 	if jsonOut {
-		printJSONRaw(resp)
-		return nil
+		return printJSONRaw(resp)
 	}
 
 	// Trending Coins

@@ -3,6 +3,8 @@ package display
 import (
 	"fmt"
 	"os"
+	"regexp"
+	"sync"
 
 	"golang.org/x/term"
 )
@@ -13,11 +15,26 @@ const (
 	colorRed   = "\033[31m"
 )
 
+var (
+	colorOnce    sync.Once
+	colorAllowed bool
+	ansiRegex    = regexp.MustCompile(`\x1b\[[0-9;]*m`)
+)
+
 func colorEnabled() bool {
-	if os.Getenv("NO_COLOR") != "" {
-		return false
-	}
-	return term.IsTerminal(int(os.Stdout.Fd()))
+	colorOnce.Do(func() {
+		if os.Getenv("NO_COLOR") != "" {
+			colorAllowed = false
+			return
+		}
+		colorAllowed = term.IsTerminal(int(os.Stdout.Fd()))
+	})
+	return colorAllowed
+}
+
+// VisibleWidth returns the display width of a string after stripping ANSI escapes.
+func VisibleWidth(s string) int {
+	return len(ansiRegex.ReplaceAllString(s, ""))
 }
 
 func ColorPercent(pct float64) string {

@@ -12,6 +12,8 @@ import (
 	"coingecko-cli/internal/config"
 )
 
+const maxErrorBodySize = 1 << 20 // 1MB
+
 var (
 	ErrInvalidAPIKey  = fmt.Errorf("invalid API key — check your key with `cg status` or set a new one with `cg auth`")
 	ErrPlanRestricted = fmt.Errorf("this endpoint requires a paid plan — upgrade at https://www.coingecko.com/en/api/pricing")
@@ -88,7 +90,7 @@ func (c *Client) handleError(resp *http.Response) error {
 		}
 		return ErrRateLimited
 	default:
-		body, _ := io.ReadAll(resp.Body)
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, maxErrorBodySize))
 		return fmt.Errorf("API error %d: %s", resp.StatusCode, string(body))
 	}
 }

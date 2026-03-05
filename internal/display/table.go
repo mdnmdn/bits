@@ -13,12 +13,15 @@ func PrintTable(headers []string, rows [][]string) {
 
 	widths := make([]int, len(headers))
 	for i, h := range headers {
-		widths[i] = len(h)
+		widths[i] = VisibleWidth(h)
 	}
 	for _, row := range rows {
 		for i, cell := range row {
-			if i < len(widths) && len(cell) > widths[i] {
-				widths[i] = len(cell)
+			if i < len(widths) {
+				w := VisibleWidth(cell)
+				if w > widths[i] {
+					widths[i] = w
+				}
 			}
 		}
 	}
@@ -37,7 +40,12 @@ func printRow(cells []string, widths []int) {
 		if i < len(cells) {
 			cell = cells[i]
 		}
-		parts[i] = fmt.Sprintf("%-*s", widths[i], cell)
+		visible := VisibleWidth(cell)
+		pad := widths[i] - visible
+		if pad < 0 {
+			pad = 0
+		}
+		parts[i] = cell + strings.Repeat(" ", pad)
 	}
 	fmt.Println("  " + strings.Join(parts, "  "))
 }

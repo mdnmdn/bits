@@ -4,9 +4,12 @@ import (
 	"encoding/csv"
 	"fmt"
 	"os"
+	"path/filepath"
 )
 
 func ExportCSV(path string, headers []string, rows [][]string) error {
+	path = filepath.Clean(path)
+
 	f, err := os.Create(path)
 	if err != nil {
 		return fmt.Errorf("creating CSV file: %w", err)

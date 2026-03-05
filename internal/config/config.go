@@ -45,13 +45,13 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 
-	viper.SetConfigName("config")
-	viper.SetConfigType("yaml")
-	viper.AddConfigPath(dir)
+	v := viper.New()
+	v.SetConfigName("config")
+	v.SetConfigType("yaml")
+	v.AddConfigPath(dir)
+	v.SetDefault("tier", TierDemo)
 
-	viper.SetDefault("tier", TierDemo)
-
-	if err := viper.ReadInConfig(); err != nil {
+	if err := v.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
 			return &Config{Tier: TierDemo}, nil
 		}
@@ -59,7 +59,7 @@ func Load() (*Config, error) {
 	}
 
 	var cfg Config
-	if err := viper.Unmarshal(&cfg); err != nil {
+	if err := v.Unmarshal(&cfg); err != nil {
 		return nil, fmt.Errorf("failed to parse config: %w", err)
 	}
 	return &cfg, nil
@@ -75,11 +75,12 @@ func Save(cfg *Config) error {
 		return fmt.Errorf("failed to create config directory: %w", err)
 	}
 
-	viper.Set("api_key", cfg.APIKey)
-	viper.Set("tier", cfg.Tier)
+	v := viper.New()
+	v.Set("api_key", cfg.APIKey)
+	v.Set("tier", cfg.Tier)
 
 	path := filepath.Join(dir, "config.yaml")
-	if err := viper.WriteConfigAs(path); err != nil {
+	if err := v.WriteConfigAs(path); err != nil {
 		return err
 	}
 	return os.Chmod(path, 0o600)

@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 
 	"coingecko-cli/internal/api"
@@ -35,7 +34,7 @@ func runSearch(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	client := api.NewClient(cfg)
-	ctx := context.Background()
+	ctx := cmd.Context()
 
 	resp, err := client.Search(ctx, args[0])
 	if err != nil {
@@ -48,8 +47,7 @@ func runSearch(cmd *cobra.Command, args []string) error {
 	}
 
 	if jsonOut {
-		printJSONRaw(coins)
-		return nil
+		return printJSONRaw(coins)
 	}
 
 	headers := []string{"Rank", "Name", "Symbol", "ID"}
