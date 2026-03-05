@@ -3,6 +3,7 @@ package display
 import (
 	"fmt"
 	"strings"
+	"unicode"
 )
 
 func PrintTable(headers []string, rows [][]string) {
@@ -38,7 +39,7 @@ func printRow(cells []string, widths []int) {
 	for i := range widths {
 		cell := ""
 		if i < len(cells) {
-			cell = cells[i]
+			cell = sanitizeCell(cells[i])
 		}
 		visible := VisibleWidth(cell)
 		pad := widths[i] - visible
@@ -56,4 +57,40 @@ func printSeparator(widths []int) {
 		parts[i] = strings.Repeat("─", w)
 	}
 	fmt.Println("  " + strings.Join(parts, "  "))
+}
+
+// sanitizeCell strips non-printable control characters from a string while
+// preserving ANSI color escape sequences (ESC[...m) that we generate ourselves.
+func sanitizeCell(s string) string {
+	var b strings.Builder
+	b.Grow(len(s))
+	runes := []rune(s)
+	for i := 0; i < len(runes); i++ {
+		r := runes[i]
+		if r == '\033' {
+			// Allow our ANSI SGR sequences (ESC[...m), pass them through.
+			j := i + 1
+			if j < len(runes) && runes[j] == '[' {
+				k := j + 1
+				for k < len(runes) && ((runes[k] >= '0' && runes[k] <= '9') || runes[k] == ';') {
+					k++
+				}
+				if k < len(runes) && runes[k] == 'm' {
+					// Valid SGR sequence — copy it through.
+					for x := i; x <= k; x++ {
+						b.WriteRune(runes[x])
+					}
+					i = k
+					continue
+				}
+			}
+			// Non-SGR escape sequence — strip it.
+			continue
+		}
+		if unicode.IsControl(r) && r != '\t' {
+			continue
+		}
+		b.WriteRune(r)
+	}
+	return b.String()
 }

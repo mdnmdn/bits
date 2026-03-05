@@ -12,7 +12,10 @@ import (
 	"github.com/coingecko/coingecko-cli/internal/config"
 )
 
-const maxErrorBodySize = 1 << 20 // 1MB
+const (
+	maxErrorBodySize    = 1 << 20 // 1MB
+	maxResponseBodySize = 50 << 20 // 50MB — guards against pathological upstream responses
+)
 
 var (
 	ErrInvalidAPIKey  = fmt.Errorf("invalid API key — check your key with `cg status` or set a new one with `cg auth`")
@@ -86,12 +89,9 @@ func (c *Client) get(ctx context.Context, path string, result any) error {
 		return c.handleError(resp)
 	}
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return fmt.Errorf("reading response: %w", err)
-	}
-
-	if err := json.Unmarshal(body, result); err != nil {
+	lr := io.LimitReader(resp.Body, maxResponseBodySize+1)
+	dec := json.NewDecoder(lr)
+	if err := dec.Decode(result); err != nil {
 		return fmt.Errorf("parsing response: %w", err)
 	}
 	return nil
@@ -120,8 +120,9 @@ func (c *Client) handleError(resp *http.Response) error {
 
 	case http.StatusTooManyRequests:
 		if retry := resp.Header.Get("Retry-After"); retry != "" {
-			secs, _ := strconv.Atoi(retry)
-			return fmt.Errorf("rate limited — retry after %d seconds", secs)
+			if secs, err := strconv.Atoi(retry); err == nil && secs > 0 {
+				return fmt.Errorf("rate limited — retry after %d seconds", secs)
+			}
 		}
 		return ErrRateLimited
 

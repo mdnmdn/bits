@@ -17,7 +17,6 @@ func ExportCSV(path string, headers []string, rows [][]string) error {
 	defer f.Close()
 
 	w := csv.NewWriter(f)
-	defer w.Flush()
 
 	if err := w.Write(headers); err != nil {
 		return fmt.Errorf("writing CSV headers: %w", err)
@@ -26,6 +25,11 @@ func ExportCSV(path string, headers []string, rows [][]string) error {
 		if err := w.Write(row); err != nil {
 			return fmt.Errorf("writing CSV row: %w", err)
 		}
+	}
+
+	w.Flush()
+	if err := w.Error(); err != nil {
+		return fmt.Errorf("flushing CSV: %w", err)
 	}
 	return nil
 }
