@@ -141,7 +141,7 @@ func (c *Client) handleError(resp *http.Response) error {
 
 	// Parse CoinGecko error body for better classification.
 	var apiErr apiErrorResponse
-	json.Unmarshal(body, &apiErr)
+	_ = json.Unmarshal(body, &apiErr)
 	msg := apiErr.extractMessage()
 
 	switch resp.StatusCode {

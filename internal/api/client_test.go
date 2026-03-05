@@ -25,12 +25,12 @@ func TestAuthHeadersSent(t *testing.T) {
 	c, srv := testClient(func(w http.ResponseWriter, r *http.Request) {
 		gotHeader = r.Header.Get("x-cg-demo-api-key")
 		w.WriteHeader(200)
-		w.Write([]byte("{}"))
+		_, _ = w.Write([]byte("{}"))
 	})
 	defer srv.Close()
 
 	var result map[string]any
-	c.get(context.Background(), "/test", &result)
+	_ = c.get(context.Background(), "/test", &result)
 	assert.Equal(t, "test-key", gotHeader)
 }
 
@@ -40,21 +40,21 @@ func TestProAuthHeaders(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotHeader = r.Header.Get("x-cg-pro-api-key")
 		w.WriteHeader(200)
-		w.Write([]byte("{}"))
+		_, _ = w.Write([]byte("{}"))
 	}))
 	defer srv.Close()
 
 	c := NewClient(cfg)
 	c.SetBaseURL(srv.URL)
 	var result map[string]any
-	c.get(context.Background(), "/test", &result)
+	_ = c.get(context.Background(), "/test", &result)
 	assert.Equal(t, "pro-key", gotHeader)
 }
 
 func TestError401InvalidKey(t *testing.T) {
 	c, srv := testClient(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(401)
-		w.Write([]byte(`{"status":{"error_code":401,"error_message":"Invalid API key"}}`))
+		_, _ = w.Write([]byte(`{"status":{"error_code":401,"error_message":"Invalid API key"}}`))
 	})
 	defer srv.Close()
 
@@ -82,7 +82,7 @@ func TestError401WithAPIMessage(t *testing.T) {
 	// so the user sees the real reason (which may mention plan restrictions)
 	c, srv := testClient(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(401)
-		w.Write([]byte(`{"status":{"error_code":401,"error_message":"You need to upgrade to a paid plan"}}`))
+		_, _ = w.Write([]byte(`{"status":{"error_code":401,"error_message":"You need to upgrade to a paid plan"}}`))
 	})
 	defer srv.Close()
 
@@ -97,7 +97,7 @@ func TestError401NestedErrorFormat(t *testing.T) {
 	// CoinGecko sometimes wraps errors as {"error":{"status":{"error_message":"..."}}}
 	c, srv := testClient(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(401)
-		w.Write([]byte(`{"error":{"status":{"timestamp":"2026-03-05T08:16:12.383+00:00","error_code":10012,"error_message":"Your request exceeds the allowed time range."}}}`))
+		_, _ = w.Write([]byte(`{"error":{"status":{"timestamp":"2026-03-05T08:16:12.383+00:00","error_code":10012,"error_message":"Your request exceeds the allowed time range."}}}`))
 	})
 	defer srv.Close()
 
@@ -111,7 +111,7 @@ func TestError401NestedErrorFormat(t *testing.T) {
 func TestError403(t *testing.T) {
 	c, srv := testClient(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(403)
-		w.Write([]byte(`{"error":"Your plan does not have access to this endpoint"}`))
+		_, _ = w.Write([]byte(`{"error":"Your plan does not have access to this endpoint"}`))
 	})
 	defer srv.Close()
 
@@ -162,7 +162,7 @@ func TestError429NoRetryAfter(t *testing.T) {
 func TestErrorUnknownStatusWithBody(t *testing.T) {
 	c, srv := testClient(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(500)
-		w.Write([]byte(`{"status":{"error_code":500,"error_message":"Internal server error"}}`))
+		_, _ = w.Write([]byte(`{"status":{"error_code":500,"error_message":"Internal server error"}}`))
 	})
 	defer srv.Close()
 
@@ -176,7 +176,7 @@ func TestErrorUnknownStatusWithBody(t *testing.T) {
 func TestErrorUnknownStatusRawBody(t *testing.T) {
 	c, srv := testClient(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(502)
-		w.Write([]byte("Bad Gateway"))
+		_, _ = w.Write([]byte("Bad Gateway"))
 	})
 	defer srv.Close()
 
@@ -190,7 +190,7 @@ func TestErrorUnknownStatusRawBody(t *testing.T) {
 func TestSuccessResponseDecodes(t *testing.T) {
 	c, srv := testClient(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
-		w.Write([]byte(`{"bitcoin":{"usd":50000}}`))
+		_, _ = w.Write([]byte(`{"bitcoin":{"usd":50000}}`))
 	})
 	defer srv.Close()
 

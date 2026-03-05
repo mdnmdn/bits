@@ -47,7 +47,7 @@ func formatError(cmd *cobra.Command, err error) error {
 	cliErr := classifyError(err)
 	enc := json.NewEncoder(os.Stderr)
 	enc.SetIndent("", "  ")
-	enc.Encode(cliErr)
+	_ = enc.Encode(cliErr)
 	return err
 }
 

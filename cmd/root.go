@@ -38,7 +38,7 @@ func Execute() {
 		// Emit structured JSON error to stderr when -o json, otherwise plain text.
 		cmd, _, _ := rootCmd.Find(os.Args[1:])
 		if cmd != nil && outputJSON(cmd) {
-			formatError(cmd, err)
+			_ = formatError(cmd, err)
 		} else {
 			fmt.Fprintln(os.Stderr, "Error:", err)
 		}
