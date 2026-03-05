@@ -76,6 +76,26 @@ func TestPrintTableAlignmentWithANSI(t *testing.T) {
 	assert.Equal(t, row1Width, row2Width, "ANSI row and plain row should align")
 }
 
+func TestSanitizeCellStripsEscapeSequences(t *testing.T) {
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{"hello", "hello"},
+		{"\033[31mred\033[0m", "red"},                    // SGR color
+		{"\033[31;1mbold red\033[0m", "bold red"},         // SGR with params
+		{"coin\033[2Aname", "coinname"},                   // cursor up (non-SGR)
+		{"a\x00b\x01c", "abc"},                            // control chars
+		{"tab\there", "tab\there"},                        // tabs preserved
+		{"\033[38;2;75;204;0mgreen\033[0m", "green"},     // 24-bit color
+		{"no escape", "no escape"},
+	}
+	for _, tt := range tests {
+		got := SanitizeCell(tt.input)
+		assert.Equal(t, tt.want, got, "SanitizeCell(%q)", tt.input)
+	}
+}
+
 func TestPrintTableColumnWidthExpandsToFitContent(t *testing.T) {
 	out := captureStdout(func() {
 		PrintTable(

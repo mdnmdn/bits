@@ -89,8 +89,8 @@ func runTopGainersLosers(cmd *cobra.Command, args []string) error {
 		}
 		rows = append(rows, []string{
 			fmt.Sprintf("%d", i+1),
-			coins[i].Name,
-			strings.ToUpper(coins[i].Symbol),
+			display.SanitizeCell(coins[i].Name),
+			strings.ToUpper(display.SanitizeCell(coins[i].Symbol)),
 			display.FormatPrice(coins[i].Price(vs)),
 			display.ColorPercent(coins[i].PriceChange(vs)),
 		})
@@ -106,8 +106,8 @@ func runTopGainersLosers(cmd *cobra.Command, args []string) error {
 			}
 			csvRows = append(csvRows, []string{
 				fmt.Sprintf("%d", i+1),
-				coins[i].Name,
-				strings.ToUpper(coins[i].Symbol),
+				display.SanitizeCell(coins[i].Name),
+				strings.ToUpper(display.SanitizeCell(coins[i].Symbol)),
 				fmt.Sprintf("%.8f", coins[i].Price(vs)),
 				fmt.Sprintf("%.2f", coins[i].PriceChange(vs)),
 			})

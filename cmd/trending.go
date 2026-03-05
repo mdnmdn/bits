@@ -65,8 +65,8 @@ func runTrending(cmd *cobra.Command, args []string) error {
 		}
 		coinRows = append(coinRows, []string{
 			fmt.Sprintf("%d", i+1),
-			c.Item.Name,
-			c.Item.Symbol,
+			display.SanitizeCell(c.Item.Name),
+			display.SanitizeCell(c.Item.Symbol),
 			rank,
 		})
 	}
@@ -82,8 +82,8 @@ func runTrending(cmd *cobra.Command, args []string) error {
 		for i, n := range resp.NFTs {
 			nftRows = append(nftRows, []string{
 				fmt.Sprintf("%d", i+1),
-				n.Name,
-				n.Symbol,
+				display.SanitizeCell(n.Name),
+				display.SanitizeCell(n.Symbol),
 				display.ColorPercent(n.FloorPriceInUSD24hPC),
 			})
 		}
@@ -100,7 +100,7 @@ func runTrending(cmd *cobra.Command, args []string) error {
 		for i, cat := range resp.Categories {
 			catRows = append(catRows, []string{
 				fmt.Sprintf("%d", i+1),
-				cat.Name,
+				display.SanitizeCell(cat.Name),
 				display.ColorPercent(cat.MarketCap1hChange),
 			})
 		}

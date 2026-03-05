@@ -77,8 +77,8 @@ func runMarkets(cmd *cobra.Command, args []string) error {
 	for i, c := range allCoins {
 		rows[i] = []string{
 			fmt.Sprintf("%d", c.MarketCapRank),
-			c.Name,
-			strings.ToUpper(c.Symbol),
+			display.SanitizeCell(c.Name),
+			strings.ToUpper(display.SanitizeCell(c.Symbol)),
 			display.FormatPrice(c.CurrentPrice),
 			display.FormatLargeNumber(c.MarketCap),
 			display.FormatLargeNumber(c.TotalVolume),
@@ -93,8 +93,8 @@ func runMarkets(cmd *cobra.Command, args []string) error {
 		for i, c := range allCoins {
 			plainRows[i] = []string{
 				fmt.Sprintf("%d", c.MarketCapRank),
-				c.Name,
-				strings.ToUpper(c.Symbol),
+				display.SanitizeCell(c.Name),
+				strings.ToUpper(display.SanitizeCell(c.Symbol)),
 				fmt.Sprintf("%.8f", c.CurrentPrice),
 				fmt.Sprintf("%.2f", c.MarketCap),
 				fmt.Sprintf("%.2f", c.TotalVolume),

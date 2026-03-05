@@ -172,6 +172,33 @@ func TestErrorUnknownStatusRawBody(t *testing.T) {
 	assert.Contains(t, err.Error(), "Bad Gateway")
 }
 
+func TestSuccessResponseDecodes(t *testing.T) {
+	c, srv := testClient(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
+		w.Write([]byte(`{"bitcoin":{"usd":50000}}`))
+	})
+	defer srv.Close()
+
+	var result PriceResponse
+	err := c.get(context.Background(), "/test", &result)
+	require.NoError(t, err)
+	assert.Equal(t, float64(50000), result["bitcoin"]["usd"])
+}
+
+func TestRetryAfterHTTPDate(t *testing.T) {
+	c, srv := testClient(func(w http.ResponseWriter, r *http.Request) {
+		// Set Retry-After to a non-integer value that isn't a valid HTTP-date either
+		w.Header().Set("Retry-After", "invalid-value")
+		w.WriteHeader(429)
+	})
+	defer srv.Close()
+
+	var result map[string]any
+	err := c.get(context.Background(), "/test", &result)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrRateLimited)
+}
+
 func TestRequirePaid(t *testing.T) {
 	cfg := &config.Config{Tier: config.TierDemo}
 	c := NewClient(cfg)

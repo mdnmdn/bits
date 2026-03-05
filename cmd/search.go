@@ -63,7 +63,7 @@ func runSearch(cmd *cobra.Command, args []string) error {
 		if c.MarketCapRank > 0 {
 			rank = fmt.Sprintf("%d", c.MarketCapRank)
 		}
-		rows[i] = []string{rank, c.Name, c.Symbol, c.ID}
+		rows[i] = []string{rank, display.SanitizeCell(c.Name), display.SanitizeCell(c.Symbol), display.SanitizeCell(c.ID)}
 	}
 
 	display.PrintTable(headers, rows)

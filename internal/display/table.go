@@ -39,7 +39,7 @@ func printRow(cells []string, widths []int) {
 	for i := range widths {
 		cell := ""
 		if i < len(cells) {
-			cell = sanitizeCell(cells[i])
+			cell = cells[i]
 		}
 		visible := VisibleWidth(cell)
 		pad := widths[i] - visible
@@ -59,32 +59,28 @@ func printSeparator(widths []int) {
 	fmt.Println("  " + strings.Join(parts, "  "))
 }
 
-// sanitizeCell strips non-printable control characters from a string while
-// preserving ANSI color escape sequences (ESC[...m) that we generate ourselves.
-func sanitizeCell(s string) string {
+// SanitizeCell strips all ANSI escape sequences and non-printable control
+// characters from untrusted API data. Call this on API-sourced strings (names,
+// symbols) before passing to PrintTable. Internal color formatting (e.g.
+// ColorPercent) operates on numeric values and should NOT be sanitized.
+func SanitizeCell(s string) string {
 	var b strings.Builder
 	b.Grow(len(s))
 	runes := []rune(s)
 	for i := 0; i < len(runes); i++ {
 		r := runes[i]
 		if r == '\033' {
-			// Allow our ANSI SGR sequences (ESC[...m), pass them through.
+			// Skip entire escape sequence (ESC [ ... final_byte).
 			j := i + 1
 			if j < len(runes) && runes[j] == '[' {
 				k := j + 1
-				for k < len(runes) && ((runes[k] >= '0' && runes[k] <= '9') || runes[k] == ';') {
+				for k < len(runes) && runes[k] >= 0x20 && runes[k] <= 0x3F {
 					k++
 				}
-				if k < len(runes) && runes[k] == 'm' {
-					// Valid SGR sequence — copy it through.
-					for x := i; x <= k; x++ {
-						b.WriteRune(runes[x])
-					}
+				if k < len(runes) && runes[k] >= 0x40 && runes[k] <= 0x7E {
 					i = k
-					continue
 				}
 			}
-			// Non-SGR escape sequence — strip it.
 			continue
 		}
 		if unicode.IsControl(r) && r != '\t' {
@@ -94,3 +90,4 @@ func sanitizeCell(s string) string {
 	}
 	return b.String()
 }
+

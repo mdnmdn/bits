@@ -88,7 +88,7 @@ func runPrice(cmd *cobra.Command, args []string) error {
 		price := data[vs]
 		change := data[vs+"_24h_change"]
 		rows = append(rows, []string{
-			id,
+			display.SanitizeCell(id),
 			display.FormatPrice(price),
 			display.ColorPercent(change),
 		})

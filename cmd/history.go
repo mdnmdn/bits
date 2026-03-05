@@ -124,7 +124,7 @@ func historyDate(ctx context.Context, client *api.Client, coinID, dateStr, vs st
 
 	headers := []string{"Metric", "Value"}
 	rows := [][]string{
-		{"Coin", fmt.Sprintf("%s (%s)", data.Name, strings.ToUpper(data.Symbol))},
+		{"Coin", fmt.Sprintf("%s (%s)", display.SanitizeCell(data.Name), strings.ToUpper(display.SanitizeCell(data.Symbol)))},
 		{"Date", dateStr},
 		{"Price", display.FormatPrice(data.MarketData.CurrentPrice[vs])},
 		{"Market Cap", display.FormatLargeNumber(data.MarketData.MarketCap[vs])},
