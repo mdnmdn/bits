@@ -68,12 +68,16 @@ func (c *Client) CoinHistory(ctx context.Context, id, date string) (*HistoricalD
 	return &result, err
 }
 
-// CoinOHLC fetches OHLC data. Valid days: 1, 7, 14, 30, 90, 180, 365.
-// https://docs.coingecko.com/v3.0.1/reference/coins-id-ohlc
-func (c *Client) CoinOHLC(ctx context.Context, id, vsCurrency string, days int) (OHLCData, error) {
+// CoinOHLC fetches OHLC data. Valid days: 1, 7, 14, 30, 90, 180, 365, max (paid).
+// Paid plans support interval param: daily, hourly.
+// https://docs.coingecko.com/reference/coins-id-ohlc
+func (c *Client) CoinOHLC(ctx context.Context, id, vsCurrency, days, interval string) (OHLCData, error) {
 	params := url.Values{
 		"vs_currency": {vsCurrency},
-		"days":        {fmt.Sprintf("%d", days)},
+		"days":        {days},
+	}
+	if interval != "" {
+		params.Set("interval", interval)
 	}
 	var result OHLCData
 	err := c.get(ctx, fmt.Sprintf("/coins/%s/ohlc?%s", url.PathEscape(id), params.Encode()), &result)
@@ -81,12 +85,16 @@ func (c *Client) CoinOHLC(ctx context.Context, id, vsCurrency string, days int) 
 }
 
 // CoinMarketChartRange fetches price data for a date range (UNIX timestamps in seconds).
-// https://docs.coingecko.com/v3.0.1/reference/coins-id-market-chart-range
-func (c *Client) CoinMarketChartRange(ctx context.Context, id, vsCurrency string, from, to int64) (*MarketChartResponse, error) {
+// Paid plans support interval param: 5m (Enterprise), hourly, daily.
+// https://docs.coingecko.com/reference/coins-id-market-chart-range
+func (c *Client) CoinMarketChartRange(ctx context.Context, id, vsCurrency string, from, to int64, interval string) (*MarketChartResponse, error) {
 	params := url.Values{
 		"vs_currency": {vsCurrency},
 		"from":        {fmt.Sprintf("%d", from)},
 		"to":          {fmt.Sprintf("%d", to)},
+	}
+	if interval != "" {
+		params.Set("interval", interval)
 	}
 	var result MarketChartResponse
 	err := c.get(ctx, fmt.Sprintf("/coins/%s/market_chart/range?%s", url.PathEscape(id), params.Encode()), &result)
@@ -95,7 +103,7 @@ func (c *Client) CoinMarketChartRange(ctx context.Context, id, vsCurrency string
 
 // TopGainersLosers fetches top gaining and losing coins (paid plans only).
 // https://docs.coingecko.com/reference/coins-top-gainers-losers
-func (c *Client) TopGainersLosers(ctx context.Context, vsCurrency, duration, topCoins string) (*GainersLosersResponse, error) {
+func (c *Client) TopGainersLosers(ctx context.Context, vsCurrency, duration, topCoins, priceChangePct string) (*GainersLosersResponse, error) {
 	if err := c.requirePaid(); err != nil {
 		return nil, err
 	}
@@ -103,6 +111,9 @@ func (c *Client) TopGainersLosers(ctx context.Context, vsCurrency, duration, top
 		"vs_currency": {vsCurrency},
 		"duration":    {duration},
 		"top_coins":   {topCoins},
+	}
+	if priceChangePct != "" {
+		params.Set("price_change_percentage", priceChangePct)
 	}
 	var result GainersLosersResponse
 	err := c.get(ctx, "/coins/top_gainers_losers?"+params.Encode(), &result)

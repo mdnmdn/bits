@@ -136,6 +136,15 @@ func (g *GainerCoin) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+func (g GainerCoin) MarshalJSON() ([]byte, error) {
+	// Re-serialize by merging Extra (which has all original fields) back out.
+	if g.Extra == nil {
+		type Alias GainerCoin
+		return json.Marshal(Alias(g))
+	}
+	return json.Marshal(g.Extra)
+}
+
 type CoinDetail struct {
 	ID          string `json:"id"`
 	Symbol      string `json:"symbol"`

@@ -16,6 +16,7 @@ var topGainersLosersCmd = &cobra.Command{
 	Short: "Show top gaining and losing coins (paid plans only)",
 	Example: `  cg top-gainers-losers
   cg top-gainers-losers --losers --duration 7d
+  cg top-gainers-losers --price-change-percentage 1h,7d,30d
   cg top-gainers-losers --top-coins 300 --export gainers.csv`,
 	RunE: runTopGainersLosers,
 }
@@ -26,6 +27,7 @@ func init() {
 	topGainersLosersCmd.Flags().String("vs", "usd", "Target currency")
 	topGainersLosersCmd.Flags().String("duration", "24h", "Duration (1h, 24h, 7d, 14d, 30d, 60d, 1y)")
 	topGainersLosersCmd.Flags().String("top-coins", "1000", "Top N coins by market cap (300, 500, 1000, all)")
+	topGainersLosersCmd.Flags().String("price-change-percentage", "", "Include extra change %: 1h, 24h, 7d, 14d, 30d, 200d, 1y (comma-separated)")
 	topGainersLosersCmd.Flags().Bool("losers", false, "Show losers instead of gainers")
 	topGainersLosersCmd.Flags().String("export", "", "Export to CSV file path")
 	rootCmd.AddCommand(topGainersLosersCmd)
@@ -35,6 +37,7 @@ func runTopGainersLosers(cmd *cobra.Command, args []string) error {
 	vs, _ := cmd.Flags().GetString("vs")
 	duration, _ := cmd.Flags().GetString("duration")
 	topCoinsStr, _ := cmd.Flags().GetString("top-coins")
+	priceChangePct, _ := cmd.Flags().GetString("price-change-percentage")
 	showLosers, _ := cmd.Flags().GetBool("losers")
 	exportPath, _ := cmd.Flags().GetString("export")
 	jsonOut := outputJSON(cmd)
@@ -60,7 +63,7 @@ func runTopGainersLosers(cmd *cobra.Command, args []string) error {
 	client := api.NewClient(cfg)
 	ctx := cmd.Context()
 
-	resp, err := client.TopGainersLosers(ctx, vs, duration, topCoinsStr)
+	resp, err := client.TopGainersLosers(ctx, vs, duration, topCoinsStr, priceChangePct)
 	if err != nil {
 		return err
 	}

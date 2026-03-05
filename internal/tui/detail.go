@@ -62,7 +62,7 @@ func (m DetailModel) fetchDetail() tea.Cmd {
 
 func (m DetailModel) fetchOHLC() tea.Cmd {
 	return func() tea.Msg {
-		data, err := m.client.CoinOHLC(context.Background(), m.coinID, m.vs, 7)
+		data, err := m.client.CoinOHLC(context.Background(), m.coinID, m.vs, "7", "")
 		return ohlcMsg{data: data, err: err}
 	}
 }

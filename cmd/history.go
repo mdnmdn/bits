@@ -21,9 +21,12 @@ var historyCmd = &cobra.Command{
   --days N              OHLC data for the last N days
   --from/--to           Price data for a date range (YYYY-MM-DD)
 
-The --to date is inclusive: it covers the full day up to 23:59:59 UTC.`,
+The --to date is inclusive: it covers the full day up to 23:59:59 UTC.
+The --interval flag (paid plans only) controls candle/data granularity.`,
 	Example: `  cg history bitcoin --date 2024-01-01
   cg history ethereum --days 30
+  cg history bitcoin --days 90 --interval daily
+  cg history solana --from 2024-01-01 --to 2024-03-01 --interval hourly
   cg history solana --from 2024-01-01 --to 2024-03-01 --export prices.csv`,
 	Args: cobra.ExactArgs(1),
 	RunE: runHistory,
@@ -31,10 +34,11 @@ The --to date is inclusive: it covers the full day up to 23:59:59 UTC.`,
 
 func init() {
 	historyCmd.Flags().String("date", "", "Snapshot date (YYYY-MM-DD)")
-	historyCmd.Flags().Int("days", 0, "OHLC data for last N days")
+	historyCmd.Flags().String("days", "", "OHLC data for last N days (1, 7, 14, 30, 90, 180, 365, max)")
 	historyCmd.Flags().String("from", "", "Range start date (YYYY-MM-DD)")
 	historyCmd.Flags().String("to", "", "Range end date (YYYY-MM-DD)")
 	historyCmd.Flags().String("vs", "usd", "Target currency")
+	historyCmd.Flags().String("interval", "", "Data interval: daily, hourly (paid plans only); 5m for range (Enterprise)")
 	historyCmd.Flags().String("export", "", "Export to CSV file path")
 	rootCmd.AddCommand(historyCmd)
 }
@@ -42,10 +46,11 @@ func init() {
 func runHistory(cmd *cobra.Command, args []string) error {
 	coinID := args[0]
 	dateStr, _ := cmd.Flags().GetString("date")
-	days, _ := cmd.Flags().GetInt("days")
+	daysStr, _ := cmd.Flags().GetString("days")
 	fromStr, _ := cmd.Flags().GetString("from")
 	toStr, _ := cmd.Flags().GetString("to")
 	vs, _ := cmd.Flags().GetString("vs")
+	interval, _ := cmd.Flags().GetString("interval")
 	exportPath, _ := cmd.Flags().GetString("export")
 	jsonOut := outputJSON(cmd)
 
@@ -57,7 +62,7 @@ func runHistory(cmd *cobra.Command, args []string) error {
 	if dateStr != "" {
 		modes++
 	}
-	if days > 0 {
+	if daysStr != "" {
 		modes++
 	}
 	if fromStr != "" || toStr != "" {
@@ -71,21 +76,29 @@ func runHistory(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+
+	if interval != "" && !cfg.IsPaid() {
+		return fmt.Errorf("--interval requires a paid plan — upgrade at https://www.coingecko.com/en/api/pricing")
+	}
+
 	client := api.NewClient(cfg)
 	ctx := cmd.Context()
 
-	validOHLCDays := map[int]bool{1: true, 7: true, 14: true, 30: true, 90: true, 180: true, 365: true}
+	validOHLCDays := map[string]bool{"1": true, "7": true, "14": true, "30": true, "90": true, "180": true, "365": true, "max": true}
 
 	switch {
 	case dateStr != "":
 		return historyDate(ctx, client, coinID, dateStr, vs, jsonOut)
-	case days > 0:
-		if !validOHLCDays[days] {
-			return fmt.Errorf("invalid --days %d — must be one of: 1, 7, 14, 30, 90, 180, 365", days)
+	case daysStr != "":
+		if !validOHLCDays[daysStr] {
+			return fmt.Errorf("invalid --days %q — must be one of: 1, 7, 14, 30, 90, 180, 365, max", daysStr)
 		}
-		return historyOHLC(ctx, client, coinID, vs, days, exportPath, jsonOut)
+		if daysStr == "max" && !cfg.IsPaid() {
+			return fmt.Errorf("--days max requires a paid plan — upgrade at https://www.coingecko.com/en/api/pricing")
+		}
+		return historyOHLC(ctx, client, coinID, vs, daysStr, interval, exportPath, jsonOut)
 	default:
-		return historyRange(ctx, client, coinID, vs, fromStr, toStr, exportPath, jsonOut)
+		return historyRange(ctx, client, coinID, vs, fromStr, toStr, interval, exportPath, jsonOut)
 	}
 }
 
@@ -121,8 +134,8 @@ func historyDate(ctx context.Context, client *api.Client, coinID, dateStr, vs st
 	return nil
 }
 
-func historyOHLC(ctx context.Context, client *api.Client, coinID, vs string, days int, exportPath string, jsonOut bool) error {
-	data, err := client.CoinOHLC(ctx, coinID, vs, days)
+func historyOHLC(ctx context.Context, client *api.Client, coinID, vs, days, interval, exportPath string, jsonOut bool) error {
+	data, err := client.CoinOHLC(ctx, coinID, vs, days, interval)
 	if err != nil {
 		return err
 	}
@@ -171,7 +184,7 @@ func historyOHLC(ctx context.Context, client *api.Client, coinID, vs string, day
 	return nil
 }
 
-func historyRange(ctx context.Context, client *api.Client, coinID, vs, fromStr, toStr, exportPath string, jsonOut bool) error {
+func historyRange(ctx context.Context, client *api.Client, coinID, vs, fromStr, toStr, interval, exportPath string, jsonOut bool) error {
 	if fromStr == "" || toStr == "" {
 		return fmt.Errorf("both --from and --to are required for range mode")
 	}
@@ -188,7 +201,7 @@ func historyRange(ctx context.Context, client *api.Client, coinID, vs, fromStr, 
 	from := fromTime.UTC().Unix()
 	to := toTime.Add(23*time.Hour + 59*time.Minute + 59*time.Second).UTC().Unix()
 
-	data, err := client.CoinMarketChartRange(ctx, coinID, vs, from, to)
+	data, err := client.CoinMarketChartRange(ctx, coinID, vs, from, to, interval)
 	if err != nil {
 		return err
 	}
