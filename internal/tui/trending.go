@@ -48,7 +48,7 @@ func NewTrendingModel(client *api.Client, vs string) TrendingModel {
 
 func (m TrendingModel) Init() tea.Cmd {
 	return func() tea.Msg {
-		resp, err := m.client.SearchTrending(context.Background())
+		resp, err := m.client.SearchTrending(context.Background(), "")
 		return trendingLoadedMsg{resp: resp, err: err}
 	}
 }
