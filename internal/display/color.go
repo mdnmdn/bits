@@ -27,7 +27,9 @@ func colorEnabled() bool {
 			colorAllowed = false
 			return
 		}
-		colorAllowed = term.IsTerminal(int(os.Stdout.Fd()))
+		// Check stderr since banner/logo write there; table data goes to stdout
+		// but is never colored when piped (colorEnabled gates all ANSI output).
+		colorAllowed = term.IsTerminal(int(os.Stderr.Fd()))
 	})
 	return colorAllowed
 }

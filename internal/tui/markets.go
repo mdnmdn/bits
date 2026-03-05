@@ -162,9 +162,9 @@ func (m MarketsModel) View() string {
 		row := fmt.Sprintf("  %-4d %-20s %-6s %12s %12s %10s",
 			c.MarketCapRank,
 			truncate(display.SanitizeCell(c.Name), 20),
-			strings.ToUpper(display.SanitizeCell(c.Symbol)),
-			display.FormatPrice(c.CurrentPrice),
-			display.FormatLargeNumber(c.MarketCap),
+			display.FormatSymbol(c.Symbol),
+			display.FormatPrice(c.CurrentPrice, m.vs),
+			display.FormatLargeNumber(c.MarketCap, m.vs),
 			pctStr,
 		)
 		if i == m.cursor {

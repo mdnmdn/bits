@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"strings"
+
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -8,13 +10,13 @@ import (
 const oasRepo = "https://github.com/coingecko/coingecko-api-oas"
 
 type commandAnnotation struct {
-	APIEndpoint    string            `json:"api_endpoint,omitempty"`
-	APIEndpoints   map[string]string `json:"api_endpoints,omitempty"`
-	OASOperationID string            `json:"oas_operation_id,omitempty"`
-	OASOperationIDs map[string]string `json:"oas_operation_ids,omitempty"`
-	OASSpec        string            `json:"oas_spec,omitempty"`
-	PaidOnly       bool              `json:"paid_only"`
-	RequiresAuth   bool              `json:"requires_auth"`
+	APIEndpoint     string
+	APIEndpoints    map[string]string
+	OASOperationID  string
+	OASOperationIDs map[string]string
+	OASSpec         string
+	PaidOnly        bool
+	RequiresAuth    bool
 }
 
 var commandMeta = map[string]commandAnnotation{
@@ -71,6 +73,20 @@ type flagInfo struct {
 	Default     string   `json:"default"`
 	Description string   `json:"description"`
 	Enum        []string `json:"enum,omitempty"`
+}
+
+// validEnum checks if a value is in the flagEnums list for a given command and flag.
+func validEnum(cmdName, flagName, value string) bool {
+	if enums, ok := flagEnums[cmdName]; ok {
+		if vals, ok := enums[flagName]; ok {
+			for _, v := range vals {
+				if v == value {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }
 
 // Flag enums sourced from CoinGecko OAS spec.
@@ -213,34 +229,11 @@ func splitExamples(s string) []string {
 		return nil
 	}
 	var examples []string
-	for _, line := range splitLines(s) {
-		line = trimLeadingSpaces(line)
+	for _, line := range strings.Split(s, "\n") {
+		line = strings.TrimLeft(line, " ")
 		if line != "" {
 			examples = append(examples, line)
 		}
 	}
 	return examples
-}
-
-func splitLines(s string) []string {
-	var lines []string
-	start := 0
-	for i := 0; i < len(s); i++ {
-		if s[i] == '\n' {
-			lines = append(lines, s[start:i])
-			start = i + 1
-		}
-	}
-	if start < len(s) {
-		lines = append(lines, s[start:])
-	}
-	return lines
-}
-
-func trimLeadingSpaces(s string) string {
-	i := 0
-	for i < len(s) && s[i] == ' ' {
-		i++
-	}
-	return s[i:]
 }

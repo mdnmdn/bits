@@ -141,15 +141,11 @@ func (m TrendingModel) View() string {
 
 	for i := 0; i < limit; i++ {
 		c := m.coins[i].Item
-		rank := "-"
-		if c.MarketCapRank > 0 {
-			rank = fmt.Sprintf("%d", c.MarketCapRank)
-		}
 		row := fmt.Sprintf("  %-4d %-25s %-8s %15s",
 			i+1,
 			truncate(display.SanitizeCell(c.Name), 25),
 			display.SanitizeCell(c.Symbol),
-			rank,
+			display.FormatRank(c.MarketCapRank),
 		)
 		if i == m.cursor {
 			row = SelectedStyle.Render(row)

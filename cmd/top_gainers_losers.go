@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/coingecko/coingecko-cli/internal/api"
 	"github.com/coingecko/coingecko-cli/internal/config"
@@ -46,13 +45,10 @@ func runTopGainersLosers(cmd *cobra.Command, args []string) error {
 		display.PrintBanner()
 	}
 
-	validDurations := map[string]bool{"1h": true, "24h": true, "7d": true, "14d": true, "30d": true, "60d": true, "1y": true}
-	if !validDurations[duration] {
+	if !validEnum("top-gainers-losers", "duration", duration) {
 		return fmt.Errorf("invalid duration %q — must be one of: 1h, 24h, 7d, 14d, 30d, 60d, 1y", duration)
 	}
-
-	validTopCoins := map[string]bool{"300": true, "500": true, "1000": true, "all": true}
-	if !validTopCoins[topCoinsStr] {
+	if !validEnum("top-gainers-losers", "top-coins", topCoinsStr) {
 		return fmt.Errorf("invalid --top-coins %q — must be 300, 500, 1000, or all", topCoinsStr)
 	}
 
@@ -95,35 +91,34 @@ func runTopGainersLosers(cmd *cobra.Command, args []string) error {
 
 	headers := []string{"#", "Name", "Symbol", "Price", "Change %"}
 	rows := make([][]string, 0, len(coins))
+	var csvRows [][]string
+	if exportPath != "" {
+		csvRows = make([][]string, 0, len(coins))
+	}
 	for i := range coins {
 		if i >= maxGainersLosersDisplay {
 			break
 		}
+		idx := fmt.Sprintf("%d", i+1)
+		name := display.SanitizeCell(coins[i].Name)
+		symbol := display.FormatSymbol(coins[i].Symbol)
 		rows = append(rows, []string{
-			fmt.Sprintf("%d", i+1),
-			display.SanitizeCell(coins[i].Name),
-			strings.ToUpper(display.SanitizeCell(coins[i].Symbol)),
-			display.FormatPrice(coins[i].Price(vs)),
+			idx, name, symbol,
+			display.FormatPrice(coins[i].Price(vs), vs),
 			display.ColorPercent(coins[i].PriceChange(vs)),
 		})
+		if exportPath != "" {
+			csvRows = append(csvRows, []string{
+				idx, name, symbol,
+				fmt.Sprintf("%.8f", coins[i].Price(vs)),
+				fmt.Sprintf("%.2f", coins[i].PriceChange(vs)),
+			})
+		}
 	}
 
 	display.PrintTable(headers, rows)
 
 	if exportPath != "" {
-		csvRows := make([][]string, 0, len(rows))
-		for i := range coins {
-			if i >= maxGainersLosersDisplay {
-				break
-			}
-			csvRows = append(csvRows, []string{
-				fmt.Sprintf("%d", i+1),
-				display.SanitizeCell(coins[i].Name),
-				strings.ToUpper(display.SanitizeCell(coins[i].Symbol)),
-				fmt.Sprintf("%.8f", coins[i].Price(vs)),
-				fmt.Sprintf("%.2f", coins[i].PriceChange(vs)),
-			})
-		}
 		if err := exportCSV(exportPath, headers, csvRows); err != nil {
 			return err
 		}

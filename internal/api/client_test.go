@@ -93,6 +93,21 @@ func TestError401WithAPIMessage(t *testing.T) {
 	assert.Contains(t, err.Error(), "You need to upgrade to a paid plan")
 }
 
+func TestError401NestedErrorFormat(t *testing.T) {
+	// CoinGecko sometimes wraps errors as {"error":{"status":{"error_message":"..."}}}
+	c, srv := testClient(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(401)
+		w.Write([]byte(`{"error":{"status":{"timestamp":"2026-03-05T08:16:12.383+00:00","error_code":10012,"error_message":"Your request exceeds the allowed time range."}}}`))
+	})
+	defer srv.Close()
+
+	var result map[string]any
+	err := c.get(context.Background(), "/test", &result)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrInvalidAPIKey)
+	assert.Contains(t, err.Error(), "allowed time range")
+}
+
 func TestError403(t *testing.T) {
 	c, srv := testClient(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(403)

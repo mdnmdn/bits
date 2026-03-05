@@ -40,12 +40,17 @@ func (e *RateLimitError) Is(target error) bool {
 }
 
 // apiErrorResponse covers CoinGecko's error JSON formats.
+// The API may return:
+//
+//	{"status": {"error_code": N, "error_message": "..."}}
+//	{"error": {"status": {"error_code": N, "error_message": "..."}}}
+//	{"error": "some string"}
 type apiErrorResponse struct {
 	Status *struct {
 		ErrorCode    int    `json:"error_code"`
 		ErrorMessage string `json:"error_message"`
 	} `json:"status"`
-	Error string `json:"error"`
+	Error json.RawMessage `json:"error"`
 }
 
 // extractMessage returns the best error message from the response body.
@@ -53,40 +58,58 @@ func (e *apiErrorResponse) extractMessage() string {
 	if e.Status != nil && e.Status.ErrorMessage != "" {
 		return e.Status.ErrorMessage
 	}
-	if e.Error != "" {
-		return e.Error
+	if len(e.Error) > 0 {
+		// Try nested {"error": {"status": {"error_message": "..."}}}
+		var nested struct {
+			Status *struct {
+				ErrorMessage string `json:"error_message"`
+			} `json:"status"`
+		}
+		if json.Unmarshal(e.Error, &nested) == nil && nested.Status != nil && nested.Status.ErrorMessage != "" {
+			return nested.Status.ErrorMessage
+		}
+		// Try simple {"error": "string"}
+		var s string
+		if json.Unmarshal(e.Error, &s) == nil && s != "" {
+			return s
+		}
 	}
 	return ""
 }
 
 type Client struct {
-	http    *http.Client
-	baseURL string
-	cfg     *config.Config
+	http       *http.Client
+	baseURLVal string // override; empty = use cfg.BaseURL()
+	cfg        *config.Config
 }
 
 func NewClient(cfg *config.Config) *Client {
 	return &Client{
-		http:    &http.Client{Timeout: 30 * time.Second},
-		baseURL: cfg.BaseURL(),
-		cfg:     cfg,
+		http: &http.Client{Timeout: 30 * time.Second},
+		cfg:  cfg,
 	}
 }
 
 func NewClientWithHTTP(cfg *config.Config, httpClient *http.Client) *Client {
 	return &Client{
-		http:    httpClient,
-		baseURL: cfg.BaseURL(),
-		cfg:     cfg,
+		http: httpClient,
+		cfg:  cfg,
 	}
 }
 
 func (c *Client) SetBaseURL(url string) {
-	c.baseURL = url
+	c.baseURLVal = url
+}
+
+func (c *Client) baseURL() string {
+	if c.baseURLVal != "" {
+		return c.baseURLVal
+	}
+	return c.cfg.BaseURL()
 }
 
 func (c *Client) get(ctx context.Context, path string, result any) error {
-	url := c.baseURL + path
+	url := c.baseURL() + path
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -124,13 +147,13 @@ func (c *Client) handleError(resp *http.Response) error {
 	switch resp.StatusCode {
 	case http.StatusUnauthorized:
 		if msg != "" {
-			return fmt.Errorf("%w: %s", ErrInvalidAPIKey, msg)
+			return fmt.Errorf("%s (%w)", msg, ErrInvalidAPIKey)
 		}
 		return ErrInvalidAPIKey
 
 	case http.StatusForbidden:
 		if msg != "" {
-			return fmt.Errorf("%w: %s", ErrPlanRestricted, msg)
+			return fmt.Errorf("%s (%w)", msg, ErrPlanRestricted)
 		}
 		return ErrPlanRestricted
 

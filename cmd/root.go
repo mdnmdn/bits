@@ -8,6 +8,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const paidPlanURL = "https://www.coingecko.com/en/api/pricing"
+
 var (
 	version = "dev"
 	commit  = "none"

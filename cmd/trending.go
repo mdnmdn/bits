@@ -38,7 +38,7 @@ func runTrending(cmd *cobra.Command, args []string) error {
 	}
 
 	if showMax != "" && !cfg.IsPaid() {
-		return fmt.Errorf("--show-max requires a paid plan — upgrade at https://www.coingecko.com/en/api/pricing")
+		return fmt.Errorf("--show-max requires a paid plan — upgrade at %s", paidPlanURL)
 	}
 
 	if isDryRun(cmd) {
@@ -67,15 +67,11 @@ func runTrending(cmd *cobra.Command, args []string) error {
 	coinHeaders := []string{"#", "Name", "Symbol", "Market Cap Rank"}
 	coinRows := make([][]string, 0, len(resp.Coins))
 	for i, c := range resp.Coins {
-		rank := "-"
-		if c.Item.MarketCapRank > 0 {
-			rank = fmt.Sprintf("%d", c.Item.MarketCapRank)
-		}
 		coinRows = append(coinRows, []string{
 			fmt.Sprintf("%d", i+1),
 			display.SanitizeCell(c.Item.Name),
 			display.SanitizeCell(c.Item.Symbol),
-			rank,
+			display.FormatRank(c.Item.MarketCapRank),
 		})
 	}
 	display.PrintTable(coinHeaders, coinRows)

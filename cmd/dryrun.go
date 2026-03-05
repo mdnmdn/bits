@@ -31,7 +31,11 @@ type paginationInfo struct {
 }
 
 func printDryRun(cfg *config.Config, cmdName, endpoint string, params map[string]string, pagination *paginationInfo) error {
-	headerKey, headerVal := cfg.AuthHeader()
+	return printDryRunWithOp(cfg, cmdName, "", endpoint, params, pagination)
+}
+
+func printDryRunWithOp(cfg *config.Config, cmdName, opKey, endpoint string, params map[string]string, pagination *paginationInfo) error {
+	headerKey, _ := cfg.AuthHeader()
 	masked := cfg.MaskedKey()
 
 	headers := map[string]string{}
@@ -48,15 +52,13 @@ func printDryRun(cfg *config.Config, cmdName, endpoint string, params map[string
 		Pagination: pagination,
 	}
 
-	// Mask the API key in headers.
-	if cfg.APIKey != "" {
-		out.Headers[headerKey] = masked
-		_ = headerVal
-	}
-
 	if meta, ok := commandMeta[cmdName]; ok {
-		out.OASOperationID = meta.OASOperationID
 		out.OASSpec = meta.OASSpec
+		if opKey != "" && meta.OASOperationIDs != nil {
+			out.OASOperationID = meta.OASOperationIDs[opKey]
+		} else {
+			out.OASOperationID = meta.OASOperationID
+		}
 	}
 
 	return printJSONRaw(out)

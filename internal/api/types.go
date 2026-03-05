@@ -119,18 +119,25 @@ func (g *GainerCoin) PriceChange(vs string) float64 {
 }
 
 func (g *GainerCoin) UnmarshalJSON(data []byte) error {
-	// Unmarshal known fields via an alias to avoid recursion.
-	type Alias GainerCoin
-	var alias Alias
-	if err := json.Unmarshal(data, &alias); err != nil {
-		return err
-	}
-	*g = GainerCoin(alias)
-
-	// Capture all fields into a flat map to extract dynamic currency keys.
+	// Single-pass: unmarshal into flat map, then extract known fields.
 	var raw map[string]interface{}
 	if err := json.Unmarshal(data, &raw); err != nil {
 		return err
+	}
+	if v, ok := raw["id"].(string); ok {
+		g.ID = v
+	}
+	if v, ok := raw["symbol"].(string); ok {
+		g.Symbol = v
+	}
+	if v, ok := raw["name"].(string); ok {
+		g.Name = v
+	}
+	if v, ok := raw["image"].(string); ok {
+		g.Image = v
+	}
+	if v, ok := raw["market_cap_rank"].(float64); ok {
+		g.MarketCapRank = int(v)
 	}
 	g.Extra = raw
 	return nil

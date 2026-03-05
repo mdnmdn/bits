@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/coingecko/coingecko-cli/internal/api"
 	"github.com/coingecko/coingecko-cli/internal/config"
 	"github.com/coingecko/coingecko-cli/internal/display"
@@ -65,11 +63,7 @@ func runSearch(cmd *cobra.Command, args []string) error {
 	headers := []string{"Rank", "Name", "Symbol", "ID"}
 	rows := make([][]string, len(coins))
 	for i, c := range coins {
-		rank := "-"
-		if c.MarketCapRank > 0 {
-			rank = fmt.Sprintf("%d", c.MarketCapRank)
-		}
-		rows[i] = []string{rank, display.SanitizeCell(c.Name), display.SanitizeCell(c.Symbol), display.SanitizeCell(c.ID)}
+		rows[i] = []string{display.FormatRank(c.MarketCapRank), display.SanitizeCell(c.Name), display.SanitizeCell(c.Symbol), display.SanitizeCell(c.ID)}
 	}
 
 	display.PrintTable(headers, rows)

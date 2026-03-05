@@ -7,14 +7,18 @@ import (
 	"path/filepath"
 )
 
-func ExportCSV(path string, headers []string, rows [][]string) error {
+func ExportCSV(path string, headers []string, rows [][]string) (retErr error) {
 	path = filepath.Clean(path)
 
 	f, err := os.Create(path)
 	if err != nil {
 		return fmt.Errorf("creating CSV file: %w", err)
 	}
-	defer f.Close()
+	defer func() {
+		if cerr := f.Close(); cerr != nil && retErr == nil {
+			retErr = fmt.Errorf("closing CSV file: %w", cerr)
+		}
+	}()
 
 	w := csv.NewWriter(f)
 

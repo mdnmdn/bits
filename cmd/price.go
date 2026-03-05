@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/coingecko/coingecko-cli/internal/api"
 	"github.com/coingecko/coingecko-cli/internal/config"
@@ -48,6 +49,23 @@ func runPrice(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+
+	// Short-circuit before any API calls in dry-run mode.
+	if isDryRun(cmd) {
+		raw := idsStr
+		if symbolsStr != "" {
+			if raw != "" {
+				raw += ","
+			}
+			raw += symbolsStr
+		}
+		return printDryRun(cfg, "price", "/simple/price", map[string]string{
+			"ids":                 raw,
+			"vs_currencies":       vs,
+			"include_24hr_change": "true",
+		}, nil)
+	}
+
 	client := api.NewClient(cfg)
 
 	var ids []string
@@ -66,14 +84,6 @@ func runPrice(cmd *cobra.Command, args []string) error {
 
 	if len(ids) == 0 {
 		return fmt.Errorf("no valid coins found")
-	}
-
-	if isDryRun(cmd) {
-		return printDryRun(cfg, "price", "/simple/price", map[string]string{
-			"ids":                 strings.Join(ids, ","),
-			"vs_currencies":       vs,
-			"include_24hr_change": "true",
-		}, nil)
 	}
 
 	prices, err := client.SimplePrice(ctx, ids, vs)
@@ -97,7 +107,7 @@ func runPrice(cmd *cobra.Command, args []string) error {
 		change := data[vs+"_24h_change"]
 		rows = append(rows, []string{
 			display.SanitizeCell(id),
-			display.FormatPrice(price),
+			display.FormatPrice(price, vs),
 			display.ColorPercent(change),
 		})
 	}
@@ -107,26 +117,52 @@ func runPrice(cmd *cobra.Command, args []string) error {
 }
 
 func resolveSymbols(ctx context.Context, client *api.Client, symbols []string) ([]string, error) {
-	var ids []string
-	for _, sym := range symbols {
-		sym = strings.ToLower(sym)
-		resp, err := client.Search(ctx, sym)
-		if err != nil {
-			return nil, fmt.Errorf("searching for %q: %w", sym, err)
-		}
-		var best *api.SearchCoin
-		for i, c := range resp.Coins {
-			if strings.EqualFold(c.Symbol, sym) {
-				if best == nil || (c.MarketCapRank > 0 && (best.MarketCapRank == 0 || c.MarketCapRank < best.MarketCapRank)) {
-					best = &resp.Coins[i]
+	type result struct {
+		index int
+		id    string
+		sym   string
+		err   error
+	}
+
+	results := make([]result, len(symbols))
+	var wg sync.WaitGroup
+	for i, sym := range symbols {
+		wg.Add(1)
+		go func(idx int, sym string) {
+			defer wg.Done()
+			sym = strings.ToLower(sym)
+			resp, err := client.Search(ctx, sym)
+			if err != nil {
+				results[idx] = result{index: idx, sym: sym, err: err}
+				return
+			}
+			var best *api.SearchCoin
+			for j, c := range resp.Coins {
+				if strings.EqualFold(c.Symbol, sym) {
+					if best == nil || (c.MarketCapRank > 0 && (best.MarketCapRank == 0 || c.MarketCapRank < best.MarketCapRank)) {
+						best = &resp.Coins[j]
+					}
 				}
 			}
+			if best != nil {
+				results[idx] = result{index: idx, id: best.ID, sym: sym}
+			} else {
+				results[idx] = result{index: idx, sym: sym}
+			}
+		}(i, sym)
+	}
+	wg.Wait()
+
+	var ids []string
+	for _, r := range results {
+		if r.err != nil {
+			return nil, fmt.Errorf("searching for %q: %w", r.sym, r.err)
 		}
-		if best == nil {
-			warnf("Warning: no exact match for symbol %q, skipping\n", sym)
+		if r.id == "" {
+			warnf("Warning: no exact match for symbol %q, skipping\n", r.sym)
 			continue
 		}
-		ids = append(ids, best.ID)
+		ids = append(ids, r.id)
 	}
 	return ids, nil
 }

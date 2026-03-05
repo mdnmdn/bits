@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/coingecko/coingecko-cli/internal/api"
@@ -78,44 +77,61 @@ func runHistory(cmd *cobra.Command, args []string) error {
 	}
 
 	if interval != "" && !cfg.IsPaid() {
-		return fmt.Errorf("--interval requires a paid plan — upgrade at https://www.coingecko.com/en/api/pricing")
+		return fmt.Errorf("--interval requires a paid plan — upgrade at %s", paidPlanURL)
 	}
 
 	if isDryRun(cmd) {
 		switch {
 		case dateStr != "":
-			return printDryRun(cfg, "history", "/coins/"+coinID+"/history", map[string]string{
-				"date": dateStr, "localization": "false",
+			t, err := parseDate("--date", dateStr)
+			if err != nil {
+				return err
+			}
+			return printDryRunWithOp(cfg, "history", "--date", "/coins/"+coinID+"/history", map[string]string{
+				"date": t.Format("02-01-2006"), "localization": "false",
 			}, nil)
 		case daysStr != "":
 			params := map[string]string{"vs_currency": vs, "days": daysStr}
 			if interval != "" {
 				params["interval"] = interval
 			}
-			return printDryRun(cfg, "history", "/coins/"+coinID+"/ohlc", params, nil)
+			return printDryRunWithOp(cfg, "history", "--days", "/coins/"+coinID+"/ohlc", params, nil)
 		default:
-			params := map[string]string{"vs_currency": vs, "from": fromStr, "to": toStr}
+			if fromStr == "" || toStr == "" {
+				return fmt.Errorf("both --from and --to are required for range mode")
+			}
+			fromTime, err := parseDate("--from", fromStr)
+			if err != nil {
+				return err
+			}
+			toTime, err := parseDate("--to", toStr)
+			if err != nil {
+				return err
+			}
+			params := map[string]string{
+				"vs_currency": vs,
+				"from":        fmt.Sprintf("%d", fromTime.UTC().Unix()),
+				"to":          fmt.Sprintf("%d", endOfDayUnix(toTime)),
+			}
 			if interval != "" {
 				params["interval"] = interval
 			}
-			return printDryRun(cfg, "history", "/coins/"+coinID+"/market_chart/range", params, nil)
+			return printDryRunWithOp(cfg, "history", "--from/--to", "/coins/"+coinID+"/market_chart/range", params, nil)
 		}
 	}
 
 	client := api.NewClient(cfg)
 	ctx := cmd.Context()
 
-	validOHLCDays := map[string]bool{"1": true, "7": true, "14": true, "30": true, "90": true, "180": true, "365": true, "max": true}
-
 	switch {
 	case dateStr != "":
 		return historyDate(ctx, client, coinID, dateStr, vs, jsonOut)
 	case daysStr != "":
-		if !validOHLCDays[daysStr] {
+		if !validEnum("history", "days", daysStr) {
 			return fmt.Errorf("invalid --days %q — must be one of: 1, 7, 14, 30, 90, 180, 365, max", daysStr)
 		}
 		if daysStr == "max" && !cfg.IsPaid() {
-			return fmt.Errorf("--days max requires a paid plan — upgrade at https://www.coingecko.com/en/api/pricing")
+			return fmt.Errorf("--days max requires a paid plan — upgrade at %s", paidPlanURL)
 		}
 		return historyOHLC(ctx, client, coinID, vs, daysStr, interval, exportPath, jsonOut)
 	default:
@@ -123,10 +139,24 @@ func runHistory(cmd *cobra.Command, args []string) error {
 	}
 }
 
-func historyDate(ctx context.Context, client *api.Client, coinID, dateStr, vs string, jsonOut bool) error {
-	t, err := time.Parse("2006-01-02", dateStr)
+const dateLayout = "2006-01-02"
+
+func parseDate(name, value string) (time.Time, error) {
+	t, err := time.Parse(dateLayout, value)
 	if err != nil {
-		return fmt.Errorf("invalid date format, use YYYY-MM-DD: %w", err)
+		return time.Time{}, fmt.Errorf("invalid %s date, use YYYY-MM-DD: %w", name, err)
+	}
+	return t, nil
+}
+
+func endOfDayUnix(t time.Time) int64 {
+	return t.Add(23*time.Hour + 59*time.Minute + 59*time.Second).UTC().Unix()
+}
+
+func historyDate(ctx context.Context, client *api.Client, coinID, dateStr, vs string, jsonOut bool) error {
+	t, err := parseDate("--date", dateStr)
+	if err != nil {
+		return err
 	}
 	apiDate := t.Format("02-01-2006") // CoinGecko uses DD-MM-YYYY
 
@@ -145,11 +175,11 @@ func historyDate(ctx context.Context, client *api.Client, coinID, dateStr, vs st
 
 	headers := []string{"Metric", "Value"}
 	rows := [][]string{
-		{"Coin", fmt.Sprintf("%s (%s)", display.SanitizeCell(data.Name), strings.ToUpper(display.SanitizeCell(data.Symbol)))},
+		{"Coin", fmt.Sprintf("%s (%s)", display.SanitizeCell(data.Name), display.FormatSymbol(data.Symbol))},
 		{"Date", dateStr},
-		{"Price", display.FormatPrice(data.MarketData.CurrentPrice[vs])},
-		{"Market Cap", display.FormatLargeNumber(data.MarketData.MarketCap[vs])},
-		{"Volume", display.FormatLargeNumber(data.MarketData.TotalVolume[vs])},
+		{"Price", display.FormatPrice(data.MarketData.CurrentPrice[vs], vs)},
+		{"Market Cap", display.FormatLargeNumber(data.MarketData.MarketCap[vs], vs)},
+		{"Volume", display.FormatLargeNumber(data.MarketData.TotalVolume[vs], vs)},
 	}
 	display.PrintTable(headers, rows)
 	return nil
@@ -167,6 +197,7 @@ func historyOHLC(ctx context.Context, client *api.Client, coinID, vs, days, inte
 
 	headers := []string{"Date", "Open", "High", "Low", "Close"}
 	var rows [][]string
+	var csvRows [][]string
 	for _, d := range data {
 		if len(d) < 5 {
 			continue
@@ -174,22 +205,12 @@ func historyOHLC(ctx context.Context, client *api.Client, coinID, vs, days, inte
 		ts := time.UnixMilli(int64(d[0]))
 		rows = append(rows, []string{
 			ts.UTC().Format("2006-01-02 15:04"),
-			display.FormatPrice(d[1]),
-			display.FormatPrice(d[2]),
-			display.FormatPrice(d[3]),
-			display.FormatPrice(d[4]),
+			display.FormatPrice(d[1], vs),
+			display.FormatPrice(d[2], vs),
+			display.FormatPrice(d[3], vs),
+			display.FormatPrice(d[4], vs),
 		})
-	}
-
-	display.PrintTable(headers, rows)
-
-	if exportPath != "" {
-		var csvRows [][]string
-		for _, d := range data {
-			if len(d) < 5 {
-				continue
-			}
-			ts := time.UnixMilli(int64(d[0]))
+		if exportPath != "" {
 			csvRows = append(csvRows, []string{
 				ts.UTC().Format(time.RFC3339),
 				fmt.Sprintf("%.8f", d[1]),
@@ -198,6 +219,11 @@ func historyOHLC(ctx context.Context, client *api.Client, coinID, vs, days, inte
 				fmt.Sprintf("%.8f", d[4]),
 			})
 		}
+	}
+
+	display.PrintTable(headers, rows)
+
+	if exportPath != "" {
 		if err := exportCSV(exportPath, headers, csvRows); err != nil {
 			return err
 		}
@@ -210,17 +236,17 @@ func historyRange(ctx context.Context, client *api.Client, coinID, vs, fromStr, 
 		return fmt.Errorf("both --from and --to are required for range mode")
 	}
 
-	fromTime, err := time.Parse("2006-01-02", fromStr)
+	fromTime, err := parseDate("--from", fromStr)
 	if err != nil {
-		return fmt.Errorf("invalid --from date, use YYYY-MM-DD: %w", err)
+		return err
 	}
-	toTime, err := time.Parse("2006-01-02", toStr)
+	toTime, err := parseDate("--to", toStr)
 	if err != nil {
-		return fmt.Errorf("invalid --to date, use YYYY-MM-DD: %w", err)
+		return err
 	}
 
 	from := fromTime.UTC().Unix()
-	to := toTime.Add(23*time.Hour + 59*time.Minute + 59*time.Second).UTC().Unix()
+	to := endOfDayUnix(toTime)
 
 	data, err := client.CoinMarketChartRange(ctx, coinID, vs, from, to, interval)
 	if err != nil {
@@ -233,6 +259,7 @@ func historyRange(ctx context.Context, client *api.Client, coinID, vs, fromStr, 
 
 	headers := []string{"Date", "Price"}
 	var rows [][]string
+	var csvRows [][]string
 	for _, p := range data.Prices {
 		if len(p) < 2 {
 			continue
@@ -240,24 +267,19 @@ func historyRange(ctx context.Context, client *api.Client, coinID, vs, fromStr, 
 		ts := time.UnixMilli(int64(p[0]))
 		rows = append(rows, []string{
 			ts.UTC().Format("2006-01-02 15:04"),
-			display.FormatPrice(p[1]),
+			display.FormatPrice(p[1], vs),
 		})
-	}
-
-	display.PrintTable(headers, rows)
-
-	if exportPath != "" {
-		var csvRows [][]string
-		for _, p := range data.Prices {
-			if len(p) < 2 {
-				continue
-			}
-			ts := time.UnixMilli(int64(p[0]))
+		if exportPath != "" {
 			csvRows = append(csvRows, []string{
 				ts.UTC().Format(time.RFC3339),
 				fmt.Sprintf("%.8f", p[1]),
 			})
 		}
+	}
+
+	display.PrintTable(headers, rows)
+
+	if exportPath != "" {
 		if err := exportCSV(exportPath, headers, csvRows); err != nil {
 			return err
 		}

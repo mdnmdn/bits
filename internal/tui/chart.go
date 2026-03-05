@@ -11,7 +11,7 @@ import (
 	"github.com/NimbleMarkets/ntcharts/canvas/graph"
 )
 
-func renderBrailleChart(ohlc api.OHLCData, width, height int) string {
+func renderBrailleChart(ohlc api.OHLCData, width, height int, vs string) string {
 	if len(ohlc) == 0 || width < 4 || height < 3 {
 		return "No data"
 	}
@@ -69,8 +69,8 @@ func renderBrailleChart(ohlc api.OHLCData, width, height int) string {
 	// Add price labels
 	chart += fmt.Sprintf("\n%s  High: %s  Low: %s",
 		DimStyle.Render(""),
-		display.FormatPrice(maxP),
-		display.FormatPrice(minP),
+		display.FormatPrice(maxP, vs),
+		display.FormatPrice(minP, vs),
 	)
 
 	return chart

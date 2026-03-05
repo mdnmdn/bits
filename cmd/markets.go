@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/coingecko/coingecko-cli/internal/api"
 	"github.com/coingecko/coingecko-cli/internal/config"
@@ -68,7 +67,7 @@ func runMarkets(cmd *cobra.Command, args []string) error {
 		})
 	}
 
-	var allCoins []api.MarketCoin
+	allCoins := make([]api.MarketCoin, 0, total)
 	remaining := total
 
 	for page := 1; remaining > 0; page++ {
@@ -93,34 +92,36 @@ func runMarkets(cmd *cobra.Command, args []string) error {
 
 	headers := []string{"Rank", "Name", "Symbol", "Price", "Market Cap", "Volume", "24h Change"}
 	rows := make([][]string, len(allCoins))
+	var csvRows [][]string
+	if exportPath != "" {
+		csvRows = make([][]string, len(allCoins))
+	}
 	for i, c := range allCoins {
+		rank := fmt.Sprintf("%d", c.MarketCapRank)
+		name := display.SanitizeCell(c.Name)
+		symbol := display.FormatSymbol(c.Symbol)
 		rows[i] = []string{
-			fmt.Sprintf("%d", c.MarketCapRank),
-			display.SanitizeCell(c.Name),
-			strings.ToUpper(display.SanitizeCell(c.Symbol)),
-			display.FormatPrice(c.CurrentPrice),
-			display.FormatLargeNumber(c.MarketCap),
-			display.FormatLargeNumber(c.TotalVolume),
+			rank, name, symbol,
+			display.FormatPrice(c.CurrentPrice, vs),
+			display.FormatLargeNumber(c.MarketCap, vs),
+			display.FormatLargeNumber(c.TotalVolume, vs),
 			display.ColorPercent(c.PriceChangePercentage24h),
 		}
-	}
-
-	display.PrintTable(headers, rows)
-
-	if exportPath != "" {
-		plainRows := make([][]string, len(allCoins))
-		for i, c := range allCoins {
-			plainRows[i] = []string{
-				fmt.Sprintf("%d", c.MarketCapRank),
-				display.SanitizeCell(c.Name),
-				strings.ToUpper(display.SanitizeCell(c.Symbol)),
+		if exportPath != "" {
+			csvRows[i] = []string{
+				rank, name, symbol,
 				fmt.Sprintf("%.8f", c.CurrentPrice),
 				fmt.Sprintf("%.2f", c.MarketCap),
 				fmt.Sprintf("%.2f", c.TotalVolume),
 				fmt.Sprintf("%.2f", c.PriceChangePercentage24h),
 			}
 		}
-		if err := exportCSV(exportPath, headers, plainRows); err != nil {
+	}
+
+	display.PrintTable(headers, rows)
+
+	if exportPath != "" {
+		if err := exportCSV(exportPath, headers, csvRows); err != nil {
 			return err
 		}
 	}

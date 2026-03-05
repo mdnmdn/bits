@@ -6,43 +6,62 @@ import (
 	"unicode"
 )
 
+// FormatSymbol sanitizes and uppercases a coin symbol from API data.
+func FormatSymbol(s string) string {
+	return strings.ToUpper(SanitizeCell(s))
+}
+
+// FormatRank formats a market cap rank, returning "-" for zero/unranked.
+func FormatRank(rank int) string {
+	if rank > 0 {
+		return fmt.Sprintf("%d", rank)
+	}
+	return "-"
+}
+
 func PrintTable(headers []string, rows [][]string) {
 	if len(rows) == 0 {
 		fmt.Println("No data to display.")
 		return
 	}
 
-	widths := make([]int, len(headers))
+	cols := len(headers)
+	// Compute visible widths for all cells in a single pass.
+	headerWidths := make([]int, cols)
 	for i, h := range headers {
-		widths[i] = VisibleWidth(h)
+		headerWidths[i] = VisibleWidth(h)
 	}
-	for _, row := range rows {
+	cellWidths := make([][]int, len(rows))
+	colMax := make([]int, cols)
+	copy(colMax, headerWidths)
+	for r, row := range rows {
+		cellWidths[r] = make([]int, len(row))
 		for i, cell := range row {
-			if i < len(widths) {
-				w := VisibleWidth(cell)
-				if w > widths[i] {
-					widths[i] = w
-				}
+			w := VisibleWidth(cell)
+			cellWidths[r][i] = w
+			if i < cols && w > colMax[i] {
+				colMax[i] = w
 			}
 		}
 	}
 
-	printRow(headers, widths)
-	printSeparator(widths)
-	for _, row := range rows {
-		printRow(row, widths)
+	printRowWithWidths(headers, headerWidths, colMax)
+	printSeparator(colMax)
+	for r, row := range rows {
+		printRowWithWidths(row, cellWidths[r], colMax)
 	}
 }
 
-func printRow(cells []string, widths []int) {
-	parts := make([]string, len(widths))
-	for i := range widths {
+func printRowWithWidths(cells []string, visWidths []int, colMax []int) {
+	parts := make([]string, len(colMax))
+	for i := range colMax {
 		cell := ""
+		visible := 0
 		if i < len(cells) {
 			cell = cells[i]
+			visible = visWidths[i]
 		}
-		visible := VisibleWidth(cell)
-		pad := widths[i] - visible
+		pad := colMax[i] - visible
 		if pad < 0 {
 			pad = 0
 		}
@@ -64,6 +83,18 @@ func printSeparator(widths []int) {
 // symbols) before passing to PrintTable. Internal color formatting (e.g.
 // ColorPercent) operates on numeric values and should NOT be sanitized.
 func SanitizeCell(s string) string {
+	// Fast path: check if sanitization is needed before allocating.
+	needsSanitize := false
+	for i := 0; i < len(s); i++ {
+		if s[i] == '\033' || (s[i] < 0x20 && s[i] != '\t') {
+			needsSanitize = true
+			break
+		}
+	}
+	if !needsSanitize {
+		return s
+	}
+
 	var b strings.Builder
 	b.Grow(len(s))
 	runes := []rune(s)

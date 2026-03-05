@@ -86,9 +86,12 @@ func printColoredRow(w *os.File, content string, visible int) {
 		pad = 0
 	}
 	if !colorEnabled() {
-		// Strip ANSI, use plain text
-		plain := content // caller should provide plain fallback
-		fmt.Fprintf(w, "| %s%s |\n", plain, strings.Repeat(" ", pad))
+		plain := ansiRegex.ReplaceAllString(content, "")
+		plainPad := boxWidth - 2 - len(plain)
+		if plainPad < 0 {
+			plainPad = 0
+		}
+		fmt.Fprintf(w, "| %s%s |\n", plain, strings.Repeat(" ", plainPad))
 		return
 	}
 	fmt.Fprintf(w, "| %s%s |\n", content, strings.Repeat(" ", pad))

@@ -124,19 +124,19 @@ func (m DetailModel) View() string {
 	}
 
 	var left strings.Builder
-	left.WriteString(TitleStyle.Render(fmt.Sprintf("%s (%s)", display.SanitizeCell(m.coin.Name), strings.ToUpper(display.SanitizeCell(m.coin.Symbol)))))
+	left.WriteString(TitleStyle.Render(fmt.Sprintf("%s (%s)", display.SanitizeCell(m.coin.Name), display.FormatSymbol(m.coin.Symbol))))
 	left.WriteString("\n\n")
 
 	if md != nil {
-		addField(&left, "Price", display.FormatPrice(md.CurrentPrice[vs]))
+		addField(&left, "Price", display.FormatPrice(md.CurrentPrice[vs], vs))
 		addField(&left, "24h Change", display.ColorPercent(md.PriceChangePercentage24h))
-		addField(&left, "24h High", display.FormatPrice(md.High24h[vs]))
-		addField(&left, "24h Low", display.FormatPrice(md.Low24h[vs]))
-		addField(&left, "Market Cap", display.FormatLargeNumber(md.MarketCap[vs]))
-		addField(&left, "Volume", display.FormatLargeNumber(md.TotalVolume[vs]))
-		addField(&left, "ATH", display.FormatPrice(md.ATH[vs]))
+		addField(&left, "24h High", display.FormatPrice(md.High24h[vs], vs))
+		addField(&left, "24h Low", display.FormatPrice(md.Low24h[vs], vs))
+		addField(&left, "Market Cap", display.FormatLargeNumber(md.MarketCap[vs], vs))
+		addField(&left, "Volume", display.FormatLargeNumber(md.TotalVolume[vs], vs))
+		addField(&left, "ATH", display.FormatPrice(md.ATH[vs], vs))
 		addField(&left, "ATH Change", display.FormatPercent(md.ATHChangePercentage[vs]))
-		addField(&left, "ATL", display.FormatPrice(md.ATL[vs]))
+		addField(&left, "ATL", display.FormatPrice(md.ATL[vs], vs))
 		addField(&left, "ATL Change", display.FormatPercent(md.ATLChangePercentage[vs]))
 		addField(&left, "Circulating", display.FormatSupply(md.CirculatingSupply))
 		if md.TotalSupply > 0 {
@@ -158,7 +158,7 @@ func (m DetailModel) View() string {
 		if chartHeight < 8 {
 			chartHeight = 12
 		}
-		right.WriteString(renderBrailleChart(m.ohlc, chartWidth, chartHeight))
+		right.WriteString(renderBrailleChart(m.ohlc, chartWidth, chartHeight, vs))
 	} else {
 		right.WriteString(DimStyle.Render("No chart data available"))
 	}
