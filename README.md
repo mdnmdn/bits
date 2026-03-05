@@ -119,10 +119,13 @@ cg top-gainers-losers --losers --duration 7d
 
 ```sh
 # Markets browser
-cg tui
+cg tui markets
 
 # Trending coins browser
-cg tui-trending
+cg tui trending
+
+# With options
+cg tui markets --category layer-1
 ```
 
 Navigate with `j`/`k` or arrow keys, press `Enter` for detail view with a 7-day price chart, `Esc` to go back, `q` to quit.

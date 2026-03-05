@@ -16,7 +16,10 @@ var priceCmd = &cobra.Command{
 	Use:   "price",
 	Short: "Get current price for coins",
 	Long:  "Fetch current prices by coin IDs or symbols. Use --ids for CoinGecko IDs (e.g. bitcoin) or --symbols for ticker symbols (e.g. btc).",
-	RunE:  runPrice,
+	Example: `  cg price --ids bitcoin,ethereum
+  cg price --symbols btc,eth --vs eur
+  cg price --ids solana -o json`,
+	RunE: runPrice,
 }
 
 func init() {

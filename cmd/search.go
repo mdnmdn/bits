@@ -13,8 +13,10 @@ import (
 var searchCmd = &cobra.Command{
 	Use:   "search [query]",
 	Short: "Search for coins",
-	Args:  cobra.ExactArgs(1),
-	RunE:  runSearch,
+	Example: `  cg search bitcoin
+  cg search sol --limit 5`,
+	Args: cobra.ExactArgs(1),
+	RunE: runSearch,
 }
 
 func init() {

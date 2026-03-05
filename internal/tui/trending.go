@@ -36,6 +36,8 @@ type trendingLoadedMsg struct {
 	err  error
 }
 
+const defaultTrendingLimit = 30
+
 func NewTrendingModel(client *api.Client, vs string) TrendingModel {
 	return TrendingModel{
 		client: client,
@@ -131,7 +133,7 @@ func (m TrendingModel) View() string {
 	b.WriteString(HeaderStyle.Render(header))
 	b.WriteString("\n")
 
-	limit := 30
+	limit := defaultTrendingLimit
 	if len(m.coins) < limit {
 		limit = len(m.coins)
 	}

@@ -20,7 +20,12 @@ var historyCmd = &cobra.Command{
 	Long: `Fetch historical data using one of three modes (mutually exclusive):
   --date YYYY-MM-DD     Snapshot on a specific date
   --days N              OHLC data for the last N days
-  --from/--to           Price data for a date range (YYYY-MM-DD)`,
+  --from/--to           Price data for a date range (YYYY-MM-DD)
+
+The --to date is inclusive: it covers the full day up to 23:59:59 UTC.`,
+	Example: `  cg history bitcoin --date 2024-01-01
+  cg history ethereum --days 30
+  cg history solana --from 2024-01-01 --to 2024-03-01 --export prices.csv`,
 	Args: cobra.ExactArgs(1),
 	RunE: runHistory,
 }

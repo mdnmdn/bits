@@ -13,8 +13,16 @@ import (
 var trendingCmd = &cobra.Command{
 	Use:   "trending",
 	Short: "Show trending coins, NFTs, and categories",
-	RunE:  runTrending,
+	Example: `  cg trending
+  cg trending -o json`,
+	RunE: runTrending,
 }
+
+const (
+	maxTrendingCoins      = 15
+	maxTrendingNFTs       = 7
+	maxTrendingCategories = 6
+)
 
 func init() {
 	rootCmd.AddCommand(trendingCmd)
@@ -45,7 +53,7 @@ func runTrending(cmd *cobra.Command, args []string) error {
 	coinHeaders := []string{"#", "Name", "Symbol", "Market Cap Rank"}
 	coinRows := make([][]string, 0, len(resp.Coins))
 	for i, c := range resp.Coins {
-		if i >= 15 {
+		if i >= maxTrendingCoins {
 			break
 		}
 		rank := "-"
@@ -69,7 +77,7 @@ func runTrending(cmd *cobra.Command, args []string) error {
 		nftHeaders := []string{"#", "Name", "Symbol", "Floor Price 24h Change"}
 		nftRows := make([][]string, 0, len(resp.NFTs))
 		for i, n := range resp.NFTs {
-			if i >= 7 {
+			if i >= maxTrendingNFTs {
 				break
 			}
 			nftRows = append(nftRows, []string{
@@ -90,7 +98,7 @@ func runTrending(cmd *cobra.Command, args []string) error {
 		catHeaders := []string{"#", "Name", "Market Cap 1h Change"}
 		catRows := make([][]string, 0, len(resp.Categories))
 		for i, cat := range resp.Categories {
-			if i >= 6 {
+			if i >= maxTrendingCategories {
 				break
 			}
 			catRows = append(catRows, []string{

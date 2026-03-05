@@ -6,7 +6,7 @@ builds:
   - binary: cg
     main: .
     ldflags:
-      - -s -w -X coingecko-cli/cmd.version={{.Version}}
+      - -s -w -X coingecko-cli/cmd.version={{.Version}} -X coingecko-cli/cmd.commit={{.Commit}} -X coingecko-cli/cmd.date={{.Date}}
     goos:
       - linux
       - darwin

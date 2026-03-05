@@ -6,7 +6,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var version = "dev"
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+)
 
 var rootCmd = &cobra.Command{
 	Use:     "cg",

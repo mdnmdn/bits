@@ -15,8 +15,13 @@ import (
 var topGainersLosersCmd = &cobra.Command{
 	Use:   "top-gainers-losers",
 	Short: "Show top gaining and losing coins (paid plans only)",
-	RunE:  runTopGainersLosers,
+	Example: `  cg top-gainers-losers
+  cg top-gainers-losers --losers --duration 7d
+  cg top-gainers-losers --top-coins 300 --export gainers.csv`,
+	RunE: runTopGainersLosers,
 }
+
+const maxGainersLosersDisplay = 30
 
 func init() {
 	topGainersLosersCmd.Flags().String("vs", "usd", "Target currency")
@@ -73,7 +78,7 @@ func runTopGainersLosers(cmd *cobra.Command, args []string) error {
 	headers := []string{"#", "Name", "Symbol", "Price", "Change %"}
 	rows := make([][]string, 0, len(coins))
 	for i, c := range coins {
-		if i >= 30 {
+		if i >= maxGainersLosersDisplay {
 			break
 		}
 		rows = append(rows, []string{
@@ -90,7 +95,7 @@ func runTopGainersLosers(cmd *cobra.Command, args []string) error {
 	if exportPath != "" {
 		csvRows := make([][]string, 0, len(rows))
 		for i, c := range coins {
-			if i >= 30 {
+			if i >= maxGainersLosersDisplay {
 				break
 			}
 			csvRows = append(csvRows, []string{

@@ -14,7 +14,9 @@ import (
 var authCmd = &cobra.Command{
 	Use:   "auth",
 	Short: "Configure API key and tier",
-	RunE:  runAuth,
+	Example: `  cg auth
+  CG_API_KEY=your-key CG_API_TIER=pro cg auth`,
+	RunE: runAuth,
 }
 
 func init() {
@@ -26,6 +28,10 @@ func init() {
 func runAuth(cmd *cobra.Command, args []string) error {
 	key, _ := cmd.Flags().GetString("key")
 	tier, _ := cmd.Flags().GetString("tier")
+
+	if cmd.Flags().Changed("key") {
+		warnf("Warning: --key flag exposes secrets in shell history. Prefer CG_API_KEY env var or interactive prompt.\n")
+	}
 
 	// Prefer env vars over flags to avoid shell history exposure
 	if key == "" {

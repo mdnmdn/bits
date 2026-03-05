@@ -12,6 +12,8 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+const defaultMarketsLimit = 50
+
 type marketsState int
 
 const (
@@ -53,7 +55,7 @@ func (m MarketsModel) Init() tea.Cmd {
 
 func (m MarketsModel) fetchCoins() tea.Cmd {
 	return func() tea.Msg {
-		coins, err := m.client.CoinMarkets(context.Background(), m.vs, 50, 1, "market_cap_desc", m.category)
+		coins, err := m.client.CoinMarkets(context.Background(), m.vs, defaultMarketsLimit, 1, "market_cap_desc", m.category)
 		return coinsLoadedMsg{coins: coins, err: err}
 	}
 }
@@ -131,7 +133,7 @@ func (m MarketsModel) View() string {
 	}
 
 	var b strings.Builder
-	b.WriteString(TitleStyle.Render("Markets — Top 50 by Market Cap"))
+	b.WriteString(TitleStyle.Render(fmt.Sprintf("Markets — Top %d by Market Cap", defaultMarketsLimit)))
 	b.WriteString("\n\n")
 
 	header := fmt.Sprintf("  %-4s %-20s %-6s %12s %12s %10s", "#", "Name", "Symbol", "Price", "Market Cap", "24h %")

@@ -15,7 +15,10 @@ import (
 var marketsCmd = &cobra.Command{
 	Use:   "markets",
 	Short: "List top coins by market cap",
-	RunE:  runMarkets,
+	Example: `  cg markets
+  cg markets --total 20 --vs eur
+  cg markets --category layer-1 --export coins.csv`,
+	RunE: runMarkets,
 }
 
 func init() {

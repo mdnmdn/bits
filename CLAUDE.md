@@ -25,7 +25,7 @@ go test -race ./...
 ```
 coingecko-cli/
 ├── main.go                        # Entry point
-├── cmd/                           # Cobra commands (auth, status, price, markets, search, trending, history, top_gainers_losers, tui, tui_trending)
+├── cmd/                           # Cobra commands (auth, status, price, markets, search, trending, history, top_gainers_losers, tui, version)
 ├── internal/
 │   ├── api/
 │   │   ├── client.go              # HTTP client, auth, error handling

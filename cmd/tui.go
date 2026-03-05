@@ -11,17 +11,39 @@ import (
 
 var tuiCmd = &cobra.Command{
 	Use:   "tui",
-	Short: "Interactive TUI for browsing markets",
-	RunE:  runTUI,
+	Short: "Interactive TUI for browsing crypto data",
+	Example: `  cg tui markets
+  cg tui trending
+  cg tui markets --category layer-1`,
+}
+
+var tuiMarketsCmd = &cobra.Command{
+	Use:   "markets",
+	Short: "Browse top coins by market cap",
+	Example: `  cg tui markets
+  cg tui markets --vs eur --category layer-1`,
+	RunE: runTUIMarkets,
+}
+
+var tuiTrendingCmd = &cobra.Command{
+	Use:   "trending",
+	Short: "Browse trending coins",
+	Example: `  cg tui trending
+  cg tui trending --vs eur`,
+	RunE: runTUITrending,
 }
 
 func init() {
-	tuiCmd.Flags().String("vs", "usd", "Target currency")
-	tuiCmd.Flags().String("category", "", "Filter by category")
+	tuiMarketsCmd.Flags().String("vs", "usd", "Target currency")
+	tuiMarketsCmd.Flags().String("category", "", "Filter by category")
+	tuiTrendingCmd.Flags().String("vs", "usd", "Target currency")
+
+	tuiCmd.AddCommand(tuiMarketsCmd)
+	tuiCmd.AddCommand(tuiTrendingCmd)
 	rootCmd.AddCommand(tuiCmd)
 }
 
-func runTUI(cmd *cobra.Command, args []string) error {
+func runTUIMarkets(cmd *cobra.Command, args []string) error {
 	vs, _ := cmd.Flags().GetString("vs")
 	category, _ := cmd.Flags().GetString("category")
 
@@ -31,6 +53,21 @@ func runTUI(cmd *cobra.Command, args []string) error {
 	}
 	client := api.NewClient(cfg)
 	model := tui.NewMarketsModel(client, vs, category)
+
+	p := tea.NewProgram(model, tea.WithAltScreen())
+	_, err = p.Run()
+	return err
+}
+
+func runTUITrending(cmd *cobra.Command, args []string) error {
+	vs, _ := cmd.Flags().GetString("vs")
+
+	cfg, err := config.Load()
+	if err != nil {
+		return err
+	}
+	client := api.NewClient(cfg)
+	model := tui.NewTrendingModel(client, vs)
 
 	p := tea.NewProgram(model, tea.WithAltScreen())
 	_, err = p.Run()
