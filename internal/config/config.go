@@ -11,11 +11,8 @@ import (
 )
 
 const (
-	TierDemo       = "demo"
-	TierAnalyst    = "analyst"
-	TierLite       = "lite"
-	TierPro        = "pro"
-	TierEnterprise = "enterprise"
+	TierDemo = "demo"
+	TierPaid = "paid"
 
 	demoBaseURL = "https://api.coingecko.com/api/v3"
 	proBaseURL  = "https://pro-api.coingecko.com/api/v3"
@@ -24,7 +21,7 @@ const (
 	proHeaderKey  = "x-cg-pro-api-key"
 )
 
-var ValidTiers = []string{TierDemo, TierAnalyst, TierLite, TierPro, TierEnterprise}
+var ValidTiers = []string{TierDemo, TierPaid}
 
 type Config struct {
 	APIKey string `mapstructure:"api_key"`
@@ -106,8 +103,7 @@ func (c *Config) ApplyAuth(req *http.Request) {
 }
 
 func (c *Config) IsPaid() bool {
-	tier := strings.ToLower(c.Tier)
-	return tier == TierAnalyst || tier == TierLite || tier == TierPro || tier == TierEnterprise
+	return strings.ToLower(c.Tier) == TierPaid
 }
 
 func IsValidTier(tier string) bool {

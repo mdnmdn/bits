@@ -16,13 +16,13 @@ var authCmd = &cobra.Command{
 	Use:   "auth",
 	Short: "Configure API key and tier",
 	Example: `  cg auth
-  CG_API_KEY=your-key CG_API_TIER=pro cg auth`,
+  CG_API_KEY=your-key CG_API_TIER=paid cg auth`,
 	RunE: runAuth,
 }
 
 func init() {
 	authCmd.Flags().String("key", "", "CoinGecko API key")
-	authCmd.Flags().String("tier", "", "API tier (demo, analyst, lite, pro, enterprise)")
+	authCmd.Flags().String("tier", "", "API tier (demo, paid)")
 	rootCmd.AddCommand(authCmd)
 }
 
@@ -59,11 +59,8 @@ func runAuth(cmd *cobra.Command, args []string) error {
 		if err := huh.NewSelect[string]().
 			Title("API Tier").
 			Options(
-				huh.NewOption("Demo (free)", config.TierDemo),
-				huh.NewOption("Analyst", config.TierAnalyst),
-				huh.NewOption("Lite", config.TierLite),
-				huh.NewOption("Pro", config.TierPro),
-				huh.NewOption("Enterprise", config.TierEnterprise),
+				huh.NewOption("Demo  — Free tier (public API)", config.TierDemo),
+				huh.NewOption("Paid  — Paid tier (pro API)", config.TierPaid),
 			).
 			Value(&tier).
 			Run(); err != nil {

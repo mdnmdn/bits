@@ -13,12 +13,11 @@ func TestIsValidTier(t *testing.T) {
 		valid bool
 	}{
 		{"demo", true},
-		{"analyst", true},
-		{"lite", true},
-		{"pro", true},
-		{"enterprise", true},
+		{"paid", true},
 		{"Demo", true},
-		{"PRO", true},
+		{"Paid", true},
+		{"PAID", true},
+		{"pro", false},
 		{"free", false},
 		{"", false},
 	}
@@ -33,10 +32,8 @@ func TestIsPaid(t *testing.T) {
 		paid bool
 	}{
 		{"demo", false},
-		{"analyst", true},
-		{"lite", true},
-		{"pro", true},
-		{"enterprise", true},
+		{"paid", true},
+		{"Paid", true},
 	}
 	for _, tt := range tests {
 		cfg := &Config{Tier: tt.tier}
@@ -48,8 +45,8 @@ func TestBaseURL(t *testing.T) {
 	demo := &Config{Tier: TierDemo}
 	assert.Equal(t, demoBaseURL, demo.BaseURL())
 
-	pro := &Config{Tier: TierPro}
-	assert.Equal(t, proBaseURL, pro.BaseURL())
+	paid := &Config{Tier: TierPaid}
+	assert.Equal(t, proBaseURL, paid.BaseURL())
 }
 
 func TestAuthHeader(t *testing.T) {
@@ -58,8 +55,8 @@ func TestAuthHeader(t *testing.T) {
 	assert.Equal(t, demoHeaderKey, key)
 	assert.Equal(t, "demo-key-123", val)
 
-	pro := &Config{APIKey: "pro-key-456", Tier: TierPro}
-	key, val = pro.AuthHeader()
+	paid := &Config{APIKey: "pro-key-456", Tier: TierPaid}
+	key, val = paid.AuthHeader()
 	assert.Equal(t, proHeaderKey, key)
 	assert.Equal(t, "pro-key-456", val)
 }

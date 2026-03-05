@@ -61,7 +61,7 @@ coingecko-cli/
 - **Test framework**: `testify/assert` + `net/http/httptest`
 - **API client tests**: use `httptest.NewServer` with `SetBaseURL`, never hit real API
 - **Config location**: `~/.config/coingecko-cli/config.yaml` (dir `0700`, file `0600`)
-- **Auth tiers**: demo, analyst, lite, pro, enterprise — demo uses `x-cg-demo-api-key` header and `api.coingecko.com`, paid tiers use `x-cg-pro-api-key` and `pro-api.coingecko.com`
+- **Auth tiers**: demo, paid — demo uses `x-cg-demo-api-key` header and `api.coingecko.com`, paid uses `x-cg-pro-api-key` and `pro-api.coingecko.com`
 - **Error model**: `ErrInvalidAPIKey` (401), `ErrPlanRestricted` (403), `ErrRateLimited` (429) — all user-friendly messages
 - **Paid-only endpoints**: use `requirePaid()` pre-flight check before API call
 - **Output modes**: global `-o json` / `--output json` flag on all data commands; JSON mode emits raw API structs to stdout

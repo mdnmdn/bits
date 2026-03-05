@@ -37,7 +37,7 @@ CG_API_KEY=YOUR_API_KEY CG_API_TIER=demo cg auth
 cg auth --key YOUR_API_KEY --tier demo
 ```
 
-Tiers: `demo`, `analyst`, `lite`, `pro`, `enterprise`
+Tiers: `demo`, `paid`
 
 ```sh
 # Verify configuration
