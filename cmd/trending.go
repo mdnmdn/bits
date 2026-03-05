@@ -14,21 +14,18 @@ var trendingCmd = &cobra.Command{
 	Use:   "trending",
 	Short: "Show trending coins, NFTs, and categories",
 	Example: `  cg trending
+  cg trending --show-max coins,nfts,categories
   cg trending -o json`,
 	RunE: runTrending,
 }
 
-const (
-	maxTrendingCoins      = 15
-	maxTrendingNFTs       = 7
-	maxTrendingCategories = 6
-)
-
 func init() {
+	trendingCmd.Flags().String("show-max", "", "Show max results for types: coins, nfts, categories (comma-separated, paid plans only)")
 	rootCmd.AddCommand(trendingCmd)
 }
 
 func runTrending(cmd *cobra.Command, args []string) error {
+	showMax, _ := cmd.Flags().GetString("show-max")
 	jsonOut := outputJSON(cmd)
 
 	if !jsonOut {
@@ -39,10 +36,15 @@ func runTrending(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+
+	if showMax != "" && !cfg.IsPaid() {
+		return fmt.Errorf("--show-max requires a paid plan — upgrade at https://www.coingecko.com/en/api/pricing")
+	}
+
 	client := api.NewClient(cfg)
 	ctx := cmd.Context()
 
-	resp, err := client.SearchTrending(ctx)
+	resp, err := client.SearchTrending(ctx, showMax)
 	if err != nil {
 		return err
 	}
@@ -57,9 +59,6 @@ func runTrending(cmd *cobra.Command, args []string) error {
 	coinHeaders := []string{"#", "Name", "Symbol", "Market Cap Rank"}
 	coinRows := make([][]string, 0, len(resp.Coins))
 	for i, c := range resp.Coins {
-		if i >= maxTrendingCoins {
-			break
-		}
 		rank := "-"
 		if c.Item.MarketCapRank > 0 {
 			rank = fmt.Sprintf("%d", c.Item.MarketCapRank)
@@ -81,9 +80,6 @@ func runTrending(cmd *cobra.Command, args []string) error {
 		nftHeaders := []string{"#", "Name", "Symbol", "Floor Price 24h Change"}
 		nftRows := make([][]string, 0, len(resp.NFTs))
 		for i, n := range resp.NFTs {
-			if i >= maxTrendingNFTs {
-				break
-			}
 			nftRows = append(nftRows, []string{
 				fmt.Sprintf("%d", i+1),
 				n.Name,
@@ -102,9 +98,6 @@ func runTrending(cmd *cobra.Command, args []string) error {
 		catHeaders := []string{"#", "Name", "Market Cap 1h Change"}
 		catRows := make([][]string, 0, len(resp.Categories))
 		for i, cat := range resp.Categories {
-			if i >= maxTrendingCategories {
-				break
-			}
 			catRows = append(catRows, []string{
 				fmt.Sprintf("%d", i+1),
 				cat.Name,

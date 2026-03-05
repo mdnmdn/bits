@@ -48,9 +48,14 @@ func (c *Client) Search(ctx context.Context, query string) (*SearchResponse, err
 
 // SearchTrending fetches trending coins, NFTs, and categories.
 // https://docs.coingecko.com/v3.0.1/reference/trending-search
-func (c *Client) SearchTrending(ctx context.Context) (*TrendingResponse, error) {
+func (c *Client) SearchTrending(ctx context.Context, showMax string) (*TrendingResponse, error) {
+	path := "/search/trending"
+	if showMax != "" {
+		params := url.Values{"show_max": {showMax}}
+		path += "?" + params.Encode()
+	}
 	var result TrendingResponse
-	err := c.get(ctx, "/search/trending", &result)
+	err := c.get(ctx, path, &result)
 	return &result, err
 }
 
