@@ -1,6 +1,9 @@
 package display
 
-import "fmt"
+import (
+	"fmt"
+	"os"
+)
 
 // Brand color: CoinGecko green #4BCC00 → RGB(75, 204, 0)
 const (
@@ -17,28 +20,29 @@ var asciiLogo = []string{
 	"  ╚═════╝ ╚═════╝ ╚═╝╚═╝  ╚═══╝ ╚═════╝ ╚══════╝ ╚═════╝╚═╝  ╚═╝ ╚═════╝ ",
 }
 
-// PrintLogo prints the full ASCII art CoinGecko logo in brand green.
+// PrintLogo prints the full ASCII art CoinGecko logo in brand green to stderr.
 func PrintLogo() {
 	if !colorEnabled() {
 		for _, line := range asciiLogo {
-			fmt.Println(line)
+			fmt.Fprintln(os.Stderr, line)
 		}
-		fmt.Println()
+		fmt.Fprintln(os.Stderr)
 		return
 	}
-	fmt.Println()
+	fmt.Fprintln(os.Stderr)
 	for _, line := range asciiLogo {
-		fmt.Printf("%s%s%s\n", brandGreen, line, colorReset)
+		fmt.Fprintf(os.Stderr, "%s%s%s\n", brandGreen, line, colorReset)
 	}
-	fmt.Println()
+	fmt.Fprintln(os.Stderr)
 }
 
-// PrintBanner prints a compact one-line CoinGecko banner.
+// PrintBanner prints a compact one-line CoinGecko banner to stderr.
+// Writing to stderr keeps stdout clean for piped data.
 func PrintBanner() {
 	if !colorEnabled() {
-		fmt.Print("\n  CoinGecko CLI  —  Real-time crypto data\n\n")
+		fmt.Fprint(os.Stderr, "\n  CoinGecko CLI  —  Real-time crypto data\n\n")
 		return
 	}
-	fmt.Printf("\n  %s◆ CoinGecko%s %sCLI  —  Real-time crypto data%s\n\n",
+	fmt.Fprintf(os.Stderr, "\n  %s◆ CoinGecko%s %sCLI  —  Real-time crypto data%s\n\n",
 		brandGreen, colorReset, dimColor, colorReset)
 }
