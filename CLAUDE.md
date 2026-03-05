@@ -55,7 +55,7 @@ coingecko-cli/
 
 ## Conventions
 
-- **Go version**: 1.25 (pinned in go.mod and CI)
+- **Go version**: 1.26 (pinned in go.mod and CI)
 - **Binary name**: `cg`
 - **Module path**: `coingecko-cli` (local; update when GitHub repo path is finalized)
 - **Test framework**: `testify/assert` + `net/http/httptest`

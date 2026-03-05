@@ -9,7 +9,6 @@ import (
 	"coingecko-cli/internal/api"
 	"coingecko-cli/internal/config"
 	"coingecko-cli/internal/display"
-	"coingecko-cli/internal/export"
 
 	"github.com/spf13/cobra"
 )
@@ -160,10 +159,9 @@ func historyOHLC(ctx context.Context, client *api.Client, coinID, vs string, day
 				fmt.Sprintf("%.8f", d[4]),
 			})
 		}
-		if err := export.ExportCSV(exportPath, headers, csvRows); err != nil {
+		if err := exportCSV(exportPath, headers, csvRows); err != nil {
 			return err
 		}
-		warnf("Exported to %s\n", exportPath)
 	}
 	return nil
 }
@@ -221,10 +219,9 @@ func historyRange(ctx context.Context, client *api.Client, coinID, vs, fromStr, 
 				fmt.Sprintf("%.8f", p[1]),
 			})
 		}
-		if err := export.ExportCSV(exportPath, headers, csvRows); err != nil {
+		if err := exportCSV(exportPath, headers, csvRows); err != nil {
 			return err
 		}
-		warnf("Exported to %s\n", exportPath)
 	}
 	return nil
 }

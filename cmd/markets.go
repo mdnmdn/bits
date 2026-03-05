@@ -7,7 +7,6 @@ import (
 	"coingecko-cli/internal/api"
 	"coingecko-cli/internal/config"
 	"coingecko-cli/internal/display"
-	"coingecko-cli/internal/export"
 
 	"github.com/spf13/cobra"
 )
@@ -102,10 +101,9 @@ func runMarkets(cmd *cobra.Command, args []string) error {
 				fmt.Sprintf("%.2f", c.PriceChangePercentage24h),
 			}
 		}
-		if err := export.ExportCSV(exportPath, headers, plainRows); err != nil {
+		if err := exportCSV(exportPath, headers, plainRows); err != nil {
 			return err
 		}
-		warnf("Exported to %s\n", exportPath)
 	}
 
 	return nil
