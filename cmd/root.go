@@ -3,6 +3,7 @@ package cmd
 import (
 	"os"
 
+	"github.com/coingecko/coingecko-cli/internal/display"
 	"github.com/spf13/cobra"
 )
 
@@ -17,6 +18,10 @@ var rootCmd = &cobra.Command{
 	Short:   "CoinGecko CLI — cryptocurrency data at your fingertips",
 	Long:    "A command-line tool for accessing CoinGecko cryptocurrency market data.",
 	Version: version,
+	Run: func(cmd *cobra.Command, args []string) {
+		display.PrintLogo()
+		cmd.Help()
+	},
 }
 
 func init() {
