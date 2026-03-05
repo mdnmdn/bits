@@ -7,6 +7,8 @@ import (
 	"strings"
 )
 
+// SimplePrice fetches current prices for the given coin IDs.
+// https://docs.coingecko.com/v3.0.1/reference/simple-price
 func (c *Client) SimplePrice(ctx context.Context, ids []string, vsCurrency string) (PriceResponse, error) {
 	params := url.Values{
 		"ids":                 {strings.Join(ids, ",")},
@@ -18,6 +20,8 @@ func (c *Client) SimplePrice(ctx context.Context, ids []string, vsCurrency strin
 	return result, err
 }
 
+// CoinMarkets fetches a paginated list of coins with market data.
+// https://docs.coingecko.com/v3.0.1/reference/coins-markets
 func (c *Client) CoinMarkets(ctx context.Context, vsCurrency string, perPage, page int, order, category string) ([]MarketCoin, error) {
 	params := url.Values{
 		"vs_currency": {vsCurrency},
@@ -33,6 +37,8 @@ func (c *Client) CoinMarkets(ctx context.Context, vsCurrency string, perPage, pa
 	return result, err
 }
 
+// Search queries the CoinGecko search endpoint.
+// https://docs.coingecko.com/v3.0.1/reference/search-data
 func (c *Client) Search(ctx context.Context, query string) (*SearchResponse, error) {
 	params := url.Values{"query": {query}}
 	var result SearchResponse
@@ -40,12 +46,16 @@ func (c *Client) Search(ctx context.Context, query string) (*SearchResponse, err
 	return &result, err
 }
 
+// SearchTrending fetches trending coins, NFTs, and categories.
+// https://docs.coingecko.com/v3.0.1/reference/trending-search
 func (c *Client) SearchTrending(ctx context.Context) (*TrendingResponse, error) {
 	var result TrendingResponse
 	err := c.get(ctx, "/search/trending", &result)
 	return &result, err
 }
 
+// CoinHistory fetches historical data for a coin on a specific date (DD-MM-YYYY).
+// https://docs.coingecko.com/v3.0.1/reference/coins-id-history
 func (c *Client) CoinHistory(ctx context.Context, id, date string) (*HistoricalData, error) {
 	params := url.Values{"date": {date}, "localization": {"false"}}
 	var result HistoricalData
@@ -53,6 +63,8 @@ func (c *Client) CoinHistory(ctx context.Context, id, date string) (*HistoricalD
 	return &result, err
 }
 
+// CoinOHLC fetches OHLC data. Valid days: 1, 7, 14, 30, 90, 180, 365.
+// https://docs.coingecko.com/v3.0.1/reference/coins-id-ohlc
 func (c *Client) CoinOHLC(ctx context.Context, id, vsCurrency string, days int) (OHLCData, error) {
 	params := url.Values{
 		"vs_currency": {vsCurrency},
@@ -63,6 +75,8 @@ func (c *Client) CoinOHLC(ctx context.Context, id, vsCurrency string, days int) 
 	return result, err
 }
 
+// CoinMarketChartRange fetches price data for a date range (UNIX timestamps in seconds).
+// https://docs.coingecko.com/v3.0.1/reference/coins-id-market-chart-range
 func (c *Client) CoinMarketChartRange(ctx context.Context, id, vsCurrency string, from, to int64) (*MarketChartResponse, error) {
 	params := url.Values{
 		"vs_currency": {vsCurrency},
@@ -74,6 +88,8 @@ func (c *Client) CoinMarketChartRange(ctx context.Context, id, vsCurrency string
 	return &result, err
 }
 
+// TopGainersLosers fetches top gaining and losing coins (paid plans only).
+// https://docs.coingecko.com/reference/coins-top-gainers-losers
 func (c *Client) TopGainersLosers(ctx context.Context, vsCurrency, duration, topCoins string) (*GainersLosersResponse, error) {
 	if err := c.requirePaid(); err != nil {
 		return nil, err
@@ -88,6 +104,8 @@ func (c *Client) TopGainersLosers(ctx context.Context, vsCurrency, duration, top
 	return &result, err
 }
 
+// CoinDetail fetches detailed coin data (used in TUI detail view).
+// https://docs.coingecko.com/v3.0.1/reference/coins-id
 func (c *Client) CoinDetail(ctx context.Context, id string) (*CoinDetail, error) {
 	params := url.Values{
 		"localization":   {"false"},
