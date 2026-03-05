@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/coingecko/coingecko-cli/internal/api"
+	"github.com/coingecko/coingecko-cli/internal/display"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -146,8 +147,8 @@ func (m TrendingModel) View() string {
 		}
 		row := fmt.Sprintf("  %-4d %-25s %-8s %15s",
 			i+1,
-			truncate(c.Name, 25),
-			c.Symbol,
+			truncate(display.SanitizeCell(c.Name), 25),
+			display.SanitizeCell(c.Symbol),
 			rank,
 		)
 		if i == m.cursor {

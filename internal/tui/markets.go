@@ -161,8 +161,8 @@ func (m MarketsModel) View() string {
 
 		row := fmt.Sprintf("  %-4d %-20s %-6s %12s %12s %10s",
 			c.MarketCapRank,
-			truncate(c.Name, 20),
-			strings.ToUpper(c.Symbol),
+			truncate(display.SanitizeCell(c.Name), 20),
+			strings.ToUpper(display.SanitizeCell(c.Symbol)),
 			display.FormatPrice(c.CurrentPrice),
 			display.FormatLargeNumber(c.MarketCap),
 			pctStr,

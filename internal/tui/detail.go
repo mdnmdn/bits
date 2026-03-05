@@ -124,7 +124,7 @@ func (m DetailModel) View() string {
 	}
 
 	var left strings.Builder
-	left.WriteString(TitleStyle.Render(fmt.Sprintf("%s (%s)", m.coin.Name, strings.ToUpper(m.coin.Symbol))))
+	left.WriteString(TitleStyle.Render(fmt.Sprintf("%s (%s)", display.SanitizeCell(m.coin.Name), strings.ToUpper(display.SanitizeCell(m.coin.Symbol)))))
 	left.WriteString("\n\n")
 
 	if md != nil {
