@@ -7,7 +7,6 @@ import (
 	"io"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/coingecko/coingecko-cli/internal/config"
@@ -39,19 +38,6 @@ func (e *apiErrorResponse) extractMessage() string {
 		return e.Error
 	}
 	return ""
-}
-
-// planRestricted keywords in CoinGecko error messages.
-var planKeywords = []string{"plan", "tier", "upgrade", "access", "restrict", "subscribe", "permission"}
-
-func isPlanRestricted(msg string) bool {
-	lower := strings.ToLower(msg)
-	for _, kw := range planKeywords {
-		if strings.Contains(lower, kw) {
-			return true
-		}
-	}
-	return false
 }
 
 type Client struct {
@@ -120,22 +106,17 @@ func (c *Client) handleError(resp *http.Response) error {
 	msg := apiErr.extractMessage()
 
 	switch resp.StatusCode {
-	case http.StatusUnauthorized, http.StatusForbidden:
-		// CoinGecko sometimes returns 401 for plan-restricted endpoints,
-		// so classify by message content rather than status code alone.
-		if msg != "" && isPlanRestricted(msg) {
-			return fmt.Errorf("%w: %s", ErrPlanRestricted, msg)
-		}
-		if resp.StatusCode == http.StatusForbidden {
-			if msg != "" {
-				return fmt.Errorf("%w: %s", ErrPlanRestricted, msg)
-			}
-			return ErrPlanRestricted
-		}
+	case http.StatusUnauthorized:
 		if msg != "" {
 			return fmt.Errorf("%w: %s", ErrInvalidAPIKey, msg)
 		}
 		return ErrInvalidAPIKey
+
+	case http.StatusForbidden:
+		if msg != "" {
+			return fmt.Errorf("%w: %s", ErrPlanRestricted, msg)
+		}
+		return ErrPlanRestricted
 
 	case http.StatusTooManyRequests:
 		if retry := resp.Header.Get("Retry-After"); retry != "" {

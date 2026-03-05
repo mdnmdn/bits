@@ -77,19 +77,20 @@ func TestError401EmptyBody(t *testing.T) {
 	assert.ErrorIs(t, err, ErrInvalidAPIKey)
 }
 
-func TestError401PlanRestricted(t *testing.T) {
-	// CoinGecko sometimes returns 401 for plan-restricted endpoints
+func TestError401WithAPIMessage(t *testing.T) {
+	// 401 always maps to ErrInvalidAPIKey — the API message is passed through
+	// so the user sees the real reason (which may mention plan restrictions)
 	c, srv := testClient(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(401)
-		w.Write([]byte(`{"status":{"error_code":401,"error_message":"You need to upgrade to a paid plan to access this endpoint"}}`))
+		w.Write([]byte(`{"status":{"error_code":401,"error_message":"You need to upgrade to a paid plan"}}`))
 	})
 	defer srv.Close()
 
 	var result map[string]any
 	err := c.get(context.Background(), "/test", &result)
 	require.Error(t, err)
-	assert.ErrorIs(t, err, ErrPlanRestricted)
-	assert.Contains(t, err.Error(), "upgrade")
+	assert.ErrorIs(t, err, ErrInvalidAPIKey)
+	assert.Contains(t, err.Error(), "You need to upgrade to a paid plan")
 }
 
 func TestError403(t *testing.T) {
@@ -181,11 +182,3 @@ func TestRequirePaid(t *testing.T) {
 	assert.NoError(t, c2.requirePaid())
 }
 
-func TestIsPlanRestricted(t *testing.T) {
-	assert.True(t, isPlanRestricted("You need to upgrade your plan"))
-	assert.True(t, isPlanRestricted("Access restricted for this tier"))
-	assert.True(t, isPlanRestricted("Please subscribe to use this endpoint"))
-	assert.True(t, isPlanRestricted("Permission denied for your plan"))
-	assert.False(t, isPlanRestricted("Invalid API key"))
-	assert.False(t, isPlanRestricted(""))
-}
