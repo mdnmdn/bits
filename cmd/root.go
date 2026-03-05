@@ -15,9 +15,18 @@ var rootCmd = &cobra.Command{
 	Version: version,
 }
 
+func init() {
+	rootCmd.PersistentFlags().StringP("output", "o", "table", "Output format (table, json)")
+}
+
 func Execute() {
 	rootCmd.SilenceUsage = true
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
 	}
+}
+
+func outputJSON(cmd *cobra.Command) bool {
+	o, _ := cmd.Flags().GetString("output")
+	return o == "json"
 }

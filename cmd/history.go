@@ -43,6 +43,7 @@ func runHistory(cmd *cobra.Command, args []string) error {
 	toStr, _ := cmd.Flags().GetString("to")
 	vs, _ := cmd.Flags().GetString("vs")
 	exportPath, _ := cmd.Flags().GetString("export")
+	jsonOut := outputJSON(cmd)
 
 	modes := 0
 	if dateStr != "" {
@@ -67,15 +68,15 @@ func runHistory(cmd *cobra.Command, args []string) error {
 
 	switch {
 	case dateStr != "":
-		return historyDate(ctx, client, coinID, dateStr, vs)
+		return historyDate(ctx, client, coinID, dateStr, vs, jsonOut)
 	case days > 0:
-		return historyOHLC(ctx, client, coinID, vs, days, exportPath)
+		return historyOHLC(ctx, client, coinID, vs, days, exportPath, jsonOut)
 	default:
-		return historyRange(ctx, client, coinID, vs, fromStr, toStr, exportPath)
+		return historyRange(ctx, client, coinID, vs, fromStr, toStr, exportPath, jsonOut)
 	}
 }
 
-func historyDate(ctx context.Context, client *api.Client, coinID, dateStr, vs string) error {
+func historyDate(ctx context.Context, client *api.Client, coinID, dateStr, vs string, jsonOut bool) error {
 	t, err := time.Parse("2006-01-02", dateStr)
 	if err != nil {
 		return fmt.Errorf("invalid date format, use YYYY-MM-DD: %w", err)
@@ -91,6 +92,11 @@ func historyDate(ctx context.Context, client *api.Client, coinID, dateStr, vs st
 		return fmt.Errorf("no market data available for %s on %s", coinID, dateStr)
 	}
 
+	if jsonOut {
+		printJSONRaw(data)
+		return nil
+	}
+
 	headers := []string{"Metric", "Value"}
 	rows := [][]string{
 		{"Coin", fmt.Sprintf("%s (%s)", data.Name, strings.ToUpper(data.Symbol))},
@@ -103,10 +109,15 @@ func historyDate(ctx context.Context, client *api.Client, coinID, dateStr, vs st
 	return nil
 }
 
-func historyOHLC(ctx context.Context, client *api.Client, coinID, vs string, days int, exportPath string) error {
+func historyOHLC(ctx context.Context, client *api.Client, coinID, vs string, days int, exportPath string, jsonOut bool) error {
 	data, err := client.CoinOHLC(ctx, coinID, vs, days)
 	if err != nil {
 		return err
+	}
+
+	if jsonOut {
+		printJSONRaw(data)
+		return nil
 	}
 
 	headers := []string{"Date", "Open", "High", "Low", "Close"}
@@ -145,12 +156,12 @@ func historyOHLC(ctx context.Context, client *api.Client, coinID, vs string, day
 		if err := export.ExportCSV(exportPath, headers, csvRows); err != nil {
 			return err
 		}
-		fmt.Printf("Exported to %s\n", exportPath)
+		warnf("Exported to %s\n", exportPath)
 	}
 	return nil
 }
 
-func historyRange(ctx context.Context, client *api.Client, coinID, vs, fromStr, toStr, exportPath string) error {
+func historyRange(ctx context.Context, client *api.Client, coinID, vs, fromStr, toStr, exportPath string, jsonOut bool) error {
 	if fromStr == "" || toStr == "" {
 		return fmt.Errorf("both --from and --to are required for range mode")
 	}
@@ -170,6 +181,11 @@ func historyRange(ctx context.Context, client *api.Client, coinID, vs, fromStr, 
 	data, err := client.CoinMarketChartRange(ctx, coinID, vs, from, to)
 	if err != nil {
 		return err
+	}
+
+	if jsonOut {
+		printJSONRaw(data)
+		return nil
 	}
 
 	headers := []string{"Date", "Price"}
@@ -202,7 +218,7 @@ func historyRange(ctx context.Context, client *api.Client, coinID, vs, fromStr, 
 		if err := export.ExportCSV(exportPath, headers, csvRows); err != nil {
 			return err
 		}
-		fmt.Printf("Exported to %s\n", exportPath)
+		warnf("Exported to %s\n", exportPath)
 	}
 	return nil
 }

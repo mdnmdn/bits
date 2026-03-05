@@ -24,6 +24,15 @@ func runStatus(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	if outputJSON(cmd) {
+		printJSONRaw(map[string]string{
+			"tier":     cfg.Tier,
+			"api_key":  cfg.MaskedKey(),
+			"base_url": cfg.BaseURL(),
+		})
+		return nil
+	}
+
 	fmt.Printf("Tier:     %s\n", cfg.Tier)
 	fmt.Printf("API Key:  %s\n", cfg.MaskedKey())
 	fmt.Printf("Base URL: %s\n", cfg.BaseURL())

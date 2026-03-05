@@ -34,6 +34,7 @@ func runMarkets(cmd *cobra.Command, args []string) error {
 	order, _ := cmd.Flags().GetString("order")
 	category, _ := cmd.Flags().GetString("category")
 	exportPath, _ := cmd.Flags().GetString("export")
+	jsonOut := outputJSON(cmd)
 
 	cfg, err := config.Load()
 	if err != nil {
@@ -60,6 +61,11 @@ func runMarkets(cmd *cobra.Command, args []string) error {
 		if len(coins) < fetch {
 			break
 		}
+	}
+
+	if jsonOut {
+		printJSONRaw(allCoins)
+		return nil
 	}
 
 	headers := []string{"Rank", "Name", "Symbol", "Price", "Market Cap", "Volume", "24h Change"}
@@ -94,7 +100,7 @@ func runMarkets(cmd *cobra.Command, args []string) error {
 		if err := export.ExportCSV(exportPath, headers, plainRows); err != nil {
 			return err
 		}
-		fmt.Printf("Exported to %s\n", exportPath)
+		warnf("Exported to %s\n", exportPath)
 	}
 
 	return nil

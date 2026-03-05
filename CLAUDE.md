@@ -64,6 +64,8 @@ coingecko-cli/
 - **Auth tiers**: demo, analyst, lite, pro, enterprise — demo uses `x-cg-demo-api-key` header and `api.coingecko.com`, paid tiers use `x-cg-pro-api-key` and `pro-api.coingecko.com`
 - **Error model**: `ErrInvalidAPIKey` (401), `ErrPlanRestricted` (403), `ErrRateLimited` (429) — all user-friendly messages
 - **Paid-only endpoints**: use `requirePaid()` pre-flight check before API call
+- **Output modes**: global `-o json` / `--output json` flag on all data commands; JSON mode emits raw API structs to stdout
+- **Stream contract**: stdout = data only, stderr = diagnostics/warnings (use `warnf()` helper in `cmd/output.go`)
 - **Color output**: respects `NO_COLOR` env var and TTY detection — never hardcode ANSI in output that may be piped
 - **Formatting**: all code must be `gofmt`-clean
 - **Commits**: conventional commit style (`feat:`, `fix:`, `chore:`)

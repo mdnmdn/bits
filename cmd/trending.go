@@ -22,6 +22,8 @@ func init() {
 }
 
 func runTrending(cmd *cobra.Command, args []string) error {
+	jsonOut := outputJSON(cmd)
+
 	cfg, err := config.Load()
 	if err != nil {
 		return err
@@ -32,6 +34,11 @@ func runTrending(cmd *cobra.Command, args []string) error {
 	resp, err := client.SearchTrending(ctx)
 	if err != nil {
 		return err
+	}
+
+	if jsonOut {
+		printJSONRaw(resp)
+		return nil
 	}
 
 	// Trending Coins

@@ -44,6 +44,16 @@ Tiers: `demo`, `analyst`, `lite`, `pro`, `enterprise`
 cg status
 ```
 
+## Global Flags
+
+```sh
+# JSON output (for scripting and automation)
+cg price --ids bitcoin -o json
+cg markets --total 10 -o json | jq '.[0].name'
+```
+
+All data commands support `-o json` / `--output json` for machine-readable output. Diagnostics and warnings are written to stderr, so stdout is always clean data.
+
 ## Commands
 
 ### Price lookup

@@ -28,6 +28,7 @@ func runSearch(cmd *cobra.Command, args []string) error {
 	if limit < 0 {
 		limit = 0
 	}
+	jsonOut := outputJSON(cmd)
 
 	cfg, err := config.Load()
 	if err != nil {
@@ -44,6 +45,11 @@ func runSearch(cmd *cobra.Command, args []string) error {
 	coins := resp.Coins
 	if len(coins) > limit {
 		coins = coins[:limit]
+	}
+
+	if jsonOut {
+		printJSONRaw(coins)
+		return nil
 	}
 
 	headers := []string{"Rank", "Name", "Symbol", "ID"}

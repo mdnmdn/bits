@@ -30,6 +30,7 @@ func runPrice(cmd *cobra.Command, args []string) error {
 	idsStr, _ := cmd.Flags().GetString("ids")
 	symbolsStr, _ := cmd.Flags().GetString("symbols")
 	vs, _ := cmd.Flags().GetString("vs")
+	jsonOut := outputJSON(cmd)
 
 	if idsStr == "" && symbolsStr == "" {
 		return fmt.Errorf("provide --ids or --symbols")
@@ -63,6 +64,11 @@ func runPrice(cmd *cobra.Command, args []string) error {
 	prices, err := client.SimplePrice(ctx, ids, vs)
 	if err != nil {
 		return err
+	}
+
+	if jsonOut {
+		printJSONRaw(prices)
+		return nil
 	}
 
 	headers := []string{"Coin", "Price", "24h Change"}
@@ -103,7 +109,7 @@ func resolveSymbols(ctx context.Context, client *api.Client, symbols []string) (
 			}
 		}
 		if best == nil {
-			fmt.Printf("Warning: no exact match for symbol %q, skipping\n", sym)
+			warnf("Warning: no exact match for symbol %q, skipping\n", sym)
 			continue
 		}
 		ids = append(ids, best.ID)
