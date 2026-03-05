@@ -50,7 +50,7 @@ func Load() (*Config, error) {
 	v.SetDefault("tier", TierDemo)
 
 	if err := v.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+		if os.IsNotExist(err) {
 			return &Config{Tier: TierDemo}, nil
 		}
 		return nil, fmt.Errorf("failed to read config: %w", err)

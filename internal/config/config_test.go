@@ -77,6 +77,15 @@ func TestApplyAuth(t *testing.T) {
 	assert.Empty(t, req2.Header.Get(demoHeaderKey))
 }
 
+func TestLoadMissingConfigReturnsDefault(t *testing.T) {
+	// Point HOME to a temp dir so os.UserConfigDir() finds no config
+	t.Setenv("HOME", t.TempDir())
+	cfg, err := Load()
+	assert.NoError(t, err)
+	assert.Equal(t, TierDemo, cfg.Tier)
+	assert.Empty(t, cfg.APIKey)
+}
+
 func TestMaskedKey(t *testing.T) {
 	tests := []struct {
 		key    string
