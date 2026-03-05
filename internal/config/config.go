@@ -46,9 +46,7 @@ func Load() (*Config, error) {
 	}
 
 	v := viper.New()
-	v.SetConfigName("config")
-	v.SetConfigType("yaml")
-	v.AddConfigPath(dir)
+	v.SetConfigFile(filepath.Join(dir, "config.yaml"))
 	v.SetDefault("tier", TierDemo)
 
 	if err := v.ReadInConfig(); err != nil {

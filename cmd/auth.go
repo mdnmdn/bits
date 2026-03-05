@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"coingecko-cli/internal/config"
+	"coingecko-cli/internal/display"
 
 	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"
@@ -26,6 +27,8 @@ func init() {
 }
 
 func runAuth(cmd *cobra.Command, args []string) error {
+	display.PrintBanner()
+
 	key, _ := cmd.Flags().GetString("key")
 	tier, _ := cmd.Flags().GetString("tier")
 
@@ -78,6 +81,6 @@ func runAuth(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("saving config: %w", err)
 	}
 
-	fmt.Printf("Saved! Tier: %s, Key: %s\n", cfg.Tier, cfg.MaskedKey())
+	warnf("Saved! Tier: %s, Key: %s\n", cfg.Tier, cfg.MaskedKey())
 	return nil
 }

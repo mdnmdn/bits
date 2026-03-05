@@ -50,6 +50,10 @@ func runHistory(cmd *cobra.Command, args []string) error {
 	exportPath, _ := cmd.Flags().GetString("export")
 	jsonOut := outputJSON(cmd)
 
+	if !jsonOut {
+		display.PrintBanner()
+	}
+
 	modes := 0
 	if dateStr != "" {
 		modes++

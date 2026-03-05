@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"coingecko-cli/internal/config"
+	"coingecko-cli/internal/display"
 
 	"github.com/spf13/cobra"
 )
@@ -32,6 +33,7 @@ func runStatus(cmd *cobra.Command, args []string) error {
 		})
 	}
 
+	display.PrintBanner()
 	fmt.Printf("Tier:     %s\n", cfg.Tier)
 	fmt.Printf("API Key:  %s\n", cfg.MaskedKey())
 	fmt.Printf("Base URL: %s\n", cfg.BaseURL())

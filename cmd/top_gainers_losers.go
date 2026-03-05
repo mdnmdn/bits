@@ -40,6 +40,10 @@ func runTopGainersLosers(cmd *cobra.Command, args []string) error {
 	exportPath, _ := cmd.Flags().GetString("export")
 	jsonOut := outputJSON(cmd)
 
+	if !jsonOut {
+		display.PrintBanner()
+	}
+
 	validDurations := map[string]bool{"1h": true, "24h": true, "7d": true, "14d": true, "30d": true, "60d": true, "1y": true}
 	if !validDurations[duration] {
 		return fmt.Errorf("invalid duration %q — must be one of: 1h, 24h, 7d, 14d, 30d, 60d, 1y", duration)

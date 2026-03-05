@@ -31,6 +31,10 @@ func runSearch(cmd *cobra.Command, args []string) error {
 	}
 	jsonOut := outputJSON(cmd)
 
+	if !jsonOut {
+		display.PrintBanner()
+	}
+
 	cfg, err := config.Load()
 	if err != nil {
 		return err

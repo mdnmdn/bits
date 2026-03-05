@@ -36,6 +36,10 @@ func runPrice(cmd *cobra.Command, args []string) error {
 	jsonOut := outputJSON(cmd)
 	ctx := cmd.Context()
 
+	if !jsonOut {
+		display.PrintBanner()
+	}
+
 	if idsStr == "" && symbolsStr == "" {
 		return fmt.Errorf("provide --ids or --symbols")
 	}

@@ -38,6 +38,10 @@ func runMarkets(cmd *cobra.Command, args []string) error {
 	exportPath, _ := cmd.Flags().GetString("export")
 	jsonOut := outputJSON(cmd)
 
+	if !jsonOut {
+		display.PrintBanner()
+	}
+
 	cfg, err := config.Load()
 	if err != nil {
 		return err
