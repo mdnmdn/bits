@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"coingecko-cli/internal/config"
@@ -25,6 +26,14 @@ func init() {
 func runAuth(cmd *cobra.Command, args []string) error {
 	key, _ := cmd.Flags().GetString("key")
 	tier, _ := cmd.Flags().GetString("tier")
+
+	// Prefer env vars over flags to avoid shell history exposure
+	if key == "" {
+		key = os.Getenv("CG_API_KEY")
+	}
+	if tier == "" {
+		tier = os.Getenv("CG_API_TIER")
+	}
 
 	if key == "" {
 		if err := huh.NewInput().

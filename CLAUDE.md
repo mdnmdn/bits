@@ -69,6 +69,7 @@ coingecko-cli/
 - **Commits**: conventional commit style (`feat:`, `fix:`, `chore:`)
 - **TUI framework**: Bubble Tea (bubbletea) + Lip Gloss (lipgloss) + Bubbles + ntcharts
 - **Interactive prompts**: `huh` (Charm ecosystem) — API key input uses password echo mode
+- **Auth key input priority**: env var `CG_API_KEY` > `--key` flag > interactive prompt — env vars are preferred to avoid shell history/process listing exposure
 
 ## Key Design Decisions
 
