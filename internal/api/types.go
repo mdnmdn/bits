@@ -1,5 +1,7 @@
 package api
 
+import "encoding/json"
+
 // Simple price response: map[coinID]map[field]value
 // Fields include currency price (float64) and 24h change (float64).
 type PriceResponse map[string]map[string]float64
@@ -92,14 +94,46 @@ type GainersLosersResponse struct {
 	TopLosers  []GainerCoin `json:"top_losers"`
 }
 
+// GainerCoin uses dynamic JSON keys for price fields based on the vs_currency
+// parameter. The API returns {currency} and {currency}_24h_change as keys
+// (e.g. "usd", "usd_24h_change" or "eur", "eur_24h_change").
 type GainerCoin struct {
-	ID                       string  `json:"id"`
-	Symbol                   string  `json:"symbol"`
-	Name                     string  `json:"name"`
-	Image                    string  `json:"image"`
-	MarketCapRank            int     `json:"market_cap_rank"`
-	USD                      float64 `json:"usd"`
-	USDPriceChangePercentage float64 `json:"usd_24h_change"`
+	ID            string                 `json:"id"`
+	Symbol        string                 `json:"symbol"`
+	Name          string                 `json:"name"`
+	Image         string                 `json:"image"`
+	MarketCapRank int                    `json:"market_cap_rank"`
+	Extra         map[string]interface{} `json:"-"`
+}
+
+// Price returns the price in the given vs currency.
+func (g *GainerCoin) Price(vs string) float64 {
+	v, _ := g.Extra[vs].(float64)
+	return v
+}
+
+// PriceChange returns the 24h price change percentage in the given vs currency.
+func (g *GainerCoin) PriceChange(vs string) float64 {
+	v, _ := g.Extra[vs+"_24h_change"].(float64)
+	return v
+}
+
+func (g *GainerCoin) UnmarshalJSON(data []byte) error {
+	// Unmarshal known fields via an alias to avoid recursion.
+	type Alias GainerCoin
+	var alias Alias
+	if err := json.Unmarshal(data, &alias); err != nil {
+		return err
+	}
+	*g = GainerCoin(alias)
+
+	// Capture all fields into a flat map to extract dynamic currency keys.
+	var raw map[string]interface{}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	g.Extra = raw
+	return nil
 }
 
 type CoinDetail struct {

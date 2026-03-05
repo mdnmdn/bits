@@ -25,7 +25,7 @@ const maxGainersLosersDisplay = 30
 func init() {
 	topGainersLosersCmd.Flags().String("vs", "usd", "Target currency")
 	topGainersLosersCmd.Flags().String("duration", "24h", "Duration (1h, 24h, 7d, 14d, 30d, 60d, 1y)")
-	topGainersLosersCmd.Flags().Int("top-coins", 1000, "Top N coins by market cap (300, 500, 1000)")
+	topGainersLosersCmd.Flags().String("top-coins", "1000", "Top N coins by market cap (300, 500, 1000, all)")
 	topGainersLosersCmd.Flags().Bool("losers", false, "Show losers instead of gainers")
 	topGainersLosersCmd.Flags().String("export", "", "Export to CSV file path")
 	rootCmd.AddCommand(topGainersLosersCmd)
@@ -34,7 +34,7 @@ func init() {
 func runTopGainersLosers(cmd *cobra.Command, args []string) error {
 	vs, _ := cmd.Flags().GetString("vs")
 	duration, _ := cmd.Flags().GetString("duration")
-	topCoins, _ := cmd.Flags().GetInt("top-coins")
+	topCoinsStr, _ := cmd.Flags().GetString("top-coins")
 	showLosers, _ := cmd.Flags().GetBool("losers")
 	exportPath, _ := cmd.Flags().GetString("export")
 	jsonOut := outputJSON(cmd)
@@ -48,9 +48,9 @@ func runTopGainersLosers(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("invalid duration %q — must be one of: 1h, 24h, 7d, 14d, 30d, 60d, 1y", duration)
 	}
 
-	validTopCoins := map[int]bool{300: true, 500: true, 1000: true}
-	if !validTopCoins[topCoins] {
-		return fmt.Errorf("invalid --top-coins %d — must be 300, 500, or 1000", topCoins)
+	validTopCoins := map[string]bool{"300": true, "500": true, "1000": true, "all": true}
+	if !validTopCoins[topCoinsStr] {
+		return fmt.Errorf("invalid --top-coins %q — must be 300, 500, 1000, or all", topCoinsStr)
 	}
 
 	cfg, err := config.Load()
@@ -60,7 +60,7 @@ func runTopGainersLosers(cmd *cobra.Command, args []string) error {
 	client := api.NewClient(cfg)
 	ctx := cmd.Context()
 
-	resp, err := client.TopGainersLosers(ctx, vs, duration, topCoins)
+	resp, err := client.TopGainersLosers(ctx, vs, duration, topCoinsStr)
 	if err != nil {
 		return err
 	}
@@ -76,20 +76,20 @@ func runTopGainersLosers(cmd *cobra.Command, args []string) error {
 		title = "Top Losers"
 	}
 
-	fmt.Printf("%s (%s, top %d coins)\n\n", title, duration, topCoins)
+	fmt.Printf("%s (%s, top %s coins, vs %s)\n\n", title, duration, topCoinsStr, vs)
 
 	headers := []string{"#", "Name", "Symbol", "Price", "Change %"}
 	rows := make([][]string, 0, len(coins))
-	for i, c := range coins {
+	for i := range coins {
 		if i >= maxGainersLosersDisplay {
 			break
 		}
 		rows = append(rows, []string{
 			fmt.Sprintf("%d", i+1),
-			c.Name,
-			strings.ToUpper(c.Symbol),
-			display.FormatPrice(c.USD),
-			display.ColorPercent(c.USDPriceChangePercentage),
+			coins[i].Name,
+			strings.ToUpper(coins[i].Symbol),
+			display.FormatPrice(coins[i].Price(vs)),
+			display.ColorPercent(coins[i].PriceChange(vs)),
 		})
 	}
 
@@ -97,16 +97,16 @@ func runTopGainersLosers(cmd *cobra.Command, args []string) error {
 
 	if exportPath != "" {
 		csvRows := make([][]string, 0, len(rows))
-		for i, c := range coins {
+		for i := range coins {
 			if i >= maxGainersLosersDisplay {
 				break
 			}
 			csvRows = append(csvRows, []string{
 				fmt.Sprintf("%d", i+1),
-				c.Name,
-				strings.ToUpper(c.Symbol),
-				fmt.Sprintf("%.8f", c.USD),
-				fmt.Sprintf("%.2f", c.USDPriceChangePercentage),
+				coins[i].Name,
+				strings.ToUpper(coins[i].Symbol),
+				fmt.Sprintf("%.8f", coins[i].Price(vs)),
+				fmt.Sprintf("%.2f", coins[i].PriceChange(vs)),
 			})
 		}
 		if err := exportCSV(exportPath, headers, csvRows); err != nil {

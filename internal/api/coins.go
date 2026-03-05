@@ -74,14 +74,14 @@ func (c *Client) CoinMarketChartRange(ctx context.Context, id, vsCurrency string
 	return &result, err
 }
 
-func (c *Client) TopGainersLosers(ctx context.Context, vsCurrency, duration string, topCoins int) (*GainersLosersResponse, error) {
+func (c *Client) TopGainersLosers(ctx context.Context, vsCurrency, duration, topCoins string) (*GainersLosersResponse, error) {
 	if err := c.requirePaid(); err != nil {
 		return nil, err
 	}
 	params := url.Values{
 		"vs_currency": {vsCurrency},
 		"duration":    {duration},
-		"top_coins":   {fmt.Sprintf("%d", topCoins)},
+		"top_coins":   {topCoins},
 	}
 	var result GainersLosersResponse
 	err := c.get(ctx, "/coins/top_gainers_losers?"+params.Encode(), &result)

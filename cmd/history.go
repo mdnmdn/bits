@@ -74,10 +74,15 @@ func runHistory(cmd *cobra.Command, args []string) error {
 	client := api.NewClient(cfg)
 	ctx := cmd.Context()
 
+	validOHLCDays := map[int]bool{1: true, 7: true, 14: true, 30: true, 90: true, 180: true, 365: true}
+
 	switch {
 	case dateStr != "":
 		return historyDate(ctx, client, coinID, dateStr, vs, jsonOut)
 	case days > 0:
+		if !validOHLCDays[days] {
+			return fmt.Errorf("invalid --days %d — must be one of: 1, 7, 14, 30, 90, 180, 365", days)
+		}
 		return historyOHLC(ctx, client, coinID, vs, days, exportPath, jsonOut)
 	default:
 		return historyRange(ctx, client, coinID, vs, fromStr, toStr, exportPath, jsonOut)
