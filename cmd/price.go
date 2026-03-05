@@ -68,6 +68,14 @@ func runPrice(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("no valid coins found")
 	}
 
+	if isDryRun(cmd) {
+		return printDryRun(cfg, "price", "/simple/price", map[string]string{
+			"ids":                 strings.Join(ids, ","),
+			"vs_currencies":       vs,
+			"include_24hr_change": "true",
+		}, nil)
+	}
+
 	prices, err := client.SimplePrice(ctx, ids, vs)
 	if err != nil {
 		return err

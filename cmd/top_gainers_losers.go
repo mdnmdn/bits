@@ -60,6 +60,18 @@ func runTopGainersLosers(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	if isDryRun(cmd) {
+		params := map[string]string{
+			"vs_currency": vs,
+			"duration":    duration,
+			"top_coins":   topCoinsStr,
+		}
+		if priceChangePct != "" {
+			params["price_change_percentage"] = priceChangePct
+		}
+		return printDryRun(cfg, "top-gainers-losers", "/coins/top_gainers_losers", params, nil)
+	}
+
 	client := api.NewClient(cfg)
 	ctx := cmd.Context()
 

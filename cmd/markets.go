@@ -48,8 +48,27 @@ func runMarkets(cmd *cobra.Command, args []string) error {
 	client := api.NewClient(cfg)
 	ctx := cmd.Context()
 
-	var allCoins []api.MarketCoin
 	perPage := 250
+
+	if isDryRun(cmd) {
+		params := map[string]string{
+			"vs_currency": vs,
+			"per_page":    fmt.Sprintf("%d", perPage),
+			"page":        "1",
+			"order":       order,
+		}
+		if category != "" {
+			params["category"] = category
+		}
+		pages := (total + perPage - 1) / perPage
+		return printDryRun(cfg, "markets", "/coins/markets", params, &paginationInfo{
+			TotalRequested: total,
+			PerPage:        perPage,
+			Pages:          pages,
+		})
+	}
+
+	var allCoins []api.MarketCoin
 	remaining := total
 
 	for page := 1; remaining > 0; page++ {

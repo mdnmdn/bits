@@ -73,9 +73,33 @@ coingecko-cli/
 - **Interactive prompts**: `huh` (Charm ecosystem) — API key input uses password echo mode
 - **Auth key input priority**: env var `CG_API_KEY` > `--key` flag > interactive prompt — env vars are preferred to avoid shell history/process listing exposure
 
+## API Reference
+
+- **OAS specs**: https://github.com/coingecko/coingecko-api-oas (`coingecko-demo.json`, `coingecko-pro.json`)
+- **API docs**: https://docs.coingecko.com
+- **Rate limiting**: 429 responses include `Retry-After: <seconds>` header (integer only, no HTTP-date)
+- **Structured errors**: `-o json` mode emits `{"error":"rate_limited","message":"...","retry_after":54}` to stderr
+- **Dry run**: `--dry-run` on any data command outputs the API request as JSON without executing
+- **Command catalog**: `cg commands` (hidden) outputs machine-readable JSON with all commands, flags, OAS operation IDs, and enums
+
+### CLI → OAS Endpoint Mapping
+
+| CLI Command | API Endpoint | OAS Operation ID |
+|-------------|-------------|------------------|
+| `cg price` | `/simple/price` | `simple-price` |
+| `cg markets` | `/coins/markets` | `coins-markets` |
+| `cg search` | `/search` | `search-data` |
+| `cg trending` | `/search/trending` | `trending-search` |
+| `cg history --date` | `/coins/{id}/history` | `coins-id-history` |
+| `cg history --days` | `/coins/{id}/ohlc` | `coins-id-ohlc` |
+| `cg history --from/--to` | `/coins/{id}/market_chart/range` | `coins-id-market-chart-range` |
+| `cg top-gainers-losers` | `/coins/top_gainers_losers` | `coins-top-gainers-losers` |
+
 ## Key Design Decisions
 
 - CoinGecko `/coins/{id}/market_chart/range` expects UNIX timestamps in seconds — CLI accepts `YYYY-MM-DD` and converts in the command layer
 - CoinGecko `/coins/{id}/history` uses `DD-MM-YYYY` date format — CLI accepts `YYYY-MM-DD` and converts
 - Symbol resolution (for `cg price --symbols`) uses `/search` endpoint, picks exact case-insensitive match with highest market_cap_rank
 - TUI detail view fetches coin detail + OHLC concurrently via `tea.Batch`
+- `RateLimitError` typed error carries `RetryAfter` seconds, satisfies `errors.Is(err, ErrRateLimited)` via custom `Is()` method
+- API text (coin names, symbols) sanitized via `display.SanitizeCell` to strip terminal escape injection

@@ -2,11 +2,22 @@ package cmd
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 
+	"github.com/coingecko/coingecko-cli/internal/api"
 	"github.com/coingecko/coingecko-cli/internal/export"
+
+	"github.com/spf13/cobra"
 )
+
+// CLIError is the structured JSON error format emitted to stderr when -o json is set.
+type CLIError struct {
+	Error      string `json:"error"`
+	Message    string `json:"message"`
+	RetryAfter *int   `json:"retry_after,omitempty"`
+}
 
 func printJSONRaw(v any) error {
 	enc := json.NewEncoder(os.Stdout)
@@ -24,4 +35,36 @@ func exportCSV(path string, headers []string, rows [][]string) error {
 	}
 	warnf("Exported to %s\n", path)
 	return nil
+}
+
+// formatError writes a structured JSON error to stderr when -o json is active,
+// otherwise returns the error unchanged for Cobra's default plain text handling.
+func formatError(cmd *cobra.Command, err error) error {
+	if !outputJSON(cmd) {
+		return err
+	}
+
+	cliErr := classifyError(err)
+	enc := json.NewEncoder(os.Stderr)
+	enc.SetIndent("", "  ")
+	enc.Encode(cliErr)
+	return err
+}
+
+func classifyError(err error) CLIError {
+	var rle *api.RateLimitError
+	if errors.As(err, &rle) {
+		ce := CLIError{Error: "rate_limited", Message: rle.Error()}
+		if rle.RetryAfter > 0 {
+			ce.RetryAfter = &rle.RetryAfter
+		}
+		return ce
+	}
+	if errors.Is(err, api.ErrInvalidAPIKey) {
+		return CLIError{Error: "invalid_api_key", Message: err.Error()}
+	}
+	if errors.Is(err, api.ErrPlanRestricted) {
+		return CLIError{Error: "plan_restricted", Message: err.Error()}
+	}
+	return CLIError{Error: "error", Message: err.Error()}
 }

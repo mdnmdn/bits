@@ -23,6 +23,22 @@ var (
 	ErrRateLimited    = fmt.Errorf("rate limited — please wait and try again")
 )
 
+// RateLimitError carries the Retry-After metadata from a 429 response.
+type RateLimitError struct {
+	RetryAfter int // seconds; 0 if Retry-After header was absent
+}
+
+func (e *RateLimitError) Error() string {
+	if e.RetryAfter > 0 {
+		return fmt.Sprintf("rate limited — retry after %d seconds", e.RetryAfter)
+	}
+	return "rate limited — please wait and try again"
+}
+
+func (e *RateLimitError) Is(target error) bool {
+	return target == ErrRateLimited
+}
+
 // apiErrorResponse covers CoinGecko's error JSON formats.
 type apiErrorResponse struct {
 	Status *struct {
@@ -119,12 +135,13 @@ func (c *Client) handleError(resp *http.Response) error {
 		return ErrPlanRestricted
 
 	case http.StatusTooManyRequests:
+		retryAfter := 0
 		if retry := resp.Header.Get("Retry-After"); retry != "" {
 			if secs, err := strconv.Atoi(retry); err == nil && secs > 0 {
-				return fmt.Errorf("rate limited — retry after %d seconds", secs)
+				retryAfter = secs
 			}
 		}
-		return ErrRateLimited
+		return &RateLimitError{RetryAfter: retryAfter}
 
 	default:
 		if msg != "" {

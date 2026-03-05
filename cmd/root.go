@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/coingecko/coingecko-cli/internal/display"
@@ -30,7 +31,15 @@ func init() {
 
 func Execute() {
 	rootCmd.SilenceUsage = true
+	rootCmd.SilenceErrors = true
 	if err := rootCmd.Execute(); err != nil {
+		// Emit structured JSON error to stderr when -o json, otherwise plain text.
+		cmd, _, _ := rootCmd.Find(os.Args[1:])
+		if cmd != nil && outputJSON(cmd) {
+			formatError(cmd, err)
+		} else {
+			fmt.Fprintln(os.Stderr, "Error:", err)
+		}
 		os.Exit(1)
 	}
 }

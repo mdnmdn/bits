@@ -41,6 +41,14 @@ func runTrending(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("--show-max requires a paid plan — upgrade at https://www.coingecko.com/en/api/pricing")
 	}
 
+	if isDryRun(cmd) {
+		params := map[string]string{}
+		if showMax != "" {
+			params["show_max"] = showMax
+		}
+		return printDryRun(cfg, "trending", "/search/trending", params, nil)
+	}
+
 	client := api.NewClient(cfg)
 	ctx := cmd.Context()
 

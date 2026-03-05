@@ -81,6 +81,27 @@ func runHistory(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("--interval requires a paid plan — upgrade at https://www.coingecko.com/en/api/pricing")
 	}
 
+	if isDryRun(cmd) {
+		switch {
+		case dateStr != "":
+			return printDryRun(cfg, "history", "/coins/"+coinID+"/history", map[string]string{
+				"date": dateStr, "localization": "false",
+			}, nil)
+		case daysStr != "":
+			params := map[string]string{"vs_currency": vs, "days": daysStr}
+			if interval != "" {
+				params["interval"] = interval
+			}
+			return printDryRun(cfg, "history", "/coins/"+coinID+"/ohlc", params, nil)
+		default:
+			params := map[string]string{"vs_currency": vs, "from": fromStr, "to": toStr}
+			if interval != "" {
+				params["interval"] = interval
+			}
+			return printDryRun(cfg, "history", "/coins/"+coinID+"/market_chart/range", params, nil)
+		}
+	}
+
 	client := api.NewClient(cfg)
 	ctx := cmd.Context()
 

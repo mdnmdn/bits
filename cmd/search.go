@@ -39,6 +39,12 @@ func runSearch(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	if isDryRun(cmd) {
+		return printDryRun(cfg, "search", "/search", map[string]string{
+			"query": args[0],
+		}, nil)
+	}
+
 	client := api.NewClient(cfg)
 	ctx := cmd.Context()
 
