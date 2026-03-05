@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"coingecko-cli/internal/config"
+	"github.com/coingecko/coingecko-cli/internal/config"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

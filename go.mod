@@ -1,4 +1,4 @@
-module coingecko-cli
+module github.com/coingecko/coingecko-cli
 
 go 1.26.0
 

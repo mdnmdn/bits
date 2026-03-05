@@ -57,7 +57,7 @@ coingecko-cli/
 
 - **Go version**: 1.26 (pinned in go.mod and CI)
 - **Binary name**: `cg`
-- **Module path**: `coingecko-cli` (local; update when GitHub repo path is finalized)
+- **Module path**: `github.com/coingecko/coingecko-cli`
 - **Test framework**: `testify/assert` + `net/http/httptest`
 - **API client tests**: use `httptest.NewServer` with `SetBaseURL`, never hit real API
 - **Config location**: `~/.config/coingecko-cli/config.yaml` (dir `0700`, file `0600`)

@@ -17,7 +17,7 @@ curl -sSfL https://raw.githubusercontent.com/coingecko/coingecko-cli/main/instal
 ### Go install
 
 ```sh
-go install coingecko-cli@latest
+go install github.com/coingecko/coingecko-cli@latest
 ```
 
 ### Manual

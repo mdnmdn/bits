@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
-	"coingecko-cli/internal/api"
-	"coingecko-cli/internal/config"
-	"coingecko-cli/internal/display"
+	"github.com/coingecko/coingecko-cli/internal/api"
+	"github.com/coingecko/coingecko-cli/internal/config"
+	"github.com/coingecko/coingecko-cli/internal/display"
 
 	"github.com/spf13/cobra"
 )

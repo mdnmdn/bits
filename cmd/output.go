@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"coingecko-cli/internal/export"
+	"github.com/coingecko/coingecko-cli/internal/export"
 )
 
 func printJSONRaw(v any) error {

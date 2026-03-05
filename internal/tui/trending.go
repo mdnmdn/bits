@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"coingecko-cli/internal/api"
+	"github.com/coingecko/coingecko-cli/internal/api"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"

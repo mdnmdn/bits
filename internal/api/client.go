@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"coingecko-cli/internal/config"
+	"github.com/coingecko/coingecko-cli/internal/config"
 )
 
 const maxErrorBodySize = 1 << 20 // 1MB
