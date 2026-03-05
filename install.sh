@@ -71,8 +71,8 @@ if command -v sha256sum >/dev/null 2>&1; then
 elif command -v shasum >/dev/null 2>&1; then
   ACTUAL=$(shasum -a 256 "${TMPDIR}/${FILENAME}" | awk '{print $1}')
 else
-  echo "Warning: no sha256sum or shasum found, skipping checksum verification"
-  ACTUAL="$EXPECTED"
+  echo "Error: no sha256sum or shasum found — cannot verify download integrity"
+  exit 1
 fi
 
 if [ "$EXPECTED" != "$ACTUAL" ]; then

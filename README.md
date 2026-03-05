@@ -27,10 +27,10 @@ Download the binary for your platform from [Releases](https://github.com/coingec
 ## Setup
 
 ```sh
-# Interactive setup
+# Interactive setup (recommended — input is masked)
 cg auth
 
-# Or with flags
+# Or with flags (note: key may be visible in shell history)
 cg auth --key YOUR_API_KEY --tier demo
 ```
 
