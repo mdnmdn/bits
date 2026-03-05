@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"coingecko-cli/internal/config"
@@ -19,6 +20,39 @@ var (
 	ErrPlanRestricted = fmt.Errorf("this endpoint requires a paid plan — upgrade at https://www.coingecko.com/en/api/pricing")
 	ErrRateLimited    = fmt.Errorf("rate limited — please wait and try again")
 )
+
+// apiErrorResponse covers CoinGecko's error JSON formats.
+type apiErrorResponse struct {
+	Status *struct {
+		ErrorCode    int    `json:"error_code"`
+		ErrorMessage string `json:"error_message"`
+	} `json:"status"`
+	Error string `json:"error"`
+}
+
+// extractMessage returns the best error message from the response body.
+func (e *apiErrorResponse) extractMessage() string {
+	if e.Status != nil && e.Status.ErrorMessage != "" {
+		return e.Status.ErrorMessage
+	}
+	if e.Error != "" {
+		return e.Error
+	}
+	return ""
+}
+
+// planRestricted keywords in CoinGecko error messages.
+var planKeywords = []string{"plan", "tier", "upgrade", "access", "restrict", "subscribe", "permission"}
+
+func isPlanRestricted(msg string) bool {
+	lower := strings.ToLower(msg)
+	for _, kw := range planKeywords {
+		if strings.Contains(lower, kw) {
+			return true
+		}
+	}
+	return false
+}
 
 type Client struct {
 	http    *http.Client
@@ -78,19 +112,42 @@ func (c *Client) get(ctx context.Context, path string, result any) error {
 }
 
 func (c *Client) handleError(resp *http.Response) error {
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, maxErrorBodySize))
+
+	// Parse CoinGecko error body for better classification.
+	var apiErr apiErrorResponse
+	json.Unmarshal(body, &apiErr)
+	msg := apiErr.extractMessage()
+
 	switch resp.StatusCode {
-	case http.StatusUnauthorized:
+	case http.StatusUnauthorized, http.StatusForbidden:
+		// CoinGecko sometimes returns 401 for plan-restricted endpoints,
+		// so classify by message content rather than status code alone.
+		if msg != "" && isPlanRestricted(msg) {
+			return fmt.Errorf("%w: %s", ErrPlanRestricted, msg)
+		}
+		if resp.StatusCode == http.StatusForbidden {
+			if msg != "" {
+				return fmt.Errorf("%w: %s", ErrPlanRestricted, msg)
+			}
+			return ErrPlanRestricted
+		}
+		if msg != "" {
+			return fmt.Errorf("%w: %s", ErrInvalidAPIKey, msg)
+		}
 		return ErrInvalidAPIKey
-	case http.StatusForbidden:
-		return ErrPlanRestricted
+
 	case http.StatusTooManyRequests:
 		if retry := resp.Header.Get("Retry-After"); retry != "" {
 			secs, _ := strconv.Atoi(retry)
 			return fmt.Errorf("rate limited — retry after %d seconds", secs)
 		}
 		return ErrRateLimited
+
 	default:
-		body, _ := io.ReadAll(io.LimitReader(resp.Body, maxErrorBodySize))
+		if msg != "" {
+			return fmt.Errorf("API error %d: %s", resp.StatusCode, msg)
+		}
 		return fmt.Errorf("API error %d: %s", resp.StatusCode, string(body))
 	}
 }

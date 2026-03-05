@@ -51,7 +51,21 @@ func TestProAuthHeaders(t *testing.T) {
 	assert.Equal(t, "pro-key", gotHeader)
 }
 
-func TestError401(t *testing.T) {
+func TestError401InvalidKey(t *testing.T) {
+	c, srv := testClient(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(401)
+		w.Write([]byte(`{"status":{"error_code":401,"error_message":"Invalid API key"}}`))
+	})
+	defer srv.Close()
+
+	var result map[string]any
+	err := c.get(context.Background(), "/test", &result)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrInvalidAPIKey)
+	assert.Contains(t, err.Error(), "Invalid API key")
+}
+
+func TestError401EmptyBody(t *testing.T) {
 	c, srv := testClient(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(401)
 	})
@@ -63,7 +77,36 @@ func TestError401(t *testing.T) {
 	assert.ErrorIs(t, err, ErrInvalidAPIKey)
 }
 
+func TestError401PlanRestricted(t *testing.T) {
+	// CoinGecko sometimes returns 401 for plan-restricted endpoints
+	c, srv := testClient(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(401)
+		w.Write([]byte(`{"status":{"error_code":401,"error_message":"You need to upgrade to a paid plan to access this endpoint"}}`))
+	})
+	defer srv.Close()
+
+	var result map[string]any
+	err := c.get(context.Background(), "/test", &result)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrPlanRestricted)
+	assert.Contains(t, err.Error(), "upgrade")
+}
+
 func TestError403(t *testing.T) {
+	c, srv := testClient(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(403)
+		w.Write([]byte(`{"error":"Your plan does not have access to this endpoint"}`))
+	})
+	defer srv.Close()
+
+	var result map[string]any
+	err := c.get(context.Background(), "/test", &result)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrPlanRestricted)
+	assert.Contains(t, err.Error(), "access")
+}
+
+func TestError403EmptyBody(t *testing.T) {
 	c, srv := testClient(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(403)
 	})
@@ -88,6 +131,46 @@ func TestError429(t *testing.T) {
 	assert.Contains(t, err.Error(), "retry after 30 seconds")
 }
 
+func TestError429NoRetryAfter(t *testing.T) {
+	c, srv := testClient(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(429)
+	})
+	defer srv.Close()
+
+	var result map[string]any
+	err := c.get(context.Background(), "/test", &result)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrRateLimited)
+}
+
+func TestErrorUnknownStatusWithBody(t *testing.T) {
+	c, srv := testClient(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(500)
+		w.Write([]byte(`{"status":{"error_code":500,"error_message":"Internal server error"}}`))
+	})
+	defer srv.Close()
+
+	var result map[string]any
+	err := c.get(context.Background(), "/test", &result)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "API error 500")
+	assert.Contains(t, err.Error(), "Internal server error")
+}
+
+func TestErrorUnknownStatusRawBody(t *testing.T) {
+	c, srv := testClient(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(502)
+		w.Write([]byte("Bad Gateway"))
+	})
+	defer srv.Close()
+
+	var result map[string]any
+	err := c.get(context.Background(), "/test", &result)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "API error 502")
+	assert.Contains(t, err.Error(), "Bad Gateway")
+}
+
 func TestRequirePaid(t *testing.T) {
 	cfg := &config.Config{Tier: config.TierDemo}
 	c := NewClient(cfg)
@@ -96,4 +179,13 @@ func TestRequirePaid(t *testing.T) {
 	cfg2 := &config.Config{Tier: config.TierPro}
 	c2 := NewClient(cfg2)
 	assert.NoError(t, c2.requirePaid())
+}
+
+func TestIsPlanRestricted(t *testing.T) {
+	assert.True(t, isPlanRestricted("You need to upgrade your plan"))
+	assert.True(t, isPlanRestricted("Access restricted for this tier"))
+	assert.True(t, isPlanRestricted("Please subscribe to use this endpoint"))
+	assert.True(t, isPlanRestricted("Permission denied for your plan"))
+	assert.False(t, isPlanRestricted("Invalid API key"))
+	assert.False(t, isPlanRestricted(""))
 }
