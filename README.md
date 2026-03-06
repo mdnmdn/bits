@@ -171,16 +171,18 @@ cg history bitcoin --date 2024-01-15
 cg history ethereum --date 2024-06-01 --vs eur
 ```
 
-**Past N days (OHLC):**
+**Past N days (price data):**
 ```sh
 cg history bitcoin --days 7
 cg history bitcoin --days 30 --export btc_30d.csv
+cg history bitcoin --days 7 --ohlc          # OHLC candle data instead
 ```
 
 **Custom date range:**
 ```sh
 cg history bitcoin --from 2024-01-01 --to 2024-06-30
 cg history bitcoin --from 2024-01-01 --to 2024-03-31 --export q1.csv
+cg history bitcoin --from 2024-01-01 --to 2024-06-30 --ohlc   # OHLC output
 ```
 
 | Flag | Description |
