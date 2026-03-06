@@ -178,8 +178,10 @@ type CoinDetailMarket struct {
 	PriceChangePercentage24h float64            `json:"price_change_percentage_24h"`
 	ATH                      map[string]float64 `json:"ath"`
 	ATHChangePercentage      map[string]float64 `json:"ath_change_percentage"`
+	ATHDate                  map[string]string  `json:"ath_date"`
 	ATL                      map[string]float64 `json:"atl"`
 	ATLChangePercentage      map[string]float64 `json:"atl_change_percentage"`
+	ATLDate                  map[string]string  `json:"atl_date"`
 	CirculatingSupply        float64            `json:"circulating_supply"`
 	TotalSupply              float64            `json:"total_supply"`
 }

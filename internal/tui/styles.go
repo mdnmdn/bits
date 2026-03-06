@@ -5,7 +5,7 @@ import "github.com/charmbracelet/lipgloss"
 // Brand colors matching CoinGecko identity.
 var (
 	GeckoGreen = lipgloss.Color("#8CC351")
-	Gold       = lipgloss.Color("#FFD700")
+	Gold       = lipgloss.Color("#FFE866")
 )
 
 var (
