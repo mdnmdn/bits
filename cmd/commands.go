@@ -46,14 +46,18 @@ var commandMeta = map[string]commandAnnotation{
 	},
 	"history": {
 		APIEndpoints: map[string]string{
-			"--date":      "/coins/{id}/history",
-			"--days":      "/coins/{id}/ohlc",
-			"--from/--to": "/coins/{id}/market_chart/range",
+			"--date":            "/coins/{id}/history",
+			"--days":            "/coins/{id}/market_chart",
+			"--days --ohlc":     "/coins/{id}/ohlc",
+			"--from/--to":       "/coins/{id}/market_chart/range",
+			"--from/--to --ohlc": "/coins/{id}/ohlc/range",
 		},
 		OASOperationIDs: map[string]string{
-			"--date":      "coins-id-history",
-			"--days":      "coins-id-ohlc",
-			"--from/--to": "coins-id-market-chart-range",
+			"--date":            "coins-id-history",
+			"--days":            "coins-id-market-chart",
+			"--days --ohlc":     "coins-id-ohlc",
+			"--from/--to":       "coins-id-market-chart-range",
+			"--from/--to --ohlc": "coins-id-ohlc-range",
 		},
 		OASSpec:      "coingecko-demo.json",
 		RequiresAuth: true,
@@ -75,13 +79,16 @@ type flagInfo struct {
 	Enum        []string `json:"enum,omitempty"`
 }
 
-// validEnum checks if a value is in the flagEnums list for a given command and flag.
+// validEnum checks if a value is in the validation enums for a given command and flag.
+// It checks both catalog enums and internal-only enums.
 func validEnum(cmdName, flagName, value string) bool {
-	if enums, ok := flagEnums[cmdName]; ok {
-		if vals, ok := enums[flagName]; ok {
-			for _, v := range vals {
-				if v == value {
-					return true
+	for _, m := range []map[string]map[string][]string{flagEnums, internalEnums} {
+		if enums, ok := m[cmdName]; ok {
+			if vals, ok := enums[flagName]; ok {
+				for _, v := range vals {
+					if v == value {
+						return true
+					}
 				}
 			}
 		}
@@ -89,10 +96,17 @@ func validEnum(cmdName, flagName, value string) bool {
 	return false
 }
 
-// Flag enums sourced from CoinGecko OAS spec.
+// internalEnums are used for validation only and not exposed in the command catalog.
+// The OHLC "days" enum is stricter than market_chart (which accepts any integer).
+var internalEnums = map[string]map[string][]string{
+	"history": {
+		"days": {"1", "7", "14", "30", "90", "180", "365", "max"},
+	},
+}
+
+// Flag enums sourced from CoinGecko OAS spec. Exposed in the command catalog.
 var flagEnums = map[string]map[string][]string{
 	"history": {
-		"days":     {"1", "7", "14", "30", "90", "180", "365", "max"},
 		"interval": {"5m", "hourly", "daily"},
 	},
 	"top-gainers-losers": {

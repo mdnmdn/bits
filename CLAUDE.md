@@ -91,8 +91,10 @@ coingecko-cli/
 | `cg search` | `/search` | `search-data` |
 | `cg trending` | `/search/trending` | `trending-search` |
 | `cg history --date` | `/coins/{id}/history` | `coins-id-history` |
-| `cg history --days` | `/coins/{id}/ohlc` | `coins-id-ohlc` |
+| `cg history --days` | `/coins/{id}/market_chart` | `coins-id-market-chart` |
+| `cg history --days --ohlc` | `/coins/{id}/ohlc` | `coins-id-ohlc` |
 | `cg history --from/--to` | `/coins/{id}/market_chart/range` | `coins-id-market-chart-range` |
+| `cg history --from/--to --ohlc` | `/coins/{id}/ohlc/range` | `coins-id-ohlc-range` |
 | `cg top-gainers-losers` | `/coins/top_gainers_losers` | `coins-top-gainers-losers` |
 
 ## Key Design Decisions

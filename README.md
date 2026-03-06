@@ -186,10 +186,11 @@ cg history bitcoin --from 2024-01-01 --to 2024-03-31 --export q1.csv
 | Flag | Description |
 |---|---|
 | `--date YYYY-MM-DD` | Single-day snapshot (price, market cap, volume) |
-| `--days N` | Past N days of OHLC data (1, 7, 14, 30, 90, 180, 365, max) |
-| `--from / --to YYYY-MM-DD` | Inclusive date range |
+| `--days N` | Past N days of price data (any integer, or `max`) |
+| `--from / --to YYYY-MM-DD` | Inclusive date range (price data) |
+| `--ohlc` | Switch `--days` or `--from/--to` to OHLC output |
 | `--vs` | Quote currency (default: `usd`) |
-| `--interval` | Data granularity: `daily`, `hourly` (paid plans only) |
+| `--interval` | Data granularity: `daily` (free for `--days`), `hourly`/`5m` (paid) |
 | `--export` | Export to CSV file path |
 
 ---

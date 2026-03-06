@@ -68,10 +68,10 @@ func (c *Client) CoinHistory(ctx context.Context, id, date string) (*HistoricalD
 	return &result, err
 }
 
-// CoinOHLC fetches OHLC data. Valid days: 1, 7, 14, 30, 90, 180, 365, max (paid).
-// Paid plans support interval param: daily, hourly.
-// https://docs.coingecko.com/reference/coins-id-ohlc
-func (c *Client) CoinOHLC(ctx context.Context, id, vsCurrency, days, interval string) (OHLCData, error) {
+// CoinMarketChart fetches price/market data for the last N days.
+// Paid plans support interval param: 5m (Enterprise), hourly, daily.
+// https://docs.coingecko.com/reference/coins-id-market-chart
+func (c *Client) CoinMarketChart(ctx context.Context, id, vsCurrency, days, interval string) (*MarketChartResponse, error) {
 	params := url.Values{
 		"vs_currency": {vsCurrency},
 		"days":        {days},
@@ -79,9 +79,9 @@ func (c *Client) CoinOHLC(ctx context.Context, id, vsCurrency, days, interval st
 	if interval != "" {
 		params.Set("interval", interval)
 	}
-	var result OHLCData
-	err := c.get(ctx, fmt.Sprintf("/coins/%s/ohlc?%s", url.PathEscape(id), params.Encode()), &result)
-	return result, err
+	var result MarketChartResponse
+	err := c.get(ctx, fmt.Sprintf("/coins/%s/market_chart?%s", url.PathEscape(id), params.Encode()), &result)
+	return &result, err
 }
 
 // CoinMarketChartRange fetches price data for a date range (UNIX timestamps in seconds).
@@ -99,6 +99,42 @@ func (c *Client) CoinMarketChartRange(ctx context.Context, id, vsCurrency string
 	var result MarketChartResponse
 	err := c.get(ctx, fmt.Sprintf("/coins/%s/market_chart/range?%s", url.PathEscape(id), params.Encode()), &result)
 	return &result, err
+}
+
+// CoinOHLC fetches OHLC data for the last N days.
+// Valid days: 1, 7, 14, 30, 90, 180, 365, max (paid).
+// Paid plans support interval param: daily, hourly.
+// https://docs.coingecko.com/reference/coins-id-ohlc
+func (c *Client) CoinOHLC(ctx context.Context, id, vsCurrency, days, interval string) (OHLCData, error) {
+	params := url.Values{
+		"vs_currency": {vsCurrency},
+		"days":        {days},
+	}
+	if interval != "" {
+		params.Set("interval", interval)
+	}
+	var result OHLCData
+	err := c.get(ctx, fmt.Sprintf("/coins/%s/ohlc?%s", url.PathEscape(id), params.Encode()), &result)
+	return result, err
+}
+
+// CoinOHLCRange fetches OHLC data for a date range (UNIX timestamps in seconds, paid plans only).
+// https://docs.coingecko.com/reference/coins-id-ohlc-range
+func (c *Client) CoinOHLCRange(ctx context.Context, id, vsCurrency string, from, to int64, interval string) (OHLCData, error) {
+	if err := c.requirePaid(); err != nil {
+		return nil, err
+	}
+	params := url.Values{
+		"vs_currency": {vsCurrency},
+		"from":        {fmt.Sprintf("%d", from)},
+		"to":          {fmt.Sprintf("%d", to)},
+	}
+	if interval != "" {
+		params.Set("interval", interval)
+	}
+	var result OHLCData
+	err := c.get(ctx, fmt.Sprintf("/coins/%s/ohlc/range?%s", url.PathEscape(id), params.Encode()), &result)
+	return result, err
 }
 
 // TopGainersLosers fetches top gaining and losing coins (paid plans only).
