@@ -6,9 +6,9 @@ import (
 	"strings"
 )
 
-// Brand color: CoinGecko green #8CC351 → RGB(140, 195, 81)
+// Brand color: CoinGecko green #4BCC00 → RGB(75, 204, 0)
 const (
-	brandGreen = "\033[38;2;140;195;81m"
+	brandGreen = "\033[38;2;75;204;0m"
 	dimColor   = "\033[2m"
 	cyanColor  = "\033[36m"
 	yellowBold = "\033[1;33m"
@@ -49,7 +49,7 @@ func PrintWelcomeBox() {
 
 	fmt.Fprintln(w, top)
 	fmt.Fprintln(w, blank)
-	printColoredRow(w, yellowBold+"Official API Command Line Interface"+colorReset, 36)
+	printColoredRow(w, yellowBold+"Official API Command Line Interface"+colorReset, 35)
 	fmt.Fprintln(w, blank)
 	fmt.Fprintln(w, sep)
 	fmt.Fprintln(w, blank)
@@ -60,7 +60,7 @@ func PrintWelcomeBox() {
 	printCmdRow(w, "cg markets --total 100", "# Top 100 by mkt cap")
 	printCmdRow(w, "cg search ethereum", "# Search for a coin")
 	printCmdRow(w, "cg trending", "# Trending coins")
-	printCmdRow(w, "cg history bitcoin --days 30", "# 30-day OHLC history")
+	printCmdRow(w, "cg history bitcoin --days 30", "# 30-day price history")
 	printCmdRow(w, "cg top-gainers-losers", "# Top gainers (paid)")
 	printCmdRow(w, "cg tui markets", "# Interactive TUI")
 	fmt.Fprintln(w, blank)
