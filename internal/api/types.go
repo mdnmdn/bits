@@ -47,11 +47,17 @@ type TrendingCoinWrapper struct {
 }
 
 type TrendingCoin struct {
-	ID            string `json:"id"`
-	Name          string `json:"name"`
-	Symbol        string `json:"symbol"`
-	MarketCapRank int    `json:"market_cap_rank"`
-	Score         int    `json:"score"`
+	ID            string             `json:"id"`
+	Name          string             `json:"name"`
+	Symbol        string             `json:"symbol"`
+	MarketCapRank int                `json:"market_cap_rank"`
+	Score         int                `json:"score"`
+	Data          *TrendingCoinData  `json:"data"`
+}
+
+type TrendingCoinData struct {
+	Price                      float64                    `json:"price"`
+	PriceChangePercentage24h   map[string]float64         `json:"price_change_percentage_24h"`
 }
 
 type TrendingNFT struct {
@@ -153,10 +159,11 @@ func (g GainerCoin) MarshalJSON() ([]byte, error) {
 }
 
 type CoinDetail struct {
-	ID          string `json:"id"`
-	Symbol      string `json:"symbol"`
-	Name        string `json:"name"`
-	Description struct {
+	ID            string `json:"id"`
+	Symbol        string `json:"symbol"`
+	Name          string `json:"name"`
+	MarketCapRank int    `json:"market_cap_rank"`
+	Description   struct {
 		EN string `json:"en"`
 	} `json:"description"`
 	MarketData *CoinDetailMarket `json:"market_data"`

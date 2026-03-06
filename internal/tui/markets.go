@@ -125,22 +125,29 @@ func (m MarketsModel) View() string {
 	}
 
 	if m.state == marketsLoading {
-		return "Loading markets...\n"
+		return renderLoading("Fetching top 50 coins by market cap...", m.width, m.height)
 	}
 
 	if m.state == marketsDetail {
 		return m.detail.View()
 	}
 
+	subtitle := "TUI — Top 50 by Market Cap"
+	if m.category != "" {
+		subtitle += " [" + m.category + "]"
+	}
+
 	var b strings.Builder
-	b.WriteString(TitleStyle.Render(fmt.Sprintf("Markets — Top %d by Market Cap", defaultMarketsLimit)))
+	b.WriteString(BrandTitle(subtitle))
 	b.WriteString("\n\n")
 
-	header := fmt.Sprintf("  %-4s %-20s %-6s %12s %12s %10s", "#", "Name", "Symbol", "Price", "Market Cap", "24h %")
+	header := fmt.Sprintf("  %-4s %-20s %-8s %14s %12s %12s %10s",
+		"#", "Name", "Symbol", "Price", "Market Cap", "Volume", "24h")
 	b.WriteString(HeaderStyle.Render(header))
 	b.WriteString("\n")
 
-	visibleRows := m.height - 6
+	// Reserve lines for: title(1) + blank(1) + header(1) + blank(1) + help(1) + border(2) = 7
+	visibleRows := m.height - 9
 	if visibleRows < 5 {
 		visibleRows = 5
 	}
@@ -156,29 +163,32 @@ func (m MarketsModel) View() string {
 
 	for i := start; i < end; i++ {
 		c := m.coins[i]
-		pctStr := display.FormatPercent(c.PriceChangePercentage24h)
+		// Pad percent to fixed width BEFORE applying color (ANSI codes break fmt width).
+		pctStr := fmt.Sprintf("%10s", display.FormatPercent(c.PriceChangePercentage24h))
 		pctStr = ColorPercent(c.PriceChangePercentage24h, pctStr)
 
-		row := fmt.Sprintf("  %-4d %-20s %-6s %12s %12s %10s",
+		row := fmt.Sprintf("%-4d %-20s %-8s %14s %12s %12s %s",
 			c.MarketCapRank,
 			truncate(display.SanitizeCell(c.Name), 20),
 			display.FormatSymbol(c.Symbol),
 			display.FormatPrice(c.CurrentPrice, m.vs),
 			display.FormatLargeNumber(c.MarketCap, m.vs),
+			display.FormatLargeNumber(c.TotalVolume, m.vs),
 			pctStr,
 		)
 		if i == m.cursor {
-			row = SelectedStyle.Render(row)
+			row = SelectedStyle.Render(HighlightSymbol + row)
+		} else {
+			row = "  " + row
 		}
 		b.WriteString(row)
 		b.WriteString("\n")
 	}
 
-	help := HelpStyle.Render("j/k: navigate • enter: detail • q: quit")
-	b.WriteString("\n")
-	b.WriteString(help)
+	help := HelpStyle.Render(listHelpText)
+	content := b.String() + "\n" + help
 
-	return lipgloss.NewStyle().MaxWidth(m.width).Render(b.String())
+	return renderFrame(m.width, m.height, content)
 }
 
 func truncate(s string, max int) string {
@@ -187,4 +197,14 @@ func truncate(s string, max int) string {
 		return s
 	}
 	return string(runes[:max-1]) + "…"
+}
+
+func renderLoading(msg string, width, height int) string {
+	content := BrandTitle("Loading…") + "\n\n"
+	content += lipgloss.Place(
+		width-4, height-6,
+		lipgloss.Center, lipgloss.Center,
+		DimStyle.Render(msg),
+	)
+	return renderFrame(width, height, content)
 }

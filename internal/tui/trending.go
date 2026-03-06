@@ -9,7 +9,6 @@ import (
 	"github.com/coingecko/coingecko-cli/internal/display"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 )
 
 type trendingState int
@@ -119,7 +118,7 @@ func (m TrendingModel) View() string {
 	}
 
 	if m.state == trendingLoading {
-		return "Loading trending coins...\n"
+		return renderLoading("Fetching trending coins...", m.width, m.height)
 	}
 
 	if m.state == trendingDetail {
@@ -127,10 +126,11 @@ func (m TrendingModel) View() string {
 	}
 
 	var b strings.Builder
-	b.WriteString(TitleStyle.Render("Trending Coins"))
+	b.WriteString(BrandTitle("TUI — Top 30 Trending Coins (24h)"))
 	b.WriteString("\n\n")
 
-	header := fmt.Sprintf("  %-4s %-25s %-8s %15s", "#", "Name", "Symbol", "Market Cap Rank")
+	header := fmt.Sprintf("  %-6s %-7s %-20s %-8s %14s %10s",
+		"Trend", "MCap #", "Name", "Symbol", "Price (USD)", "24h")
 	b.WriteString(HeaderStyle.Render(header))
 	b.WriteString("\n")
 
@@ -141,22 +141,42 @@ func (m TrendingModel) View() string {
 
 	for i := 0; i < limit; i++ {
 		c := m.coins[i].Item
-		row := fmt.Sprintf("  %-4d %-25s %-8s %15s",
-			i+1,
-			truncate(display.SanitizeCell(c.Name), 25),
+
+		trendRank := fmt.Sprintf("#%d", i+1)
+		mcapRank := "—"
+		if c.MarketCapRank > 0 {
+			mcapRank = fmt.Sprintf("#%d", c.MarketCapRank)
+		}
+
+		priceStr := fmt.Sprintf("%14s", "—")
+		changeStr := fmt.Sprintf("%10s", "—")
+		if c.Data != nil {
+			priceStr = fmt.Sprintf("%14s", display.FormatPrice(c.Data.Price, "usd"))
+			if pct, ok := c.Data.PriceChangePercentage24h["usd"]; ok {
+				changeStr = fmt.Sprintf("%10s", display.FormatPercent(pct))
+				changeStr = ColorPercent(pct, changeStr)
+			}
+		}
+
+		row := fmt.Sprintf("%-6s %-7s %-20s %-8s %s %s",
+			trendRank,
+			mcapRank,
+			truncate(display.SanitizeCell(c.Name), 20),
 			display.SanitizeCell(c.Symbol),
-			display.FormatRank(c.MarketCapRank),
+			priceStr,
+			changeStr,
 		)
 		if i == m.cursor {
-			row = SelectedStyle.Render(row)
+			row = SelectedStyle.Render(HighlightSymbol + row)
+		} else {
+			row = "  " + row
 		}
 		b.WriteString(row)
 		b.WriteString("\n")
 	}
 
-	help := HelpStyle.Render("j/k: navigate • enter: detail • q: quit")
-	b.WriteString("\n")
-	b.WriteString(help)
+	help := HelpStyle.Render(listHelpText)
+	content := b.String() + "\n" + help
 
-	return lipgloss.NewStyle().MaxWidth(m.width).Render(b.String())
+	return renderFrame(m.width, m.height, content)
 }

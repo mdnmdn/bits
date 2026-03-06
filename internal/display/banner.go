@@ -6,9 +6,9 @@ import (
 	"strings"
 )
 
-// Brand color: CoinGecko green #4BCC00 → RGB(75, 204, 0)
+// Brand color: CoinGecko green #8CC351 → RGB(140, 195, 81)
 const (
-	brandGreen = "\033[38;2;75;204;0m"
+	brandGreen = "\033[38;2;140;195;81m"
 	dimColor   = "\033[2m"
 	cyanColor  = "\033[36m"
 	yellowBold = "\033[1;33m"

@@ -9,10 +9,11 @@ import (
 
 	"github.com/NimbleMarkets/ntcharts/canvas"
 	"github.com/NimbleMarkets/ntcharts/canvas/graph"
+	"github.com/charmbracelet/lipgloss"
 )
 
 func renderBrailleChart(ohlc api.OHLCData, width, height int, vs string) string {
-	if len(ohlc) == 0 || width < 4 || height < 3 {
+	if len(ohlc) == 0 || width < 10 || height < 5 {
 		return "No data"
 	}
 
@@ -41,7 +42,26 @@ func renderBrailleChart(ohlc api.OHLCData, width, height int, vs string) string 
 		maxP = minP + 1
 	}
 
-	bg := graph.NewBrailleGrid(width, height,
+	// Y-axis labels: high, mid, low
+	midP := (minP + maxP) / 2
+	yHigh := display.FormatPrice(maxP, vs)
+	yMid := display.FormatPrice(midP, vs)
+	yLow := display.FormatPrice(minP, vs)
+
+	// Find the widest Y label for padding (display width, not byte length).
+	yWidth := max(lipgloss.Width(yHigh), lipgloss.Width(yMid), lipgloss.Width(yLow)) + 1
+
+	// Chart area dimensions (subtract Y-axis width and X-axis row)
+	chartW := width - yWidth
+	chartH := height - 2 // leave room for x-axis label row
+	if chartW < 4 {
+		chartW = 4
+	}
+	if chartH < 3 {
+		chartH = 3
+	}
+
+	bg := graph.NewBrailleGrid(chartW, chartH,
 		0, float64(len(prices)-1),
 		minP, maxP,
 	)
@@ -59,19 +79,44 @@ func renderBrailleChart(ohlc api.OHLCData, width, height int, vs string) string 
 	}
 
 	patterns := bg.BraillePatterns()
-	var lines []string
-	for _, row := range patterns {
-		lines = append(lines, string(row))
+
+	// Pre-compute styled Y-axis labels (right-aligned to yWidth).
+	pad := strings.Repeat(" ", yWidth)
+	styledHigh := DimStyle.Render(fmt.Sprintf("%*s", yWidth, yHigh))
+	styledMid := DimStyle.Render(fmt.Sprintf("%*s", yWidth, yMid))
+	styledLow := DimStyle.Render(fmt.Sprintf("%*s", yWidth, yLow))
+
+	var b strings.Builder
+	for i, row := range patterns {
+		switch {
+		case i == 0:
+			b.WriteString(styledHigh)
+		case i == len(patterns)/2:
+			b.WriteString(styledMid)
+		case i == len(patterns)-1:
+			b.WriteString(styledLow)
+		default:
+			b.WriteString(pad)
+		}
+		b.WriteString(string(row))
+		b.WriteString("\n")
 	}
 
-	chart := strings.Join(lines, "\n")
+	// X-axis labels: Day 1, Day 4, Day 7
+	xLeft := "Day 1"
+	xMid := "Day 4"
+	xRight := "Day 7"
+	gap := chartW - len(xLeft) - len(xMid) - len(xRight)
+	if gap < 2 {
+		gap = 2
+	}
+	leftGap := gap / 2
+	rightGap := gap - leftGap
+	xAxis := strings.Repeat(" ", yWidth) +
+		xLeft + strings.Repeat(" ", leftGap) +
+		xMid + strings.Repeat(" ", rightGap) +
+		xRight
+	b.WriteString(DimStyle.Render(xAxis))
 
-	// Add price labels
-	chart += fmt.Sprintf("\n%s  High: %s  Low: %s",
-		DimStyle.Render(""),
-		display.FormatPrice(maxP, vs),
-		display.FormatPrice(minP, vs),
-	)
-
-	return chart
+	return b.String()
 }
