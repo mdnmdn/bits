@@ -52,18 +52,17 @@ func runPrice(cmd *cobra.Command, args []string) error {
 
 	// Short-circuit before any API calls in dry-run mode.
 	if isDryRun(cmd) {
-		raw := idsStr
-		if symbolsStr != "" {
-			if raw != "" {
-				raw += ","
-			}
-			raw += symbolsStr
-		}
-		return printDryRun(cfg, "price", "/simple/price", map[string]string{
-			"ids":                 raw,
+		params := map[string]string{
 			"vs_currencies":       vs,
 			"include_24hr_change": "true",
-		}, nil)
+		}
+		if idsStr != "" {
+			params["ids"] = idsStr
+		}
+		if symbolsStr != "" {
+			params["symbols (unresolved)"] = symbolsStr
+		}
+		return printDryRun(cfg, "price", "/simple/price", params, nil)
 	}
 
 	client := api.NewClient(cfg)
