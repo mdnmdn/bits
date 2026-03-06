@@ -36,13 +36,14 @@ coingecko-cli/
 │   │   ├── config.go              # Viper-based config (API key, tier)
 │   │   └── config_test.go
 │   ├── display/
+│   │   ├── banner.go              # ASCII logo, welcome box, brand banner
 │   │   ├── table.go               # Table rendering
 │   │   ├── format.go              # Price/number formatting
 │   │   └── color.go               # ANSI color (NO_COLOR/TTY aware)
 │   ├── export/
 │   │   └── csv.go                 # CSV file export
 │   └── tui/
-│       ├── styles.go              # Shared lipgloss styles
+│       ├── styles.go              # Shared lipgloss styles, brand colors, frame/layout helpers
 │       ├── markets.go             # Markets TUI model
 │       ├── trending.go            # Trending TUI model
 │       ├── detail.go              # Coin detail view
