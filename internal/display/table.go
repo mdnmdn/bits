@@ -45,7 +45,11 @@ func PrintTable(headers []string, rows [][]string) {
 		}
 	}
 
-	printRowWithWidths(headers, headerWidths, colMax)
+	coloredHeaders := make([]string, len(headers))
+	for i, h := range headers {
+		coloredHeaders[i] = ColorHeader(h)
+	}
+	printRowWithWidths(coloredHeaders, headerWidths, colMax)
 	printSeparator(colMax)
 	for r, row := range rows {
 		printRowWithWidths(row, cellWidths[r], colMax)

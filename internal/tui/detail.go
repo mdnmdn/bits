@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/coingecko/coingecko-cli/internal/api"
 	"github.com/coingecko/coingecko-cli/internal/display"
@@ -150,9 +151,11 @@ func (m DetailModel) View() string {
 		addDetailField(&left, "Lo 24h", display.FormatPrice(md.Low24h[vs], vs))
 		left.WriteString("\n")
 		addDetailField(&left, "ATH", display.FormatPrice(md.ATH[vs], vs))
-		addDimField(&left, " date", display.FormatPercent(md.ATHChangePercentage[vs]))
+		addDimField(&left, " date", formatATHDate(md.ATHDate[vs]))
+		addDetailField(&left, " chg%", ColorPercent(md.ATHChangePercentage[vs], display.FormatPercent(md.ATHChangePercentage[vs])))
 		addDetailField(&left, "ATL", display.FormatPrice(md.ATL[vs], vs))
-		addDimField(&left, " date", display.FormatPercent(md.ATLChangePercentage[vs]))
+		addDimField(&left, " date", formatATHDate(md.ATLDate[vs]))
+		addDetailField(&left, " chg%", ColorPercent(md.ATLChangePercentage[vs], display.FormatPercent(md.ATLChangePercentage[vs])))
 		left.WriteString("\n")
 		addDetailField(&left, "Circulating", display.FormatSupply(md.CirculatingSupply))
 		if md.TotalSupply > 0 {
@@ -198,6 +201,17 @@ func (m DetailModel) View() string {
 	subtitle := fmt.Sprintf("%s (%s) — Detail", coinName, coinSymbol)
 	inner := BrandTitle(subtitle) + "\n\n" + content + "\n\n" + help
 	return renderFrame(m.width, m.height, inner)
+}
+
+func formatATHDate(s string) string {
+	if s == "" {
+		return "—"
+	}
+	t, err := time.Parse(time.RFC3339, s)
+	if err != nil {
+		return s
+	}
+	return t.UTC().Format("2006-01-02")
 }
 
 func addDetailField(b *strings.Builder, label, value string) {

@@ -80,6 +80,14 @@ func renderBrailleChart(ohlc api.OHLCData, width, height int, vs string) string 
 
 	patterns := bg.BraillePatterns()
 
+	// Color the chart line based on 7-day performance.
+	var chartStyle lipgloss.Style
+	if prices[len(prices)-1] >= prices[0] {
+		chartStyle = GreenStyle
+	} else {
+		chartStyle = RedStyle
+	}
+
 	// Pre-compute styled Y-axis labels (right-aligned to yWidth).
 	pad := strings.Repeat(" ", yWidth)
 	styledHigh := DimStyle.Render(fmt.Sprintf("%*s", yWidth, yHigh))
@@ -98,7 +106,7 @@ func renderBrailleChart(ohlc api.OHLCData, width, height int, vs string) string 
 		default:
 			b.WriteString(pad)
 		}
-		b.WriteString(string(row))
+		b.WriteString(chartStyle.Render(string(row)))
 		b.WriteString("\n")
 	}
 

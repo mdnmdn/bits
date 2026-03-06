@@ -10,9 +10,10 @@ import (
 )
 
 const (
-	colorReset = "\033[0m"
-	colorGreen = "\033[32m"
-	colorRed   = "\033[31m"
+	colorReset  = "\033[0m"
+	colorGreen  = "\033[32m"
+	colorRed    = "\033[31m"
+	colorHeader = "\033[1;38;2;255;232;102m" // bold #FFE866
 )
 
 var (
@@ -37,6 +38,14 @@ func colorEnabled() bool {
 // VisibleWidth returns the display width of a string after stripping ANSI escapes.
 func VisibleWidth(s string) int {
 	return len(ansiRegex.ReplaceAllString(s, ""))
+}
+
+// ColorHeader wraps s in bold #FFE866 (gold) when color output is enabled.
+func ColorHeader(s string) string {
+	if !colorEnabled() {
+		return s
+	}
+	return colorHeader + s + colorReset
 }
 
 func ColorPercent(pct float64) string {

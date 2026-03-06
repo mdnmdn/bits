@@ -89,7 +89,7 @@ func (m MarketsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		switch msg.String() {
-		case "q", "ctrl+c":
+		case "q", "esc", "ctrl+c":
 			return m, tea.Quit
 		case "j", "down":
 			if m.cursor < len(m.coins)-1 {
@@ -141,7 +141,7 @@ func (m MarketsModel) View() string {
 	b.WriteString(BrandTitle(subtitle))
 	b.WriteString("\n\n")
 
-	header := fmt.Sprintf("  %-4s %-20s %-8s %14s %12s %12s %10s",
+	header := fmt.Sprintf("  %-4s %-20s %-10s %14s %12s %12s %10s",
 		"#", "Name", "Symbol", "Price", "Market Cap", "Volume", "24h")
 	b.WriteString(HeaderStyle.Render(header))
 	b.WriteString("\n")
@@ -167,10 +167,10 @@ func (m MarketsModel) View() string {
 		pctStr := fmt.Sprintf("%10s", display.FormatPercent(c.PriceChangePercentage24h))
 		pctStr = ColorPercent(c.PriceChangePercentage24h, pctStr)
 
-		row := fmt.Sprintf("%-4d %-20s %-8s %14s %12s %12s %s",
+		row := fmt.Sprintf("%-4d %-20s %-10s %14s %12s %12s %s",
 			c.MarketCapRank,
 			truncate(display.SanitizeCell(c.Name), 20),
-			display.FormatSymbol(c.Symbol),
+			truncate(display.FormatSymbol(c.Symbol), 10),
 			display.FormatPrice(c.CurrentPrice, m.vs),
 			display.FormatLargeNumber(c.MarketCap, m.vs),
 			display.FormatLargeNumber(c.TotalVolume, m.vs),
