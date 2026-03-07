@@ -1,22 +1,28 @@
 # cg — CoinGecko CLI
 
-A fast, full-featured terminal interface for the [CoinGecko API](https://docs.coingecko.com), built in Go. Includes an interactive TUI with 7-day price charts, CSV export, 50+ currency symbols, and support for both demo and paid API tiers.
+A fast, full-featured terminal interface for the [CoinGecko API](https://docs.coingecko.com), built in Go. Includes an interactive TUI with 7-day price charts, CSV export, 50+ currency symbols, 500+ categories, and more than 10 years of historical data. 
 
 > [!NOTE]
 > CoinGecko CLI is currently in Beta.
 > We're constantly improving, and your feedback is crucial. Please share your feedback via this [form](https://forms.gle/VgpVbwsSJLgE7D8Q7), or submit a PR.
 
-## Features at a Glance
+<img width="584" height="705" alt="Screenshot 2026-03-07 at 4 31 27 PM" src="https://github.com/user-attachments/assets/7973c959-233b-4cb4-8f9e-37f3954c67a3" />
 
-- **Interactive TUI** — Full-screen terminal dashboard with live navigation and 7-day braille price charts
-- **Real-Time Prices** — Current prices by CoinGecko ID or ticker symbol, with 50+ currency symbols
-- **Deep Historical Data** — Snapshots, OHLC, and custom date ranges with CSV export
-- **Category Filtering** — Filter by 500+ categories including AI, Layer-2, Tokenized Stocks, Gold, and Silver
-- **Paginated Markets** — Fetch 1,000+ coins with automatic pagination
-- **Trending** — Real-time trending coins, NFTs, and categories
-- **CSV Export** — Export any market or history query for analysis in Excel or Python
-- **JSON Output** — Machine-readable `-o json` for scripting and pipelines
-- **Agent/LLM Friendly** — `--dry-run` mode and `cg commands` for tool integration
+
+## Features at a Glance
+- **🎮 Interactive TUI** — Full-screen terminal dashboard with live navigation and 7-day braille price charts
+- **⚡ Real-Time Prices** — Current prices by CoinGecko ID or ticker symbol, with 50+ currency symbols
+- **📅 Deep Historical Data** — Snapshots, OHLC, and custom date ranges with CSV export
+- **🏷️ Category Filtering** — Filter by 500+ categories including AI, Layer-2, Tokenized Stocks, Gold, and Silver
+- **📊 Unlimtited Markets** — Fetch 1,000+ coins with automatic pagination
+- **🔥 Trending & Top Movers** — Real-time trending coins, NFTs, and categories
+- **📥 CSV Export** — Export any market or history query for analysis in Excel or Python
+- **⌨️ JSON Output** — Machine-readable `-o json` for scripting and pipelines
+- **🤖 Agent/LLM Friendly** — `--dry-run` mode and `cg commands` for tool integration
+
+<img width="701" height="412" alt="Screenshot 2026-03-07 at 4 06 14 PM" src="https://github.com/user-attachments/assets/a62b26d3-da95-4040-b421-371409202e82" />
+<img width="774" height="562" alt="Screenshot 2026-03-07 at 4 07 19 PM" src="https://github.com/user-attachments/assets/b2d34cc7-7cc0-48b5-9f24-4c2e909d434e" />
+
 
 ---
 
@@ -95,12 +101,89 @@ Fetch the current price of one or more coins. Supports both CoinGecko IDs and ti
 # By CoinGecko ID
 cg price --ids bitcoin,ethereum
 
-# By ticker symbol (auto-resolves to IDs via search)
+# By ticker symbol (for coins that share the same symbol, the coin with highest market cap will be prioritised)
 cg price --symbols btc,eth
 
 # Different target currency
 cg price --ids bitcoin --vs eur
 ```
+
+#### Supported Currencies
+For `--vs` currency, refer below for the full supported currency IDs. By default, it will always lookup by `usd`
+| IDs | Currency Name | Type |
+| :--- | :--- | :--- |
+| `usd` | US Dollar | Fiat |
+| `eur` | Euro | Fiat |
+| `eth` | Ether | Crypto |
+| `xau` | Gold - Troy Ounce | Commodity |
+
+<details>
+<summary>Click to see full list of supported IDs</summary>
+  
+| IDs | Currency Name | Type |
+| :--- | :--- | :--- |
+| `bch` | Bitcoin Cash | Crypto |
+| `bnb` | Binance Coin | Crypto |
+| `eos` | EOS | Crypto |
+| `xrp` | XRP | Crypto |
+| `xlm` | Stellar | Crypto |
+| `link` | Chainlink | Crypto |
+| `dot` | Polkadot | Crypto |
+| `yfi` | yearn.finance | Crypto |
+| `sol` | Solana | Crypto |
+| `usd` | US Dollar | Fiat |
+| `aed` | UAE Dirham | Fiat |
+| `ars` | Argentine Peso | Fiat |
+| `aud` | Australian Dollar | Fiat |
+| `bdt` | Bangladeshi Taka | Fiat |
+| `bhd` | Bahraini Dinar | Fiat |
+| `bmd` | Bermudian Dollar | Fiat |
+| `brl` | Brazil Real | Fiat |
+| `cad` | Canadian Dollar | Fiat |
+| `chf` | Swiss Franc | Fiat |
+| `clp` | Chilean Peso | Fiat |
+| `cny` | Chinese Yuan | Fiat |
+| `czk` | Czech Koruna | Fiat |
+| `dkk` | Danish Krone | Fiat |
+| `eur` | Euro | Fiat |
+| `gbp` | British Pound Sterling | Fiat |
+| `gel` | Georgian Lari | Fiat |
+| `hkd` | Hong Kong Dollar | Fiat |
+| `huf` | Hungarian Forint | Fiat |
+| `idr` | Indonesian Rupiah | Fiat |
+| `ils` | Israeli New Shekel | Fiat |
+| `inr` | Indian Rupee | Fiat |
+| `jpy` | Japanese Yen | Fiat |
+| `krw` | South Korean Won | Fiat |
+| `kwd` | Kuwaiti Dinar | Fiat |
+| `lkr` | Sri Lankan Rupee | Fiat |
+| `mmk` | Burmese Kyat | Fiat |
+| `mxn` | Mexican Peso | Fiat |
+| `myr` | Malaysian Ringgit | Fiat |
+| `ngn` | Nigerian Naira | Fiat |
+| `nok` | Norwegian Krone | Fiat |
+| `nzd` | New Zealand Dollar | Fiat |
+| `php` | Philippine Peso | Fiat |
+| `pkr` | Pakistani Rupee | Fiat |
+| `pln` | Polish Zloty | Fiat |
+| `rub` | Russian Ruble | Fiat |
+| `sar` | Saudi Riyal | Fiat |
+| `sek` | Swedish Krona | Fiat |
+| `sgd` | Singapore Dollar | Fiat |
+| `thb` | Thai Baht | Fiat |
+| `try` | Turkish Lira | Fiat |
+| `twd` | New Taiwan Dollar | Fiat |
+| `uah` | Ukrainian Hryvnia | Fiat |
+| `vef` | Venezuelan Bolívar Fuerte | Fiat |
+| `vnd` | Vietnamese Dong | Fiat |
+| `zar` | South African Rand | Fiat |
+| `xdr` | IMF Special Drawing Rights | Other |
+| `xag` | Silver - Troy Ounce | Commodity |
+| `xau` | Gold - Troy Ounce | Commodity |
+| `bits` | Bits (Bitcoin) | Unit |
+| `sats` | Satoshis (Bitcoin) | Unit |
+
+</details>
 
 **Output columns:** Coin | Price | 24h Change
 
@@ -132,7 +215,7 @@ cg markets --total 250 --export data.csv
 
 ### `cg search` — Search Coins
 
-Search for any coin by name or symbol. Returns the top matches with their CoinGecko IDs.
+Search for any coin by name or symbol. Returns the top matches with their CoinGecko coin IDs.
 
 ```sh
 cg search solana
@@ -192,12 +275,14 @@ cg history bitcoin --from 2024-01-01 --to 2024-06-30 --ohlc   # OHLC output
 | `--from / --to YYYY-MM-DD` | Inclusive date range (price data) |
 | `--ohlc` | Switch `--days` or `--from/--to` to OHLC output |
 | `--vs` | Quote currency (default: `usd`) |
-| `--interval` | Data granularity: `daily` (free for `--days`), `hourly`/`5m` (paid) |
+| `--interval` | Data granularity: `daily`, `hourly`, or `5m` |
 | `--export` | Export to CSV file path |
+
+Note: `hourly` and `5m` interval data are only available from **February 2, 2018** onwards. `5m` interval is exclusive for [Enterprise](https://www.coingecko.com/en/api/pricing) plan only. 
 
 ---
 
-### `cg top-gainers-losers` — Top Movers (paid plans only)
+### `cg top-gainers-losers` — Top Movers (Exclusive for [Analyst plan](https://www.coingecko.com/en/api/pricing) & above)
 
 ```sh
 cg top-gainers-losers
@@ -250,7 +335,7 @@ CSV files contain raw numbers (not formatted strings), making them directly usab
 
 ## Interactive TUI
 
-### `cg tui markets` — Top 50 Markets
+### `cg tui markets` — Top Market Cap Ranked Coins
 
 ```sh
 cg tui markets
@@ -285,7 +370,6 @@ Pressing `Enter` on any coin opens a split-panel detail view:
 
 **Right panel** — 7-day price chart rendered as a braille-dot line graph in the terminal.
 
-Both panels are fetched concurrently, so loading time is the slower of the two requests (not their sum).
 
 ---
 
