@@ -249,7 +249,7 @@ func TestFetchMarketChartBatched_APIError(t *testing.T) {
 		callCount++
 		if callCount == 2 {
 			w.WriteHeader(500)
-			fmt.Fprint(w, `{"status":{"error_code":500,"error_message":"Internal error"}}`)
+			_, _ = fmt.Fprint(w, `{"status":{"error_code":500,"error_message":"Internal error"}}`)
 			return
 		}
 		resp := api.MarketChartResponse{

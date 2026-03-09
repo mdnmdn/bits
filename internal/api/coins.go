@@ -20,6 +20,19 @@ func (c *Client) SimplePrice(ctx context.Context, ids []string, vsCurrency strin
 	return result, err
 }
 
+// SimplePriceBySymbols fetches current prices by ticker symbols (e.g. btc, eth).
+// https://docs.coingecko.com/v3.0.1/reference/simple-price
+func (c *Client) SimplePriceBySymbols(ctx context.Context, symbols []string, vsCurrency string) (PriceResponse, error) {
+	params := url.Values{
+		"symbols":              {strings.Join(symbols, ",")},
+		"vs_currencies":        {vsCurrency},
+		"include_24hr_change":  {"true"},
+	}
+	var result PriceResponse
+	err := c.get(ctx, "/simple/price?"+params.Encode(), &result)
+	return result, err
+}
+
 // CoinMarkets fetches a paginated list of coins with market data.
 // https://docs.coingecko.com/v3.0.1/reference/coins-markets
 func (c *Client) CoinMarkets(ctx context.Context, vsCurrency string, perPage, page int, order, category string) ([]MarketCoin, error) {

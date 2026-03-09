@@ -28,16 +28,16 @@ var asciiLogo = []string{
 func PrintLogo() {
 	if !ColorEnabled() {
 		for _, line := range asciiLogo {
-			fmt.Fprintln(os.Stderr, line)
+			_, _ = fmt.Fprintln(os.Stderr, line)
 		}
-		fmt.Fprintln(os.Stderr)
+		_, _ = fmt.Fprintln(os.Stderr)
 		return
 	}
-	fmt.Fprintln(os.Stderr)
+	_, _ = fmt.Fprintln(os.Stderr)
 	for _, line := range asciiLogo {
-		fmt.Fprintf(os.Stderr, "%s%s%s\n", brandGreen, line, colorReset)
+		_, _ = fmt.Fprintf(os.Stderr, "%s%s%s\n", brandGreen, line, colorReset)
 	}
-	fmt.Fprintln(os.Stderr)
+	_, _ = fmt.Fprintln(os.Stderr)
 }
 
 // PrintWelcomeBox prints a bordered quick-start box to stderr.
@@ -47,14 +47,14 @@ func PrintWelcomeBox() {
 	blank := "|" + strings.Repeat(" ", boxWidth) + "|"
 	sep := boxRow(w, dimColor+strings.Repeat("-", boxWidth-2)+colorReset, boxWidth-2)
 
-	fmt.Fprintln(w, top)
-	fmt.Fprintln(w, blank)
+	_, _ = fmt.Fprintln(w, top)
+	_, _ = fmt.Fprintln(w, blank)
 	printColoredRow(w, yellowBold+"Official API Command Line Interface"+colorReset, 35)
-	fmt.Fprintln(w, blank)
-	fmt.Fprintln(w, sep)
-	fmt.Fprintln(w, blank)
+	_, _ = fmt.Fprintln(w, blank)
+	_, _ = fmt.Fprintln(w, sep)
+	_, _ = fmt.Fprintln(w, blank)
 	printPlainRow(w, "  Quick Start")
-	fmt.Fprintln(w, blank)
+	_, _ = fmt.Fprintln(w, blank)
 	printCmdRow(w, "cg auth", "# Set up your API key")
 	printCmdRow(w, "cg price --ids bitcoin", "# Get BTC price")
 	printCmdRow(w, "cg markets --total 100", "# Top 100 by mkt cap")
@@ -63,13 +63,13 @@ func PrintWelcomeBox() {
 	printCmdRow(w, "cg history bitcoin --days 30", "# 30-day price history")
 	printCmdRow(w, "cg top-gainers-losers", "# Top gainers (paid)")
 	printCmdRow(w, "cg tui markets", "# Interactive TUI")
-	fmt.Fprintln(w, blank)
-	fmt.Fprintln(w, sep)
-	fmt.Fprintln(w, blank)
+	_, _ = fmt.Fprintln(w, blank)
+	_, _ = fmt.Fprintln(w, sep)
+	_, _ = fmt.Fprintln(w, blank)
 	printColoredRow(w, "  "+dimColor+"Docs: "+colorReset+cyanColor+"https://docs.coingecko.com"+colorReset, 34)
-	fmt.Fprintln(w, blank)
-	fmt.Fprintln(w, top)
-	fmt.Fprintln(w)
+	_, _ = fmt.Fprintln(w, blank)
+	_, _ = fmt.Fprintln(w, top)
+	_, _ = fmt.Fprintln(w)
 }
 
 func printPlainRow(w *os.File, text string) {
@@ -77,7 +77,7 @@ func printPlainRow(w *os.File, text string) {
 	if pad < 0 {
 		pad = 0
 	}
-	fmt.Fprintf(w, "| %s%s |\n", text, strings.Repeat(" ", pad))
+	_, _ = fmt.Fprintf(w, "| %s%s |\n", text, strings.Repeat(" ", pad))
 }
 
 func printColoredRow(w *os.File, content string, visible int) {
@@ -91,10 +91,10 @@ func printColoredRow(w *os.File, content string, visible int) {
 		if plainPad < 0 {
 			plainPad = 0
 		}
-		fmt.Fprintf(w, "| %s%s |\n", plain, strings.Repeat(" ", plainPad))
+		_, _ = fmt.Fprintf(w, "| %s%s |\n", plain, strings.Repeat(" ", plainPad))
 		return
 	}
-	fmt.Fprintf(w, "| %s%s |\n", content, strings.Repeat(" ", pad))
+	_, _ = fmt.Fprintf(w, "| %s%s |\n", content, strings.Repeat(" ", pad))
 }
 
 func printCmdRow(w *os.File, cmd, comment string) {
@@ -108,12 +108,12 @@ func printCmdRow(w *os.File, cmd, comment string) {
 		commentPad = 0
 	}
 	if ColorEnabled() {
-		fmt.Fprintf(w, "|   %s$%s %s%s %s%s%s |\n",
+		_, _ = fmt.Fprintf(w, "|   %s$%s %s%s %s%s%s |\n",
 			brandGreen, colorReset,
 			cmd, strings.Repeat(" ", cmdPad),
 			dimColor, comment, colorReset+strings.Repeat(" ", commentPad))
 	} else {
-		fmt.Fprintf(w, "|   $ %s%s %s%s |\n",
+		_, _ = fmt.Fprintf(w, "|   $ %s%s %s%s |\n",
 			cmd, strings.Repeat(" ", cmdPad),
 			comment, strings.Repeat(" ", commentPad))
 	}
@@ -131,9 +131,9 @@ func boxRow(w *os.File, content string, visible int) string {
 // Writing to stderr keeps stdout clean for piped data.
 func PrintBanner() {
 	if !ColorEnabled() {
-		fmt.Fprint(os.Stderr, "\n  CoinGecko CLI  —  Real-time crypto data\n\n")
+		_, _ = fmt.Fprint(os.Stderr, "\n  CoinGecko CLI  —  Real-time crypto data\n\n")
 		return
 	}
-	fmt.Fprintf(os.Stderr, "\n  %s◆ CoinGecko%s %sCLI  —  Real-time crypto data%s\n\n",
+	_, _ = fmt.Fprintf(os.Stderr, "\n  %s◆ CoinGecko%s %sCLI  —  Real-time crypto data%s\n\n",
 		brandGreen, colorReset, dimColor, colorReset)
 }

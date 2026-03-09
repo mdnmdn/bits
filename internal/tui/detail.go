@@ -215,9 +215,9 @@ func formatATHDate(s string) string {
 }
 
 func addDetailField(b *strings.Builder, label, value string) {
-	b.WriteString(fmt.Sprintf(" %-12s %s\n", LabelStyle.Render(label), value))
+	fmt.Fprintf(b, " %-12s %s\n", LabelStyle.Render(label), value)
 }
 
 func addDimField(b *strings.Builder, label, value string) {
-	b.WriteString(fmt.Sprintf(" %-12s %s\n", DimStyle.Render(label), value))
+	fmt.Fprintf(b, " %-12s %s\n", DimStyle.Render(label), value)
 }
