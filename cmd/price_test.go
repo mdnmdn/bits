@@ -35,6 +35,22 @@ func TestPrice_DryRun(t *testing.T) {
 	assert.Contains(t, out.URL, "/simple/price")
 }
 
+func TestPrice_DryRun_Symbols(t *testing.T) {
+	srv := newTestServer(func(w http.ResponseWriter, r *http.Request) {
+		t.Fatal("should not make HTTP call in dry-run mode")
+	})
+	defer srv.Close()
+	withTestClientDemo(t, srv)
+
+	stdout, _, err := executeCommand(t, "price", "--symbols", "btc", "--dry-run", "-o", "json")
+	require.NoError(t, err)
+
+	var out dryRunOutput
+	require.NoError(t, json.Unmarshal([]byte(stdout), &out))
+	assert.Equal(t, "btc", out.Params["symbols"])
+	assert.Contains(t, out.URL, "/simple/price")
+}
+
 func TestPrice_ByIDs_JSONOutput(t *testing.T) {
 	srv := newTestServer(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "/simple/price", r.URL.Path)
@@ -57,20 +73,9 @@ func TestPrice_ByIDs_JSONOutput(t *testing.T) {
 
 func TestPrice_BySymbols_JSONOutput(t *testing.T) {
 	srv := newTestServer(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/search" {
-			// Verify the search query matches the requested symbol.
-			assert.Equal(t, "btc", r.URL.Query().Get("query"))
-			resp := api.SearchResponse{
-				Coins: []api.SearchCoin{
-					{ID: "bitcoin", Symbol: "btc", MarketCapRank: 1},
-				},
-			}
-			_ = json.NewEncoder(w).Encode(resp)
-			return
-		}
-		// Verify the resolved ID is what gets requested.
+		// Symbols are passed directly — no /search call.
 		assert.Equal(t, "/simple/price", r.URL.Path)
-		assert.Equal(t, "bitcoin", r.URL.Query().Get("ids"))
+		assert.Equal(t, "btc", r.URL.Query().Get("symbols"))
 		assert.Equal(t, "usd", r.URL.Query().Get("vs_currencies"))
 		resp := api.PriceResponse{
 			"bitcoin": {"usd": 50000},
@@ -88,25 +93,47 @@ func TestPrice_BySymbols_JSONOutput(t *testing.T) {
 	assert.Contains(t, prices, "bitcoin")
 }
 
-func TestPrice_SymbolNoMatch(t *testing.T) {
+func TestPrice_SymbolNoResults(t *testing.T) {
 	srv := newTestServer(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/search" {
-			// Return coins that don't match the symbol
-			resp := api.SearchResponse{
-				Coins: []api.SearchCoin{
-					{ID: "something", Symbol: "xyz", MarketCapRank: 100},
-				},
-			}
-			_ = json.NewEncoder(w).Encode(resp)
-			return
-		}
-		t.Fatal("should not call price API when no symbols resolved")
+		// API returns empty response for unknown symbol.
+		_ = json.NewEncoder(w).Encode(api.PriceResponse{})
 	})
 	defer srv.Close()
 	withTestClientDemo(t, srv)
 
-	_, stderr, err := executeCommand(t, "price", "--symbols", "notarealcoin", "-o", "json")
+	_, _, err := executeCommand(t, "price", "--symbols", "notarealcoin", "-o", "json")
 	require.Error(t, err)
-	assert.Contains(t, stderr, "no exact match")
 	assert.Contains(t, err.Error(), "no valid coins found")
+}
+
+func TestPrice_BySymbols_TableOutput_NoFalseWarning(t *testing.T) {
+	srv := newTestServer(func(w http.ResponseWriter, r *http.Request) {
+		// API returns coin ID as key, not the requested symbol.
+		resp := api.PriceResponse{
+			"bitcoin": {"usd": 50000, "usd_24h_change": 1.0},
+		}
+		_ = json.NewEncoder(w).Encode(resp)
+	})
+	defer srv.Close()
+	withTestClientDemo(t, srv)
+
+	_, stderr, err := executeCommand(t, "price", "--symbols", "btc")
+	require.NoError(t, err)
+	assert.NotContains(t, stderr, "no data returned")
+}
+
+func TestPrice_PartialMiss_WarnsOnStderr(t *testing.T) {
+	srv := newTestServer(func(w http.ResponseWriter, r *http.Request) {
+		// Only return data for bitcoin, not for "missing".
+		resp := api.PriceResponse{
+			"bitcoin": {"usd": 50000, "usd_24h_change": 1.0},
+		}
+		_ = json.NewEncoder(w).Encode(resp)
+	})
+	defer srv.Close()
+	withTestClientDemo(t, srv)
+
+	_, stderr, err := executeCommand(t, "price", "--ids", "bitcoin,missing")
+	require.NoError(t, err)
+	assert.Contains(t, stderr, `no data returned for "missing"`)
 }

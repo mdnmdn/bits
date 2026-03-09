@@ -1,10 +1,9 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
+	"sort"
 	"strings"
-	"sync"
 
 	"github.com/coingecko/coingecko-cli/internal/api"
 	"github.com/coingecko/coingecko-cli/internal/display"
@@ -34,7 +33,6 @@ func runPrice(cmd *cobra.Command, args []string) error {
 	symbolsStr, _ := cmd.Flags().GetString("symbols")
 	vs, _ := cmd.Flags().GetString("vs")
 	jsonOut := outputJSON(cmd)
-	ctx := cmd.Context()
 
 	if !jsonOut {
 		display.PrintBanner()
@@ -59,110 +57,84 @@ func runPrice(cmd *cobra.Command, args []string) error {
 			params["ids"] = idsStr
 		}
 		if symbolsStr != "" {
-			params["symbols (unresolved)"] = symbolsStr
+			params["symbols"] = symbolsStr
 		}
 		return printDryRun(cfg, "price", "/simple/price", params, nil)
 	}
 
 	client := newAPIClient(cfg)
+	ctx := cmd.Context()
 
-	var ids []string
+	// Fetch prices by IDs and/or symbols directly — no /search resolution needed.
+	// The API's symbols lookup returns the top-ranked match by market cap.
+	var prices api.PriceResponse
+	var requestedIDs []string // track user-requested IDs for missing-coin warnings (symbols can't be checked — response keys are coin IDs)
+
 	if idsStr != "" {
-		ids = splitTrim(idsStr)
+		ids := splitTrim(idsStr)
+		requestedIDs = append(requestedIDs, ids...)
+		p, err := client.SimplePrice(ctx, ids, vs)
+		if err != nil {
+			return err
+		}
+		prices = p
 	}
 
 	if symbolsStr != "" {
 		symbols := splitTrim(symbolsStr)
-		resolved, err := resolveSymbols(ctx, client, symbols)
+		p, err := client.SimplePriceBySymbols(ctx, symbols, vs)
 		if err != nil {
 			return err
 		}
-		ids = append(ids, resolved...)
+		if prices == nil {
+			prices = p
+		} else {
+			for k, v := range p {
+				prices[k] = v
+			}
+		}
 	}
 
-	if len(ids) == 0 {
+	if len(prices) == 0 {
 		return fmt.Errorf("no valid coins found")
-	}
-
-	prices, err := client.SimplePrice(ctx, ids, vs)
-	if err != nil {
-		return err
 	}
 
 	if jsonOut {
 		return printJSONRaw(prices)
 	}
 
+	// Warn about requested IDs that returned no data.
+	// Only check --ids values; --symbols can't be checked because response keys are coin IDs (e.g. "bitcoin"), not symbols (e.g. "btc").
+	responseKeys := make(map[string]bool, len(prices))
+	for k := range prices {
+		responseKeys[strings.ToLower(k)] = true
+	}
+	for _, r := range requestedIDs {
+		if !responseKeys[strings.ToLower(r)] {
+			warnf("Warning: no data returned for %q\n", r)
+		}
+	}
+
+	// Sort response keys for deterministic table output.
+	keys := make([]string, 0, len(prices))
+	for k := range prices {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
 	headers := []string{"Coin", "Price", "24h Change"}
 	var rows [][]string
-	for _, id := range ids {
-		data, ok := prices[id]
-		if !ok {
-			warnf("Warning: no data returned for %q\n", id)
-			continue
-		}
-		price := data[vs]
-		change := data[vs+"_24h_change"]
+	for _, id := range keys {
+		data := prices[id]
 		rows = append(rows, []string{
 			display.SanitizeCell(id),
-			display.FormatPrice(price, vs),
-			display.ColorPercent(change),
+			display.FormatPrice(data[vs], vs),
+			display.ColorPercent(data[vs+"_24h_change"]),
 		})
 	}
 
 	display.PrintTable(headers, rows)
 	return nil
-}
-
-func resolveSymbols(ctx context.Context, client *api.Client, symbols []string) ([]string, error) {
-	type result struct {
-		index int
-		id    string
-		sym   string
-		err   error
-	}
-
-	results := make([]result, len(symbols))
-	var wg sync.WaitGroup
-	for i, sym := range symbols {
-		wg.Add(1)
-		go func(idx int, sym string) {
-			defer wg.Done()
-			sym = strings.ToLower(sym)
-			resp, err := client.Search(ctx, sym)
-			if err != nil {
-				results[idx] = result{index: idx, sym: sym, err: err}
-				return
-			}
-			var best *api.SearchCoin
-			for j, c := range resp.Coins {
-				if strings.EqualFold(c.Symbol, sym) {
-					if best == nil || (c.MarketCapRank > 0 && (best.MarketCapRank == 0 || c.MarketCapRank < best.MarketCapRank)) {
-						best = &resp.Coins[j]
-					}
-				}
-			}
-			if best != nil {
-				results[idx] = result{index: idx, id: best.ID, sym: sym}
-			} else {
-				results[idx] = result{index: idx, sym: sym}
-			}
-		}(i, sym)
-	}
-	wg.Wait()
-
-	var ids []string
-	for _, r := range results {
-		if r.err != nil {
-			return nil, fmt.Errorf("searching for %q: %w", r.sym, r.err)
-		}
-		if r.id == "" {
-			warnf("Warning: no exact match for symbol %q, skipping\n", r.sym)
-			continue
-		}
-		ids = append(ids, r.id)
-	}
-	return ids, nil
 }
 
 func splitTrim(s string) []string {
