@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"os"
 	"sort"
 	"strconv"
 	"time"
@@ -506,7 +507,11 @@ func withRateLimitRetry(ctx context.Context, chunkLabel string, fn func() error)
 			jitter := 0.5 + rand.Float64()            // [0.5, 1.5)
 			wait = time.Duration(base*jitter*1000) * time.Millisecond
 		}
-		warnf("%s rate limited, retrying in %v...\n", chunkLabel, wait.Round(time.Millisecond))
+		if display.StderrIsTerminal() {
+			warnf("\r  Rate limited (%s), retrying in %v...      \n", chunkLabel, wait.Round(time.Millisecond))
+		} else {
+			warnf("Rate limited (%s), retrying in %v...\n", chunkLabel, wait.Round(time.Millisecond))
+		}
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
@@ -514,6 +519,47 @@ func withRateLimitRetry(ctx context.Context, chunkLabel string, fn func() error)
 		}
 	}
 	return err
+}
+
+// progressBar renders an inline progress indicator on stderr.
+// On TTYs it overwrites the line in-place; off-TTY it prints simple log lines.
+func progressBar(current, total int) {
+	if !display.StderrIsTerminal() {
+		if current == 0 {
+			warnf("Fetching data")
+		}
+		if current < total {
+			warnf(".")
+		} else {
+			warnf("\n")
+		}
+		return
+	}
+	const barWidth = 20
+	filled := barWidth * current / total
+	var filledBar, emptyBar string
+	for range filled {
+		filledBar += "█"
+	}
+	for range barWidth - filled {
+		emptyBar += "░"
+	}
+	pct := 100 * current / total
+	if display.ColorEnabled() {
+		// Brand green #4BCC00 for the filled portion only.
+		fmt.Fprintf(os.Stderr, "\r  Fetching data... \033[38;2;75;204;0m%s\033[0m%s %d%% (%d/%d)", filledBar, emptyBar, pct, current, total)
+	} else {
+		fmt.Fprintf(os.Stderr, "\r  Fetching data... %s%s %d%% (%d/%d)", filledBar, emptyBar, pct, current, total)
+	}
+	if current == total {
+		fmt.Fprint(os.Stderr, "\n")
+	}
+}
+
+// progressClear terminates the in-place progress line so subsequent
+// output (e.g. error messages) starts on a fresh line.
+func progressClear() {
+	fmt.Fprint(os.Stderr, "\n")
 }
 
 // fetchOHLCRangeBatched splits a large OHLC date range into chunks and merges results.
@@ -539,8 +585,8 @@ func fetchOHLCRangeBatched(ctx context.Context, client *api.Client, coinID, vs s
 			chunkTo = toUnix
 		}
 
-		chunkLabel := fmt.Sprintf("Chunk %d/%d", i+1, totalChunks)
-		warnf("%s fetching...\n", chunkLabel)
+		chunkLabel := fmt.Sprintf("chunk %d/%d", i+1, totalChunks)
+		progressBar(i, totalChunks)
 
 		var data api.OHLCData
 		err := withRateLimitRetry(ctx, chunkLabel, func() error {
@@ -549,11 +595,13 @@ func fetchOHLCRangeBatched(ctx context.Context, client *api.Client, coinID, vs s
 			return fetchErr
 		})
 		if err != nil {
+			progressClear()
 			return nil, fmt.Errorf("chunk %d/%d failed: %w", i+1, totalChunks, err)
 		}
 
 		dedupTimeseries((*[][]float64)(&merged), [][]float64(data), seen, 5)
 	}
+	progressBar(totalChunks, totalChunks)
 
 	return merged, nil
 }
@@ -584,8 +632,8 @@ func fetchMarketChartBatched(ctx context.Context, client *api.Client, coinID, vs
 			chunkTo = toUnix
 		}
 
-		chunkLabel := fmt.Sprintf("Chunk %d/%d", i+1, totalChunks)
-		warnf("%s fetching...\n", chunkLabel)
+		chunkLabel := fmt.Sprintf("chunk %d/%d", i+1, totalChunks)
+		progressBar(i, totalChunks)
 
 		var data *api.MarketChartResponse
 		err := withRateLimitRetry(ctx, chunkLabel, func() error {
@@ -594,6 +642,7 @@ func fetchMarketChartBatched(ctx context.Context, client *api.Client, coinID, vs
 			return fetchErr
 		})
 		if err != nil {
+			progressClear()
 			return nil, fmt.Errorf("chunk %d/%d failed: %w", i+1, totalChunks, err)
 		}
 
@@ -601,6 +650,7 @@ func fetchMarketChartBatched(ctx context.Context, client *api.Client, coinID, vs
 		dedupTimeseries(&merged.MarketCaps, data.MarketCaps, seenMCaps, 2)
 		dedupTimeseries(&merged.TotalVolumes, data.TotalVolumes, seenVols, 2)
 	}
+	progressBar(totalChunks, totalChunks)
 
 	return merged, nil
 }
