@@ -70,6 +70,27 @@ func TestOHLCRangeChunkDays(t *testing.T) {
 	}
 }
 
+// --- checkHourlyAvailability ---
+
+func TestCheckHourlyAvailability_OK(t *testing.T) {
+	// Date after cutoff should pass.
+	fromUnix := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC).Unix()
+	assert.NoError(t, checkHourlyAvailability(fromUnix))
+}
+
+func TestCheckHourlyAvailability_ExactCutoff(t *testing.T) {
+	// Exactly the cutoff date should pass.
+	assert.NoError(t, checkHourlyAvailability(hourlyAvailableFrom.Unix()))
+}
+
+func TestCheckHourlyAvailability_BeforeCutoff(t *testing.T) {
+	// Date before cutoff should fail.
+	fromUnix := time.Date(2017, 12, 1, 0, 0, 0, 0, time.UTC).Unix()
+	err := checkHourlyAvailability(fromUnix)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "hourly data is only available from 2018-01-30")
+}
+
 // --- trimTimeseries ---
 
 func TestTrimTimeseries(t *testing.T) {

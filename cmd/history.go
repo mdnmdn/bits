@@ -287,6 +287,9 @@ func historyDays(ctx context.Context, client *api.Client, coinID, vs, days, inte
 				apiDays = minHourlyRangeDays
 			}
 			fromUnix := now.AddDate(0, 0, -apiDays).Unix()
+			if err := checkHourlyAvailability(fromUnix); err != nil {
+				return err
+			}
 			originalFrom := now.AddDate(0, 0, -n).Unix()
 			toUnix := now.Unix()
 			data, err := fetchMarketChartBatched(ctx, client, coinID, vs, fromUnix, toUnix, "", hourlyChunkDays)
@@ -328,6 +331,9 @@ func historyRange(ctx context.Context, client *api.Client, coinID, vs, fromStr, 
 	// For hourly, always batch with auto-granularity (omit interval param).
 	// ≤90-day chunks trigger hourly auto-granularity on all plans.
 	if interval == "hourly" {
+		if err := checkHourlyAvailability(fromUnix); err != nil {
+			return err
+		}
 		data, err := fetchMarketChartBatched(ctx, client, coinID, vs, fromUnix, toUnix, "", hourlyChunkDays)
 		if err != nil {
 			return err
@@ -395,6 +401,12 @@ func historyOHLCRange(ctx context.Context, client *api.Client, coinID, vs, fromS
 		return err
 	}
 
+	if interval == "hourly" {
+		if err := checkHourlyAvailability(fromUnix); err != nil {
+			return err
+		}
+	}
+
 	// Batch OHLC range requests when range exceeds per-request limits.
 	// daily: 180 days max, hourly: 31 days max.
 	chunkDays := ohlcRangeChunkDays(interval)
@@ -428,6 +440,20 @@ const (
 	hourlyChunkDays    = 90 // auto-granularity gives hourly for 2-90 day ranges
 	minDailyRangeDays  = 91 // auto-granularity gives daily for >90 day ranges
 )
+
+// Data availability cutoff dates from CoinGecko API.
+var (
+	hourlyAvailableFrom = time.Date(2018, 1, 30, 0, 0, 0, 0, time.UTC) // 30 Jan 2018
+)
+
+// checkHourlyAvailability returns an error if fromUnix predates the hourly data cutoff.
+func checkHourlyAvailability(fromUnix int64) error {
+	if fromUnix < hourlyAvailableFrom.Unix() {
+		return fmt.Errorf("hourly data is only available from %s onwards — the requested range starts before this date",
+			hourlyAvailableFrom.Format(dateLayout))
+	}
+	return nil
+}
 
 // ohlcRangeChunkDays returns the max safe chunk size for OHLC range requests.
 func ohlcRangeChunkDays(interval string) int {
