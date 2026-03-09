@@ -3,8 +3,6 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/coingecko/coingecko-cli/internal/api"
-	"github.com/coingecko/coingecko-cli/internal/config"
 	"github.com/coingecko/coingecko-cli/internal/tui"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -55,11 +53,11 @@ func runTUIMarkets(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("--total must be a positive integer")
 	}
 
-	cfg, err := config.Load()
+	cfg, err := loadConfig()
 	if err != nil {
 		return err
 	}
-	client := api.NewClient(cfg)
+	client := newAPIClient(cfg)
 	model := tui.NewMarketsModel(client, vs, category, total)
 
 	p := tea.NewProgram(model, tea.WithAltScreen())
@@ -70,11 +68,11 @@ func runTUIMarkets(cmd *cobra.Command, args []string) error {
 func runTUITrending(cmd *cobra.Command, args []string) error {
 	vs, _ := cmd.Flags().GetString("vs")
 
-	cfg, err := config.Load()
+	cfg, err := loadConfig()
 	if err != nil {
 		return err
 	}
-	client := api.NewClient(cfg)
+	client := newAPIClient(cfg)
 	showMax := ""
 	if cfg.IsPaid() {
 		showMax = "coins"

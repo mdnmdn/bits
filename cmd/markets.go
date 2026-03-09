@@ -3,8 +3,6 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/coingecko/coingecko-cli/internal/api"
-	"github.com/coingecko/coingecko-cli/internal/config"
 	"github.com/coingecko/coingecko-cli/internal/display"
 
 	"github.com/spf13/cobra"
@@ -40,11 +38,11 @@ func runMarkets(cmd *cobra.Command, args []string) error {
 		display.PrintBanner()
 	}
 
-	cfg, err := config.Load()
+	cfg, err := loadConfig()
 	if err != nil {
 		return err
 	}
-	client := api.NewClient(cfg)
+	client := newAPIClient(cfg)
 	ctx := cmd.Context()
 
 	perPage := 250

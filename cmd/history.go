@@ -90,7 +90,7 @@ func runHistory(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("--ohlc with --from/--to requires --interval (daily or hourly)")
 	}
 
-	cfg, err := config.Load()
+	cfg, err := loadConfig()
 	if err != nil {
 		return err
 	}
@@ -115,7 +115,7 @@ func runHistory(cmd *cobra.Command, args []string) error {
 		return historyDryRun(cfg, coinID, dateStr, daysStr, fromStr, toStr, vs, interval, ohlc)
 	}
 
-	client := api.NewClient(cfg)
+	client := newAPIClient(cfg)
 	ctx := cmd.Context()
 
 	switch {
@@ -423,10 +423,10 @@ func historyOHLCRange(ctx context.Context, client *api.Client, coinID, vs, fromS
 }
 
 const (
-	secsPerDay          = 86400
-	minHourlyRangeDays  = 2  // auto-granularity gives hourly starting at 2-day ranges
-	hourlyChunkDays     = 90 // auto-granularity gives hourly for 2-90 day ranges
-	minDailyRangeDays   = 91 // auto-granularity gives daily for >90 day ranges
+	secsPerDay         = 86400
+	minHourlyRangeDays = 2  // auto-granularity gives hourly starting at 2-day ranges
+	hourlyChunkDays    = 90 // auto-granularity gives hourly for 2-90 day ranges
+	minDailyRangeDays  = 91 // auto-granularity gives daily for >90 day ranges
 )
 
 // ohlcRangeChunkDays returns the max safe chunk size for OHLC range requests.
@@ -504,7 +504,7 @@ func withRateLimitRetry(ctx context.Context, chunkLabel string, fn func() error)
 		} else {
 			// No server hint — exponential backoff with jitter: base * [0.5, 1.5)
 			base := float64(int(2) << uint(attempt)) // 2, 4, 8
-			jitter := 0.5 + rand.Float64()            // [0.5, 1.5)
+			jitter := 0.5 + rand.Float64()           // [0.5, 1.5)
 			wait = time.Duration(base*jitter*1000) * time.Millisecond
 		}
 		if display.StderrIsTerminal() {
@@ -614,7 +614,7 @@ func fetchMarketChartBatched(ctx context.Context, client *api.Client, coinID, vs
 	}
 	chunkSec := int64(chunkDays) * secsPerDay
 	// Calculate number of chunks.
-	totalChunks := int((toUnix-fromUnix+chunkSec-1) / chunkSec)
+	totalChunks := int((toUnix - fromUnix + chunkSec - 1) / chunkSec)
 
 	merged := &api.MarketChartResponse{}
 	seenPrices := make(map[int64]bool)

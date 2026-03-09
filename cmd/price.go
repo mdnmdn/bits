@@ -7,7 +7,6 @@ import (
 	"sync"
 
 	"github.com/coingecko/coingecko-cli/internal/api"
-	"github.com/coingecko/coingecko-cli/internal/config"
 	"github.com/coingecko/coingecko-cli/internal/display"
 
 	"github.com/spf13/cobra"
@@ -45,7 +44,7 @@ func runPrice(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("provide --ids or --symbols")
 	}
 
-	cfg, err := config.Load()
+	cfg, err := loadConfig()
 	if err != nil {
 		return err
 	}
@@ -65,7 +64,7 @@ func runPrice(cmd *cobra.Command, args []string) error {
 		return printDryRun(cfg, "price", "/simple/price", params, nil)
 	}
 
-	client := api.NewClient(cfg)
+	client := newAPIClient(cfg)
 
 	var ids []string
 	if idsStr != "" {

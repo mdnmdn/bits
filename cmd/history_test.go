@@ -313,8 +313,8 @@ func TestFetchOHLCRangeBatched_FutureToUnixCapped(t *testing.T) {
 	defer srv.Close()
 
 	now := time.Now().Unix()
-	from := now - 40*86400          // 40 days ago
-	futureToUnix := now + 12*3600   // 12 hours in the future (endOfDayUnix scenario)
+	from := now - 40*86400        // 40 days ago
+	futureToUnix := now + 12*3600 // 12 hours in the future (endOfDayUnix scenario)
 
 	_, err := fetchOHLCRangeBatched(context.Background(), client, "bitcoin", "usd", from, futureToUnix, "hourly", 30)
 	require.NoError(t, err)
