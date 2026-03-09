@@ -114,5 +114,7 @@ coingecko-cli/
 - **Daily interval on /range**: uses auto-granularity (>90 day ranges → daily). Short ranges (<91 days) are padded to 91 days then trimmed to the original range
 - **OHLC range batching**: daily chunks ≤170 days (API limit 180), hourly chunks ≤30 days (API limit 31). `--ohlc --interval` requires paid plans
 - **`--interval` values**: only `daily` and `hourly` are accepted; `5m` is not supported (Enterprise-only)
+- **Hourly data availability**: CoinGecko hourly data is only available from 2018-01-30 onwards; 5-minute data from 2018-02-09 onwards. The CLI validates this client-side and rejects requests with `--interval hourly` before the cutoff date
+- **Command test seams**: `cmd/client_factory.go` exposes injectable `newAPIClient` and `loadConfig` vars so command integration tests can swap in `httptest` servers and test configs without touching real API or config files
 - **Pagination helper**: `FetchAllMarkets` in `internal/api/coins.go` handles multi-page fetching (250/page) with trim-to-total, used by both `cg markets` and `cg tui markets`
 - **TUI trending tier awareness**: demo gets 15 coins, paid gets 30 via `show_max=coins` API param
