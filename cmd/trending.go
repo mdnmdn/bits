@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/coingecko/coingecko-cli/internal/api"
-	"github.com/coingecko/coingecko-cli/internal/config"
 	"github.com/coingecko/coingecko-cli/internal/display"
 
 	"github.com/spf13/cobra"
@@ -32,13 +31,13 @@ func runTrending(cmd *cobra.Command, args []string) error {
 		display.PrintBanner()
 	}
 
-	cfg, err := config.Load()
+	cfg, err := loadConfig()
 	if err != nil {
 		return err
 	}
 
 	if showMax != "" && !cfg.IsPaid() {
-		return fmt.Errorf("--show-max requires a paid plan — upgrade at %s", paidPlanURL)
+		return fmt.Errorf("--show-max: %w", api.ErrPlanRestricted)
 	}
 
 	if isDryRun(cmd) {
@@ -49,7 +48,7 @@ func runTrending(cmd *cobra.Command, args []string) error {
 		return printDryRun(cfg, "trending", "/search/trending", params, nil)
 	}
 
-	client := api.NewClient(cfg)
+	client := newAPIClient(cfg)
 	ctx := cmd.Context()
 
 	resp, err := client.SearchTrending(ctx, showMax)

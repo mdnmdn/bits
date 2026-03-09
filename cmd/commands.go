@@ -46,17 +46,17 @@ var commandMeta = map[string]commandAnnotation{
 	},
 	"history": {
 		APIEndpoints: map[string]string{
-			"--date":            "/coins/{id}/history",
-			"--days":            "/coins/{id}/market_chart",
-			"--days --ohlc":     "/coins/{id}/ohlc",
-			"--from/--to":       "/coins/{id}/market_chart/range",
+			"--date":             "/coins/{id}/history",
+			"--days":             "/coins/{id}/market_chart",
+			"--days --ohlc":      "/coins/{id}/ohlc",
+			"--from/--to":        "/coins/{id}/market_chart/range",
 			"--from/--to --ohlc": "/coins/{id}/ohlc/range",
 		},
 		OASOperationIDs: map[string]string{
-			"--date":            "coins-id-history",
-			"--days":            "coins-id-market-chart",
-			"--days --ohlc":     "coins-id-ohlc",
-			"--from/--to":       "coins-id-market-chart-range",
+			"--date":             "coins-id-history",
+			"--days":             "coins-id-market-chart",
+			"--days --ohlc":      "coins-id-ohlc",
+			"--from/--to":        "coins-id-market-chart-range",
 			"--from/--to --ohlc": "coins-id-ohlc-range",
 		},
 		OASSpec:      "coingecko-demo.json",
@@ -107,7 +107,7 @@ var internalEnums = map[string]map[string][]string{
 // Flag enums sourced from CoinGecko OAS spec. Exposed in the command catalog.
 var flagEnums = map[string]map[string][]string{
 	"history": {
-		"interval": {"5m", "hourly", "daily"},
+		"interval": {"hourly", "daily"},
 	},
 	"top-gainers-losers": {
 		"duration":  {"1h", "24h", "7d", "14d", "30d", "60d", "1y"},

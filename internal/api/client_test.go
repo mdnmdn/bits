@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/coingecko/coingecko-cli/internal/config"
 
@@ -77,9 +78,34 @@ func TestError401EmptyBody(t *testing.T) {
 	assert.ErrorIs(t, err, ErrInvalidAPIKey)
 }
 
-func TestError401WithAPIMessage(t *testing.T) {
-	// 401 always maps to ErrInvalidAPIKey — the API message is passed through
-	// so the user sees the real reason (which may mention plan restrictions)
+func TestError401APIKeyMissing(t *testing.T) {
+	c, srv := testClient(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(401)
+		_, _ = w.Write([]byte(`{"status":{"error_code":401,"error_message":"API Key Missing"}}`))
+	})
+	defer srv.Close()
+
+	var result map[string]any
+	err := c.get(context.Background(), "/test", &result)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrInvalidAPIKey)
+}
+
+func TestError401InvalidDemoKey(t *testing.T) {
+	c, srv := testClient(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(401)
+		_, _ = w.Write([]byte(`{"status":{"error_code":401,"error_message":"invalid demo api key usage"}}`))
+	})
+	defer srv.Close()
+
+	var result map[string]any
+	err := c.get(context.Background(), "/test", &result)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrInvalidAPIKey)
+}
+
+func TestError401PlanUpgradeMessage(t *testing.T) {
+	// 401 with plan-related message → ErrPlanRestricted
 	c, srv := testClient(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(401)
 		_, _ = w.Write([]byte(`{"status":{"error_code":401,"error_message":"You need to upgrade to a paid plan"}}`))
@@ -89,12 +115,25 @@ func TestError401WithAPIMessage(t *testing.T) {
 	var result map[string]any
 	err := c.get(context.Background(), "/test", &result)
 	require.Error(t, err)
-	assert.ErrorIs(t, err, ErrInvalidAPIKey)
-	assert.Contains(t, err.Error(), "You need to upgrade to a paid plan")
+	assert.ErrorIs(t, err, ErrPlanRestricted)
+	assert.Contains(t, err.Error(), "upgrade to a paid plan")
 }
 
-func TestError401NestedErrorFormat(t *testing.T) {
-	// CoinGecko sometimes wraps errors as {"error":{"status":{"error_message":"..."}}}
+func TestError401ExclusiveToPaidPlan(t *testing.T) {
+	c, srv := testClient(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(401)
+		_, _ = w.Write([]byte(`{"status":{"error_code":401,"error_message":"interval=daily is exclusive to paid plan subscribers"}}`))
+	})
+	defer srv.Close()
+
+	var result map[string]any
+	err := c.get(context.Background(), "/test", &result)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrPlanRestricted)
+}
+
+func TestError401NestedNon401Code(t *testing.T) {
+	// 401 with non-401 inner error code (10012) → ErrPlanRestricted
 	c, srv := testClient(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(401)
 		_, _ = w.Write([]byte(`{"error":{"status":{"timestamp":"2026-03-05T08:16:12.383+00:00","error_code":10012,"error_message":"Your request exceeds the allowed time range."}}}`))
@@ -104,8 +143,53 @@ func TestError401NestedErrorFormat(t *testing.T) {
 	var result map[string]any
 	err := c.get(context.Background(), "/test", &result)
 	require.Error(t, err)
-	assert.ErrorIs(t, err, ErrInvalidAPIKey)
+	assert.ErrorIs(t, err, ErrPlanRestricted)
 	assert.Contains(t, err.Error(), "allowed time range")
+}
+
+func TestError401InvalidProKey(t *testing.T) {
+	c, srv := testClient(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(401)
+		_, _ = w.Write([]byte(`{"status":{"error_code":401,"error_message":"invalid pro api key usage"}}`))
+	})
+	defer srv.Close()
+
+	var result map[string]any
+	err := c.get(context.Background(), "/test", &result)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrInvalidAPIKey)
+}
+
+func TestError401PaidPlanSubscribersFeature(t *testing.T) {
+	// Real backend message for paid-only features (e.g. show_max on /search/trending)
+	c, srv := testClient(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(401)
+		_, _ = w.Write([]byte(`{"status":{"error_code":401,"error_message":"show_max is exclusive to paid plan subscribers"}}`))
+	})
+	defer srv.Close()
+
+	var result map[string]any
+	err := c.get(context.Background(), "/test", &result)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrPlanRestricted)
+	assert.Contains(t, err.Error(), "exclusive to paid plan subscribers")
+}
+
+func TestError401UnknownMessage(t *testing.T) {
+	// 401 with unrecognized message → generic API error, not forced into auth or plan
+	c, srv := testClient(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(401)
+		_, _ = w.Write([]byte(`{"status":{"error_code":401,"error_message":"Something entirely unexpected"}}`))
+	})
+	defer srv.Close()
+
+	var result map[string]any
+	err := c.get(context.Background(), "/test", &result)
+	require.Error(t, err)
+	assert.NotErrorIs(t, err, ErrInvalidAPIKey)
+	assert.NotErrorIs(t, err, ErrPlanRestricted)
+	assert.Contains(t, err.Error(), "API error 401")
+	assert.Contains(t, err.Error(), "Something entirely unexpected")
 }
 
 func TestError403(t *testing.T) {
@@ -157,6 +241,50 @@ func TestError429NoRetryAfter(t *testing.T) {
 	err := c.get(context.Background(), "/test", &result)
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrRateLimited)
+}
+
+func TestError429WithRateLimitReset(t *testing.T) {
+	c, srv := testClient(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("x-ratelimit-reset", "2026-03-09 03:28:00 +0000")
+		w.WriteHeader(429)
+	})
+	defer srv.Close()
+
+	var result map[string]any
+	err := c.get(context.Background(), "/test", &result)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrRateLimited)
+
+	var rle *RateLimitError
+	require.ErrorAs(t, err, &rle)
+	assert.Equal(t, 0, rle.RetryAfter) // no Retry-After header
+	assert.False(t, rle.ResetAt.IsZero())
+	assert.Equal(t, 2026, rle.ResetAt.Year())
+	assert.Equal(t, time.Month(3), rle.ResetAt.Month())
+	assert.Equal(t, 9, rle.ResetAt.Day())
+	assert.Equal(t, 3, rle.ResetAt.Hour())
+	assert.Equal(t, 28, rle.ResetAt.Minute())
+	assert.Contains(t, err.Error(), "resets at 03:28:00 UTC")
+}
+
+func TestError429RetryAfterTakesPrecedence(t *testing.T) {
+	// When both headers are present, RetryAfter should be set (used first by retry logic)
+	c, srv := testClient(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Retry-After", "15")
+		w.Header().Set("x-ratelimit-reset", "2026-03-09 03:28:00 +0000")
+		w.WriteHeader(429)
+	})
+	defer srv.Close()
+
+	var result map[string]any
+	err := c.get(context.Background(), "/test", &result)
+	require.Error(t, err)
+
+	var rle *RateLimitError
+	require.ErrorAs(t, err, &rle)
+	assert.Equal(t, 15, rle.RetryAfter)
+	assert.False(t, rle.ResetAt.IsZero())
+	assert.Contains(t, err.Error(), "retry after 15 seconds") // RetryAfter wins in message
 }
 
 func TestErrorUnknownStatusWithBody(t *testing.T) {

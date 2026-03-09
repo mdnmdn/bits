@@ -1,8 +1,8 @@
 package cmd
 
 import (
-	"github.com/coingecko/coingecko-cli/internal/api"
-	"github.com/coingecko/coingecko-cli/internal/config"
+	"fmt"
+
 	"github.com/coingecko/coingecko-cli/internal/tui"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -34,6 +34,7 @@ var tuiTrendingCmd = &cobra.Command{
 }
 
 func init() {
+	tuiMarketsCmd.Flags().Int("total", 50, "Total number of coins to fetch")
 	tuiMarketsCmd.Flags().String("vs", "usd", "Target currency")
 	tuiMarketsCmd.Flags().String("category", "", "Filter by category")
 	tuiTrendingCmd.Flags().String("vs", "usd", "Target currency")
@@ -44,15 +45,20 @@ func init() {
 }
 
 func runTUIMarkets(cmd *cobra.Command, args []string) error {
+	total, _ := cmd.Flags().GetInt("total")
 	vs, _ := cmd.Flags().GetString("vs")
 	category, _ := cmd.Flags().GetString("category")
 
-	cfg, err := config.Load()
+	if total <= 0 {
+		return fmt.Errorf("--total must be a positive integer")
+	}
+
+	cfg, err := loadConfig()
 	if err != nil {
 		return err
 	}
-	client := api.NewClient(cfg)
-	model := tui.NewMarketsModel(client, vs, category)
+	client := newAPIClient(cfg)
+	model := tui.NewMarketsModel(client, vs, category, total)
 
 	p := tea.NewProgram(model, tea.WithAltScreen())
 	_, err = p.Run()
@@ -62,12 +68,16 @@ func runTUIMarkets(cmd *cobra.Command, args []string) error {
 func runTUITrending(cmd *cobra.Command, args []string) error {
 	vs, _ := cmd.Flags().GetString("vs")
 
-	cfg, err := config.Load()
+	cfg, err := loadConfig()
 	if err != nil {
 		return err
 	}
-	client := api.NewClient(cfg)
-	model := tui.NewTrendingModel(client, vs)
+	client := newAPIClient(cfg)
+	showMax := ""
+	if cfg.IsPaid() {
+		showMax = "coins"
+	}
+	model := tui.NewTrendingModel(client, vs, showMax)
 
 	p := tea.NewProgram(model, tea.WithAltScreen())
 	_, err = p.Run()

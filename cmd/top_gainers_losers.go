@@ -3,8 +3,6 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/coingecko/coingecko-cli/internal/api"
-	"github.com/coingecko/coingecko-cli/internal/config"
 	"github.com/coingecko/coingecko-cli/internal/display"
 
 	"github.com/spf13/cobra"
@@ -52,7 +50,7 @@ func runTopGainersLosers(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("invalid --top-coins %q — must be 300, 500, 1000, or all", topCoinsStr)
 	}
 
-	cfg, err := config.Load()
+	cfg, err := loadConfig()
 	if err != nil {
 		return err
 	}
@@ -68,7 +66,7 @@ func runTopGainersLosers(cmd *cobra.Command, args []string) error {
 		return printDryRun(cfg, "top-gainers-losers", "/coins/top_gainers_losers", params, nil)
 	}
 
-	client := api.NewClient(cfg)
+	client := newAPIClient(cfg)
 	ctx := cmd.Context()
 
 	resp, err := client.TopGainersLosers(ctx, vs, duration, topCoinsStr, priceChangePct)

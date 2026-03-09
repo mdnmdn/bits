@@ -26,7 +26,7 @@ var asciiLogo = []string{
 
 // PrintLogo prints the full ASCII art CoinGecko logo in brand green to stderr.
 func PrintLogo() {
-	if !colorEnabled() {
+	if !ColorEnabled() {
 		for _, line := range asciiLogo {
 			fmt.Fprintln(os.Stderr, line)
 		}
@@ -85,7 +85,7 @@ func printColoredRow(w *os.File, content string, visible int) {
 	if pad < 0 {
 		pad = 0
 	}
-	if !colorEnabled() {
+	if !ColorEnabled() {
 		plain := ansiRegex.ReplaceAllString(content, "")
 		plainPad := boxWidth - 2 - len(plain)
 		if plainPad < 0 {
@@ -107,7 +107,7 @@ func printCmdRow(w *os.File, cmd, comment string) {
 	if commentPad < 0 {
 		commentPad = 0
 	}
-	if colorEnabled() {
+	if ColorEnabled() {
 		fmt.Fprintf(w, "|   %s$%s %s%s %s%s%s |\n",
 			brandGreen, colorReset,
 			cmd, strings.Repeat(" ", cmdPad),
@@ -130,7 +130,7 @@ func boxRow(w *os.File, content string, visible int) string {
 // PrintBanner prints a compact one-line CoinGecko banner to stderr.
 // Writing to stderr keeps stdout clean for piped data.
 func PrintBanner() {
-	if !colorEnabled() {
+	if !ColorEnabled() {
 		fmt.Fprint(os.Stderr, "\n  CoinGecko CLI  —  Real-time crypto data\n\n")
 		return
 	}

@@ -22,7 +22,8 @@ var (
 	ansiRegex    = regexp.MustCompile(`\x1b\[[0-9;]*m`)
 )
 
-func colorEnabled() bool {
+// ColorEnabled reports whether color output is allowed (TTY and NO_COLOR not set).
+func ColorEnabled() bool {
 	colorOnce.Do(func() {
 		if os.Getenv("NO_COLOR") != "" {
 			colorAllowed = false
@@ -35,6 +36,11 @@ func colorEnabled() bool {
 	return colorAllowed
 }
 
+// StderrIsTerminal reports whether stderr is connected to an interactive terminal.
+func StderrIsTerminal() bool {
+	return term.IsTerminal(int(os.Stderr.Fd()))
+}
+
 // VisibleWidth returns the display width of a string after stripping ANSI escapes.
 func VisibleWidth(s string) int {
 	return len(ansiRegex.ReplaceAllString(s, ""))
@@ -42,7 +48,7 @@ func VisibleWidth(s string) int {
 
 // ColorHeader wraps s in bold #FFE866 (gold) when color output is enabled.
 func ColorHeader(s string) string {
-	if !colorEnabled() {
+	if !ColorEnabled() {
 		return s
 	}
 	return colorHeader + s + colorReset
@@ -50,7 +56,7 @@ func ColorHeader(s string) string {
 
 func ColorPercent(pct float64) string {
 	s := FormatPercent(pct)
-	if !colorEnabled() {
+	if !ColorEnabled() {
 		return s
 	}
 	if pct > 0 {

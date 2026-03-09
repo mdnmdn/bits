@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/coingecko/coingecko-cli/internal/config"
@@ -23,14 +24,18 @@ var (
 	ErrRateLimited    = fmt.Errorf("rate limited — please wait and try again")
 )
 
-// RateLimitError carries the Retry-After metadata from a 429 response.
+// RateLimitError carries rate-limit metadata from a 429 response.
 type RateLimitError struct {
-	RetryAfter int // seconds; 0 if Retry-After header was absent
+	RetryAfter int       // seconds from Retry-After header; 0 if absent
+	ResetAt    time.Time // from x-ratelimit-reset header; zero if absent
 }
 
 func (e *RateLimitError) Error() string {
 	if e.RetryAfter > 0 {
 		return fmt.Sprintf("rate limited — retry after %d seconds", e.RetryAfter)
+	}
+	if !e.ResetAt.IsZero() {
+		return fmt.Sprintf("rate limited — resets at %s", e.ResetAt.UTC().Format("15:04:05 UTC"))
 	}
 	return "rate limited — please wait and try again"
 }
@@ -75,6 +80,90 @@ func (e *apiErrorResponse) extractMessage() string {
 		}
 	}
 	return ""
+}
+
+// classify401 determines whether a 401 response is an auth failure, a plan
+// restriction, or unknown. CoinGecko returns 401 for both invalid API keys
+// and plan/entitlement restrictions.
+//
+// Strategy: positive identification of auth failures and known plan cases.
+// Unknown 401s are left unclassified rather than forced into either bucket.
+func classify401(apiErr apiErrorResponse, msg string) error {
+	code := innerErrorCode(apiErr)
+	lower := strings.ToLower(msg)
+
+	// Check plan/entitlement restrictions first — these take priority over
+	// the error code since CoinGecko sends plan restrictions with code 401.
+	if isPlanRestriction(code, lower) {
+		if msg != "" {
+			return fmt.Errorf("%s (%w)", msg, ErrPlanRestricted)
+		}
+		return ErrPlanRestricted
+	}
+
+	// Known auth failures (error_code 401 or auth-related messages).
+	if isAuthFailure(code, lower) {
+		if msg != "" {
+			return fmt.Errorf("%s (%w)", msg, ErrInvalidAPIKey)
+		}
+		return ErrInvalidAPIKey
+	}
+
+	// Unknown 401 — return a generic API error preserving the message.
+	if msg != "" {
+		return fmt.Errorf("API error 401: %s", msg)
+	}
+	return ErrInvalidAPIKey // bare 401 with no body → assume auth
+}
+
+func isAuthFailure(_ int, lowerMsg string) bool {
+	for _, phrase := range []string{
+		"invalid api key",
+		"api key missing",
+		"invalid demo api key",
+		"invalid pro api key",
+	} {
+		if strings.Contains(lowerMsg, phrase) {
+			return true
+		}
+	}
+	return false
+}
+
+func isPlanRestriction(code int, lowerMsg string) bool {
+	// Non-401 inner error codes are application-level restrictions.
+	if code != 0 && code != 401 {
+		return true
+	}
+	for _, phrase := range []string{
+		"upgrade to a paid plan",
+		"paid plan subscribers",
+		"exclusive to paid plan",
+	} {
+		if strings.Contains(lowerMsg, phrase) {
+			return true
+		}
+	}
+	return false
+}
+
+// innerErrorCode extracts the application-level error code from the API response,
+// checking both top-level and nested error formats.
+func innerErrorCode(apiErr apiErrorResponse) int {
+	if apiErr.Status != nil && apiErr.Status.ErrorCode != 0 {
+		return apiErr.Status.ErrorCode
+	}
+	if len(apiErr.Error) > 0 {
+		var nested struct {
+			Status *struct {
+				ErrorCode int `json:"error_code"`
+			} `json:"status"`
+		}
+		if json.Unmarshal(apiErr.Error, &nested) == nil && nested.Status != nil {
+			return nested.Status.ErrorCode
+		}
+	}
+	return 0
 }
 
 type Client struct {
@@ -146,10 +235,7 @@ func (c *Client) handleError(resp *http.Response) error {
 
 	switch resp.StatusCode {
 	case http.StatusUnauthorized:
-		if msg != "" {
-			return fmt.Errorf("%s (%w)", msg, ErrInvalidAPIKey)
-		}
-		return ErrInvalidAPIKey
+		return classify401(apiErr, msg)
 
 	case http.StatusForbidden:
 		if msg != "" {
@@ -158,13 +244,19 @@ func (c *Client) handleError(resp *http.Response) error {
 		return ErrPlanRestricted
 
 	case http.StatusTooManyRequests:
-		retryAfter := 0
+		rle := &RateLimitError{}
 		if retry := resp.Header.Get("Retry-After"); retry != "" {
 			if secs, err := strconv.Atoi(retry); err == nil && secs > 0 {
-				retryAfter = secs
+				rle.RetryAfter = secs
 			}
 		}
-		return &RateLimitError{RetryAfter: retryAfter}
+		if reset := resp.Header.Get("x-ratelimit-reset"); reset != "" {
+			// CoinGecko sends: "2026-03-09 03:28:00 +0000"
+			if t, err := time.Parse("2006-01-02 15:04:05 -0700", reset); err == nil {
+				rle.ResetAt = t
+			}
+		}
+		return rle
 
 	default:
 		if msg != "" {

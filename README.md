@@ -344,13 +344,13 @@ cg tui markets --category layer-1
 
 Launches a live interactive table of the top 50 coins by market cap.
 
-### `cg tui trending` — Top 30 Trending
+### `cg tui trending` — Trending Coins
 
 ```sh
 cg tui trending
 ```
 
-Launches a live interactive table of the top 30 trending coins.
+Launches a live interactive table of the top 15 trending coins (up to 30 on paid plans).
 
 ### Keyboard Controls
 

@@ -30,7 +30,8 @@ coingecko-cli/
 │   ├── api/
 │   │   ├── client.go              # HTTP client, auth, error handling
 │   │   ├── client_test.go         # httptest-based tests
-│   │   ├── coins.go               # API endpoint methods
+│   │   ├── coins.go               # API endpoint methods + FetchAllMarkets pagination helper
+│   │   ├── coins_test.go          # FetchAllMarkets tests
 │   │   └── types.go               # JSON response structs
 │   ├── config/
 │   │   ├── config.go              # Viper-based config (API key, tier)
@@ -78,7 +79,7 @@ coingecko-cli/
 
 - **OAS specs**: https://github.com/coingecko/coingecko-api-oas (`coingecko-demo.json`, `coingecko-pro.json`)
 - **API docs**: https://docs.coingecko.com
-- **Rate limiting**: 429 responses include `Retry-After: <seconds>` header (integer only, no HTTP-date)
+- **Rate limiting**: 429 responses may include `Retry-After: <seconds>` header and/or `x-ratelimit-reset: <timestamp>` header (format `2006-01-02 15:04:05 -0700`). In practice, CoinGecko sends `x-ratelimit-reset` but not always `Retry-After`. The CLI prefers `Retry-After`, then `x-ratelimit-reset`, then local exponential backoff with jitter
 - **Structured errors**: `-o json` mode emits `{"error":"rate_limited","message":"...","retry_after":54}` to stderr
 - **Dry run**: `--dry-run` on any data command outputs the API request as JSON without executing
 - **Command catalog**: `cg commands` (hidden) outputs machine-readable JSON with all commands, flags, OAS operation IDs, and enums
@@ -93,9 +94,11 @@ coingecko-cli/
 | `cg trending` | `/search/trending` | `trending-search` |
 | `cg history --date` | `/coins/{id}/history` | `coins-id-history` |
 | `cg history --days` | `/coins/{id}/market_chart` | `coins-id-market-chart` |
+| `cg history --days --interval hourly` | `/coins/{id}/market_chart/range` (batched) | `coins-id-market-chart-range` |
 | `cg history --days --ohlc` | `/coins/{id}/ohlc` | `coins-id-ohlc` |
 | `cg history --from/--to` | `/coins/{id}/market_chart/range` | `coins-id-market-chart-range` |
-| `cg history --from/--to --ohlc` | `/coins/{id}/ohlc/range` | `coins-id-ohlc-range` |
+| `cg history --from/--to --interval hourly` | `/coins/{id}/market_chart/range` (batched) | `coins-id-market-chart-range` |
+| `cg history --from/--to --ohlc` | `/coins/{id}/ohlc/range` (batched for large ranges) | `coins-id-ohlc-range` |
 | `cg top-gainers-losers` | `/coins/top_gainers_losers` | `coins-top-gainers-losers` |
 
 ## Key Design Decisions
@@ -106,3 +109,12 @@ coingecko-cli/
 - TUI detail view fetches coin detail + OHLC concurrently via `tea.Batch`
 - `RateLimitError` typed error carries `RetryAfter` seconds, satisfies `errors.Is(err, ErrRateLimited)` via custom `Is()` method
 - API text (coin names, symbols) sanitized via `display.SanitizeCell` to strip terminal escape injection
+- **History batching**: large date ranges are auto-batched into sequential API requests with dedup at chunk boundaries. Batching logic lives in `cmd/history.go` (`fetchMarketChartBatched`, `fetchOHLCRangeBatched`, `dedupTimeseries`)
+- **Hourly interval strategy**: `--interval hourly` routes through `/market_chart/range` with no `interval` param, relying on CoinGecko auto-granularity (2–90 day ranges → hourly). Chunks are ≤90 days. Requests for 1 day are padded to 2 days then trimmed
+- **Daily interval on /range**: uses auto-granularity (>90 day ranges → daily). Short ranges (<91 days) are padded to 91 days then trimmed to the original range
+- **OHLC range batching**: daily chunks ≤170 days (API limit 180), hourly chunks ≤30 days (API limit 31). `--ohlc --interval` requires paid plans
+- **`--interval` values**: only `daily` and `hourly` are accepted; `5m` is not supported (Enterprise-only)
+- **Hourly data availability**: CoinGecko hourly data is only available from 2018-01-30 onwards; 5-minute data from 2018-02-09 onwards. The CLI validates this client-side and rejects requests with `--interval hourly` before the cutoff date
+- **Command test seams**: `cmd/client_factory.go` exposes injectable `newAPIClient` and `loadConfig` vars so command integration tests can swap in `httptest` servers and test configs without touching real API or config files
+- **Pagination helper**: `FetchAllMarkets` in `internal/api/coins.go` handles multi-page fetching (250/page) with trim-to-total, used by both `cg markets` and `cg tui markets`
+- **TUI trending tier awareness**: demo gets 15 coins, paid gets 30 via `show_max=coins` API param

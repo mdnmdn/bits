@@ -3,8 +3,6 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/coingecko/coingecko-cli/internal/api"
-	"github.com/coingecko/coingecko-cli/internal/config"
 	"github.com/coingecko/coingecko-cli/internal/display"
 
 	"github.com/spf13/cobra"
@@ -40,11 +38,11 @@ func runMarkets(cmd *cobra.Command, args []string) error {
 		display.PrintBanner()
 	}
 
-	cfg, err := config.Load()
+	cfg, err := loadConfig()
 	if err != nil {
 		return err
 	}
-	client := api.NewClient(cfg)
+	client := newAPIClient(cfg)
 	ctx := cmd.Context()
 
 	perPage := 250
@@ -67,20 +65,9 @@ func runMarkets(cmd *cobra.Command, args []string) error {
 		})
 	}
 
-	allCoins := make([]api.MarketCoin, 0, total)
-
-	for page := 1; len(allCoins) < total; page++ {
-		coins, err := client.CoinMarkets(ctx, vs, perPage, page, order, category)
-		if err != nil {
-			return err
-		}
-		allCoins = append(allCoins, coins...)
-		if len(coins) < perPage {
-			break // no more data available
-		}
-	}
-	if len(allCoins) > total {
-		allCoins = allCoins[:total]
+	allCoins, err := client.FetchAllMarkets(ctx, vs, total, order, category)
+	if err != nil {
+		return err
 	}
 
 	if jsonOut {
