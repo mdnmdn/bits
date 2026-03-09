@@ -25,7 +25,7 @@ func TestFetchAllMarkets_SinglePage(t *testing.T) {
 		for i := range coins {
 			coins[i] = MarketCoin{ID: fmt.Sprintf("coin-%d", i), MarketCapRank: i + 1}
 		}
-		json.NewEncoder(w).Encode(coins)
+		_ = json.NewEncoder(w).Encode(coins)
 	})
 	defer srv.Close()
 
@@ -52,7 +52,7 @@ func TestFetchAllMarkets_MultiPage(t *testing.T) {
 				MarketCapRank: (pageNum-1)*250 + i + 1,
 			}
 		}
-		json.NewEncoder(w).Encode(coins)
+		_ = json.NewEncoder(w).Encode(coins)
 	})
 	defer srv.Close()
 
@@ -80,7 +80,7 @@ func TestFetchAllMarkets_PartialLastPage(t *testing.T) {
 		for i := range coins {
 			coins[i] = MarketCoin{ID: fmt.Sprintf("coin-%d-%d", n, i)}
 		}
-		json.NewEncoder(w).Encode(coins)
+		_ = json.NewEncoder(w).Encode(coins)
 	})
 	defer srv.Close()
 
@@ -104,7 +104,7 @@ func TestFetchAllMarkets_APIErrorMidPagination(t *testing.T) {
 		for i := range coins {
 			coins[i] = MarketCoin{ID: fmt.Sprintf("coin-%d", i)}
 		}
-		json.NewEncoder(w).Encode(coins)
+		_ = json.NewEncoder(w).Encode(coins)
 	})
 	defer srv.Close()
 
@@ -125,7 +125,7 @@ func TestFetchAllMarkets_PassesQueryParams(t *testing.T) {
 			"per_page":    q.Get("per_page"),
 			"page":        q.Get("page"),
 		})
-		json.NewEncoder(w).Encode([]MarketCoin{})
+		_ = json.NewEncoder(w).Encode([]MarketCoin{})
 	})
 	defer srv.Close()
 
@@ -142,7 +142,7 @@ func TestFetchAllMarkets_EmptyCategory(t *testing.T) {
 	c, srv := testClient(func(w http.ResponseWriter, r *http.Request) {
 		// When category is "", the param should not be set
 		assert.Empty(t, r.URL.Query().Get("category"))
-		json.NewEncoder(w).Encode([]MarketCoin{})
+		_ = json.NewEncoder(w).Encode([]MarketCoin{})
 	})
 	defer srv.Close()
 
@@ -162,7 +162,7 @@ func TestFetchAllMarkets_ContextCancellation(t *testing.T) {
 		for i := range coins {
 			coins[i] = MarketCoin{ID: fmt.Sprintf("coin-%d", i)}
 		}
-		json.NewEncoder(w).Encode(coins)
+		_ = json.NewEncoder(w).Encode(coins)
 	}))
 	defer srv.Close()
 

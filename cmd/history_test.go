@@ -322,7 +322,7 @@ func TestFetchOHLCRangeBatched_FutureToUnixCapped(t *testing.T) {
 	// The last "to" param sent to the API must not exceed current time.
 	for i, toStr := range requestTos {
 		var toVal int64
-		fmt.Sscanf(toStr, "%d", &toVal)
+		_, _ = fmt.Sscanf(toStr, "%d", &toVal)
 		assert.LessOrEqual(t, toVal, time.Now().Unix()+1, "chunk %d sent future 'to' to API", i+1)
 	}
 }
@@ -346,7 +346,7 @@ func TestFetchMarketChartBatched_FutureToUnixCapped(t *testing.T) {
 
 	for i, toStr := range requestTos {
 		var toVal int64
-		fmt.Sscanf(toStr, "%d", &toVal)
+		_, _ = fmt.Sscanf(toStr, "%d", &toVal)
 		assert.LessOrEqual(t, toVal, time.Now().Unix()+1, "chunk %d sent future 'to' to API", i+1)
 	}
 }
