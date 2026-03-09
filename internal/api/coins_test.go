@@ -600,7 +600,7 @@ func TestFetchAllMarkets_APIErrorMidPagination(t *testing.T) {
 		n := atomic.AddInt32(&calls, 1)
 		if n == 2 {
 			w.WriteHeader(500)
-			fmt.Fprint(w, `{"status":{"error_code":500,"error_message":"Internal error"}}`)
+			_, _ = fmt.Fprint(w, `{"status":{"error_code":500,"error_message":"Internal error"}}`)
 			return
 		}
 		coins := make([]MarketCoin, 250)

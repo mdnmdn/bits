@@ -81,7 +81,7 @@ func TestSearch_MissingArg(t *testing.T) {
 func TestSearch_APIError(t *testing.T) {
 	srv := newTestServer(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(500)
-		fmt.Fprint(w, `{"status":{"error_code":500,"error_message":"Server error"}}`)
+		_, _ = fmt.Fprint(w, `{"status":{"error_code":500,"error_message":"Server error"}}`)
 	})
 	defer srv.Close()
 	withTestClientDemo(t, srv)

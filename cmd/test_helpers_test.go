@@ -87,8 +87,8 @@ func executeCommand(t *testing.T, args ...string) (stdout, stderr string, err er
 	cmdErr := rootCmd.Execute()
 
 	// Close write ends so readers finish, then wait.
-	wOut.Close()
-	wErr.Close()
+	_ = wOut.Close()
+	_ = wErr.Close()
 	wg.Wait()
 	os.Stdout = oldStdout
 	os.Stderr = oldStderr

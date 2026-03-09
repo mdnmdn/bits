@@ -60,7 +60,7 @@ func TestFormatError_JSONMode_WritesStderr(t *testing.T) {
 	err := formatError(cmd, api.ErrInvalidAPIKey)
 	require.Error(t, err) // formatError returns the original error
 
-	wErr.Close()
+	_ = wErr.Close()
 	var buf bytes.Buffer
 	_, _ = buf.ReadFrom(rErr)
 	os.Stderr = oldStderr
@@ -85,7 +85,7 @@ func TestFormatError_TableMode_NoJSON(t *testing.T) {
 	err := formatError(cmd, api.ErrInvalidAPIKey)
 	require.Error(t, err)
 
-	wErr.Close()
+	_ = wErr.Close()
 	var buf bytes.Buffer
 	_, _ = buf.ReadFrom(rErr)
 	os.Stderr = oldStderr
