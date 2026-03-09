@@ -107,7 +107,7 @@ func TestFetchMarketChartBatched_SingleChunk(t *testing.T) {
 			MarketCaps:   [][]float64{{1000, 900e9}, {2000, 910e9}},
 			TotalVolumes: [][]float64{{1000, 30e9}, {2000, 31e9}},
 		}
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	})
 	defer srv.Close()
 
@@ -125,7 +125,7 @@ func TestFetchMarketChartBatched_HourlyOmitsInterval(t *testing.T) {
 	var gotIntervals []string
 	client, srv := testAPIClient(func(w http.ResponseWriter, r *http.Request) {
 		gotIntervals = append(gotIntervals, r.URL.Query().Get("interval"))
-		json.NewEncoder(w).Encode(api.MarketChartResponse{
+		_ = json.NewEncoder(w).Encode(api.MarketChartResponse{
 			Prices: [][]float64{{1000, 50000}},
 		})
 	})
@@ -151,7 +151,7 @@ func TestFetchMarketChartBatched_MultipleChunks(t *testing.T) {
 			MarketCaps:   [][]float64{{base + 1, 900e9}, {base + 2, 910e9}},
 			TotalVolumes: [][]float64{{base + 1, 30e9}, {base + 2, 31e9}},
 		}
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	})
 	defer srv.Close()
 
@@ -184,7 +184,7 @@ func TestFetchMarketChartBatched_Deduplication(t *testing.T) {
 				TotalVolumes: [][]float64{{3000, 32e9}, {4000, 33e9}},
 			}
 		}
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	})
 	defer srv.Close()
 
@@ -210,7 +210,7 @@ func TestFetchMarketChartBatched_ContextCancellation(t *testing.T) {
 		resp := api.MarketChartResponse{
 			Prices: [][]float64{{float64(n) * 1000, 50000}},
 		}
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	})
 	defer srv.Close()
 
@@ -234,7 +234,7 @@ func TestFetchMarketChartBatched_APIError(t *testing.T) {
 		resp := api.MarketChartResponse{
 			Prices: [][]float64{{float64(callCount) * 1000, 50000}},
 		}
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	})
 	defer srv.Close()
 
@@ -255,7 +255,7 @@ func TestFetchMarketChartBatched_EmptyChunk(t *testing.T) {
 			resp.MarketCaps = [][]float64{{1000, 900e9}}
 			resp.TotalVolumes = [][]float64{{1000, 30e9}}
 		}
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	})
 	defer srv.Close()
 
@@ -277,7 +277,7 @@ func TestFetchMarketChartBatched_ChunkBoundaries(t *testing.T) {
 			"from": q.Get("from"),
 			"to":   q.Get("to"),
 		})
-		json.NewEncoder(w).Encode(api.MarketChartResponse{})
+		_ = json.NewEncoder(w).Encode(api.MarketChartResponse{})
 	})
 	defer srv.Close()
 
@@ -308,7 +308,7 @@ func TestFetchOHLCRangeBatched_FutureToUnixCapped(t *testing.T) {
 	var requestTos []string
 	client, srv := testPaidAPIClient(func(w http.ResponseWriter, r *http.Request) {
 		requestTos = append(requestTos, r.URL.Query().Get("to"))
-		json.NewEncoder(w).Encode(api.OHLCData{{1000, 1, 2, 3, 4}})
+		_ = json.NewEncoder(w).Encode(api.OHLCData{{1000, 1, 2, 3, 4}})
 	})
 	defer srv.Close()
 
@@ -331,7 +331,7 @@ func TestFetchMarketChartBatched_FutureToUnixCapped(t *testing.T) {
 	var requestTos []string
 	client, srv := testAPIClient(func(w http.ResponseWriter, r *http.Request) {
 		requestTos = append(requestTos, r.URL.Query().Get("to"))
-		json.NewEncoder(w).Encode(api.MarketChartResponse{
+		_ = json.NewEncoder(w).Encode(api.MarketChartResponse{
 			Prices: [][]float64{{1000, 50000}},
 		})
 	})
@@ -362,7 +362,7 @@ func TestFetchOHLCRangeBatched_MultipleChunks(t *testing.T) {
 			{base + 1, 100, 110, 90, 105},
 			{base + 2, 105, 115, 95, 110},
 		}
-		json.NewEncoder(w).Encode(data)
+		_ = json.NewEncoder(w).Encode(data)
 	})
 	defer srv.Close()
 
@@ -391,7 +391,7 @@ func TestFetchOHLCRangeBatched_Deduplication(t *testing.T) {
 				{3000, 110, 120, 100, 115},
 			}
 		}
-		json.NewEncoder(w).Encode(data)
+		_ = json.NewEncoder(w).Encode(data)
 	})
 	defer srv.Close()
 
@@ -475,7 +475,7 @@ func TestFetchMarketChartBatched_RateLimitRetry(t *testing.T) {
 			w.WriteHeader(429)
 			return
 		}
-		json.NewEncoder(w).Encode(api.MarketChartResponse{
+		_ = json.NewEncoder(w).Encode(api.MarketChartResponse{
 			Prices: [][]float64{{1000, 50000}},
 		})
 	})
@@ -513,7 +513,7 @@ func TestFetchMarketChartBatched_RateLimitResetRetry(t *testing.T) {
 			w.WriteHeader(429)
 			return
 		}
-		json.NewEncoder(w).Encode(api.MarketChartResponse{
+		_ = json.NewEncoder(w).Encode(api.MarketChartResponse{
 			Prices: [][]float64{{1000, 50000}},
 		})
 	})
@@ -569,7 +569,7 @@ func TestFetchOHLCRangeBatched_ContextCancellation(t *testing.T) {
 		if n == 1 {
 			cancel()
 		}
-		json.NewEncoder(w).Encode(api.OHLCData{{float64(n) * 1000, 1, 2, 3, 4}})
+		_ = json.NewEncoder(w).Encode(api.OHLCData{{float64(n) * 1000, 1, 2, 3, 4}})
 	})
 	defer srv.Close()
 

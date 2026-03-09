@@ -80,8 +80,8 @@ func executeCommand(t *testing.T, args ...string) (stdout, stderr string, err er
 	var bufOut, bufErr bytes.Buffer
 	var wg sync.WaitGroup
 	wg.Add(2)
-	go func() { defer wg.Done(); io.Copy(&bufOut, rOut) }()
-	go func() { defer wg.Done(); io.Copy(&bufErr, rErr) }()
+	go func() { defer wg.Done(); _, _ = io.Copy(&bufOut, rOut) }()
+	go func() { defer wg.Done(); _, _ = io.Copy(&bufErr, rErr) }()
 
 	// Run the command — Cobra writes to os.Stdout/os.Stderr.
 	cmdErr := rootCmd.Execute()

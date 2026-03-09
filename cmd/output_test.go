@@ -62,7 +62,7 @@ func TestFormatError_JSONMode_WritesStderr(t *testing.T) {
 
 	wErr.Close()
 	var buf bytes.Buffer
-	buf.ReadFrom(rErr)
+	_, _ = buf.ReadFrom(rErr)
 	os.Stderr = oldStderr
 
 	var cliErr CLIError
@@ -87,7 +87,7 @@ func TestFormatError_TableMode_NoJSON(t *testing.T) {
 
 	wErr.Close()
 	var buf bytes.Buffer
-	buf.ReadFrom(rErr)
+	_, _ = buf.ReadFrom(rErr)
 	os.Stderr = oldStderr
 
 	// stderr should be empty — formatError only writes JSON in JSON mode.
