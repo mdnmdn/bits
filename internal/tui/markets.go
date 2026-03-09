@@ -12,8 +12,6 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-const defaultMarketsLimit = 50
-
 type marketsState int
 
 const (
@@ -26,6 +24,7 @@ type MarketsModel struct {
 	client   *api.Client
 	vs       string
 	category string
+	total    int
 	coins    []api.MarketCoin
 	cursor   int
 	state    marketsState
@@ -40,11 +39,12 @@ type coinsLoadedMsg struct {
 	err   error
 }
 
-func NewMarketsModel(client *api.Client, vs, category string) MarketsModel {
+func NewMarketsModel(client *api.Client, vs, category string, total int) MarketsModel {
 	return MarketsModel{
 		client:   client,
 		vs:       vs,
 		category: category,
+		total:    total,
 		state:    marketsLoading,
 	}
 }
@@ -55,7 +55,7 @@ func (m MarketsModel) Init() tea.Cmd {
 
 func (m MarketsModel) fetchCoins() tea.Cmd {
 	return func() tea.Msg {
-		coins, err := m.client.CoinMarkets(context.Background(), m.vs, defaultMarketsLimit, 1, "market_cap_desc", m.category)
+		coins, err := m.client.FetchAllMarkets(context.Background(), m.vs, m.total, "market_cap_desc", m.category)
 		return coinsLoadedMsg{coins: coins, err: err}
 	}
 }
@@ -125,14 +125,14 @@ func (m MarketsModel) View() string {
 	}
 
 	if m.state == marketsLoading {
-		return renderLoading("Fetching top 50 coins by market cap...", m.width, m.height)
+		return renderLoading(fmt.Sprintf("Fetching top %d coins by market cap...", m.total), m.width, m.height)
 	}
 
 	if m.state == marketsDetail {
 		return m.detail.View()
 	}
 
-	subtitle := "TUI — Top 50 by Market Cap"
+	subtitle := fmt.Sprintf("TUI — Top %d by Market Cap", m.total)
 	if m.category != "" {
 		subtitle += " [" + m.category + "]"
 	}

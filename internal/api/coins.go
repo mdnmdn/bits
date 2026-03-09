@@ -37,6 +37,30 @@ func (c *Client) CoinMarkets(ctx context.Context, vsCurrency string, perPage, pa
 	return result, err
 }
 
+// FetchAllMarkets fetches up to total coins with automatic pagination (250 per page).
+func (c *Client) FetchAllMarkets(ctx context.Context, vsCurrency string, total int, order, category string) ([]MarketCoin, error) {
+	const perPage = 250
+	initCap := total
+	if initCap > perPage {
+		initCap = perPage
+	}
+	allCoins := make([]MarketCoin, 0, initCap)
+	for page := 1; len(allCoins) < total; page++ {
+		coins, err := c.CoinMarkets(ctx, vsCurrency, perPage, page, order, category)
+		if err != nil {
+			return nil, err
+		}
+		allCoins = append(allCoins, coins...)
+		if len(coins) < perPage {
+			break
+		}
+	}
+	if len(allCoins) > total {
+		allCoins = allCoins[:total]
+	}
+	return allCoins, nil
+}
+
 // Search queries the CoinGecko search endpoint.
 // https://docs.coingecko.com/v3.0.1/reference/search-data
 func (c *Client) Search(ctx context.Context, query string) (*SearchResponse, error) {

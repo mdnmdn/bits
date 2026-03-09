@@ -38,7 +38,7 @@ func runTrending(cmd *cobra.Command, args []string) error {
 	}
 
 	if showMax != "" && !cfg.IsPaid() {
-		return fmt.Errorf("--show-max requires a paid plan — upgrade at %s", paidPlanURL)
+		return fmt.Errorf("--show-max: %w", api.ErrPlanRestricted)
 	}
 
 	if isDryRun(cmd) {

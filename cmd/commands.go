@@ -107,7 +107,7 @@ var internalEnums = map[string]map[string][]string{
 // Flag enums sourced from CoinGecko OAS spec. Exposed in the command catalog.
 var flagEnums = map[string]map[string][]string{
 	"history": {
-		"interval": {"5m", "hourly", "daily"},
+		"interval": {"hourly", "daily"},
 	},
 	"top-gainers-losers": {
 		"duration":  {"1h", "24h", "7d", "14d", "30d", "60d", "1y"},

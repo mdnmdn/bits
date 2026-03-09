@@ -21,6 +21,7 @@ type dryRunOutput struct {
 	Headers        map[string]string `json:"headers"`
 	OASOperationID string            `json:"oas_operation_id,omitempty"`
 	OASSpec        string            `json:"oas_spec,omitempty"`
+	Note           string            `json:"note,omitempty"`
 	Pagination     *paginationInfo   `json:"pagination"`
 }
 
@@ -35,6 +36,10 @@ func printDryRun(cfg *config.Config, cmdName, endpoint string, params map[string
 }
 
 func printDryRunWithOp(cfg *config.Config, cmdName, opKey, endpoint string, params map[string]string, pagination *paginationInfo) error {
+	return printDryRunFull(cfg, cmdName, opKey, endpoint, params, pagination, "")
+}
+
+func printDryRunFull(cfg *config.Config, cmdName, opKey, endpoint string, params map[string]string, pagination *paginationInfo, note string) error {
 	headerKey, _ := cfg.AuthHeader()
 	masked := cfg.MaskedKey()
 
@@ -49,6 +54,7 @@ func printDryRunWithOp(cfg *config.Config, cmdName, opKey, endpoint string, para
 		URL:        cfg.BaseURL() + endpoint,
 		Params:     params,
 		Headers:    headers,
+		Note:       note,
 		Pagination: pagination,
 	}
 

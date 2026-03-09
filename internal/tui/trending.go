@@ -20,15 +20,17 @@ const (
 )
 
 type TrendingModel struct {
-	client *api.Client
-	vs     string
-	coins  []api.TrendingCoinWrapper
-	cursor int
-	state  trendingState
-	detail DetailModel
-	err    error
-	width  int
-	height int
+	client  *api.Client
+	vs      string
+	showMax string
+	limit   int
+	coins   []api.TrendingCoinWrapper
+	cursor  int
+	state   trendingState
+	detail  DetailModel
+	err     error
+	width   int
+	height  int
 }
 
 type trendingLoadedMsg struct {
@@ -36,19 +38,23 @@ type trendingLoadedMsg struct {
 	err  error
 }
 
-const defaultTrendingLimit = 30
-
-func NewTrendingModel(client *api.Client, vs string) TrendingModel {
+func NewTrendingModel(client *api.Client, vs, showMax string) TrendingModel {
+	limit := 15
+	if showMax != "" {
+		limit = 30
+	}
 	return TrendingModel{
-		client: client,
-		vs:     vs,
-		state:  trendingLoading,
+		client:  client,
+		vs:      vs,
+		showMax: showMax,
+		limit:   limit,
+		state:   trendingLoading,
 	}
 }
 
 func (m TrendingModel) Init() tea.Cmd {
 	return func() tea.Msg {
-		resp, err := m.client.SearchTrending(context.Background(), "")
+		resp, err := m.client.SearchTrending(context.Background(), m.showMax)
 		return trendingLoadedMsg{resp: resp, err: err}
 	}
 }
@@ -126,7 +132,7 @@ func (m TrendingModel) View() string {
 	}
 
 	var b strings.Builder
-	b.WriteString(BrandTitle("TUI — Top 30 Trending Coins (24h)"))
+	b.WriteString(BrandTitle(fmt.Sprintf("TUI — Top %d Trending Coins (24h)", m.limit)))
 	b.WriteString("\n\n")
 
 	header := fmt.Sprintf("  %-6s %-7s %-20s %-8s %14s %10s",
@@ -134,7 +140,7 @@ func (m TrendingModel) View() string {
 	b.WriteString(HeaderStyle.Render(header))
 	b.WriteString("\n")
 
-	limit := defaultTrendingLimit
+	limit := m.limit
 	if len(m.coins) < limit {
 		limit = len(m.coins)
 	}

@@ -67,20 +67,9 @@ func runMarkets(cmd *cobra.Command, args []string) error {
 		})
 	}
 
-	allCoins := make([]api.MarketCoin, 0, total)
-
-	for page := 1; len(allCoins) < total; page++ {
-		coins, err := client.CoinMarkets(ctx, vs, perPage, page, order, category)
-		if err != nil {
-			return err
-		}
-		allCoins = append(allCoins, coins...)
-		if len(coins) < perPage {
-			break // no more data available
-		}
-	}
-	if len(allCoins) > total {
-		allCoins = allCoins[:total]
+	allCoins, err := client.FetchAllMarkets(ctx, vs, total, order, category)
+	if err != nil {
+		return err
 	}
 
 	if jsonOut {
