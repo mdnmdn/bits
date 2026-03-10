@@ -14,7 +14,7 @@ A fast, full-featured terminal interface for the [CoinGecko API](https://docs.co
 - **⚡ Real-Time Prices** — Current prices by CoinGecko ID or ticker symbol, with 50+ currency symbols
 - **📅 Deep Historical Data** — Snapshots, OHLC, and custom date ranges with CSV export
 - **🏷️ Category Filtering** — Filter by 500+ categories including AI, Layer-2, Tokenized Stocks, Gold, and Silver
-- **📊 Unlimtited Markets** — Fetch 1,000+ coins with automatic pagination
+- **📊 Unlimited Markets** — Fetch 1,000+ coins with automatic pagination
 - **🔥 Trending & Top Movers** — Real-time trending coins, NFTs, and categories
 - **📥 CSV Export** — Export any market or history query for analysis in Excel or Python
 - **⌨️ JSON Output** — Machine-readable `-o json` for scripting and pipelines
