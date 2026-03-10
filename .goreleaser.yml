@@ -28,10 +28,15 @@ checksum:
 changelog:
   sort: asc
 
-# Homebrew tap — uncomment and update once tap repo is created
-# brews:
-#   - repository:
-#       owner: coingecko
-#       name: homebrew-tap
-#     homepage: https://github.com/coingecko/coingecko-cli
-#     description: CoinGecko CLI — cryptocurrency data at your fingertips
+brews:
+  - repository:
+      owner: coingecko
+      name: homebrew-coingecko-cli
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    homepage: https://github.com/coingecko/coingecko-cli
+    description: CoinGecko CLI — cryptocurrency data at your fingertips
+    license: MIT
+    install: |
+      bin.install "cg"
+    test: |
+      system "#{bin}/cg", "version"

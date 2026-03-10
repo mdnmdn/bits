@@ -30,7 +30,16 @@ A fast, full-featured terminal interface for the [CoinGecko API](https://docs.co
 
 ### Homebrew (macOS/Linux)
 
-> Coming soon — tap repo pending.
+```sh
+brew install coingecko/coingecko-cli/cg
+```
+
+Or tap first, then install:
+
+```sh
+brew tap coingecko/coingecko-cli
+brew install cg
+```
 
 ### Shell script
 
