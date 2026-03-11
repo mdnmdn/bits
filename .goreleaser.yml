@@ -16,11 +16,13 @@ builds:
       - arm64
 
 archives:
-  - format: tar.gz
+  - formats:
+      - tar.gz
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     format_overrides:
       - goos: windows
-        format: zip
+        formats:
+          - zip
 
 checksum:
   name_template: "checksums.txt"
@@ -28,15 +30,12 @@ checksum:
 changelog:
   sort: asc
 
-brews:
+homebrew_casks:
   - repository:
       owner: coingecko
       name: homebrew-coingecko-cli
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
     homepage: https://github.com/coingecko/coingecko-cli
     description: CoinGecko CLI — cryptocurrency data at your fingertips
-    license: MIT
-    install: |
-      bin.install "cg"
-    test: |
-      system "#{bin}/cg", "version"
+    binaries:
+      - cg
