@@ -101,6 +101,15 @@ coingecko-cli/
 | `cg history --from/--to --ohlc` | `/coins/{id}/ohlc/range` (batched for large ranges) | `coins-id-ohlc-range` |
 | `cg top-gainers-losers` | `/coins/top_gainers_losers` | `coins-top-gainers-losers` |
 
+## Distribution
+
+- **Homebrew**: tap repo at `coingecko/homebrew-coingecko-cli` — goreleaser pushes cask formula on each tagged release
+- **Goreleaser**: `.goreleaser.yml` uses `homebrew_casks` with `binaries` field for CLI binary distribution
+- **Release workflow**: `.github/workflows/release.yml` triggers on `v*` tags, requires `HOMEBREW_TAP_TOKEN` repo secret for tap repo write access
+- **Tagging**: always tag from `main` after pulling latest — `git tag vX.Y.Z && git push origin vX.Y.Z`
+- **Install script**: `install.sh` downloads the latest release binary from GitHub Releases
+- **Go install**: `go install github.com/coingecko/coingecko-cli@latest`
+
 ## Key Design Decisions
 
 - CoinGecko `/coins/{id}/market_chart/range` expects UNIX timestamps in seconds — CLI accepts `YYYY-MM-DD` and converts in the command layer
