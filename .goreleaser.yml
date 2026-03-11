@@ -30,12 +30,15 @@ checksum:
 changelog:
   sort: asc
 
-homebrew_casks:
+brews:
   - repository:
       owner: coingecko
       name: homebrew-coingecko-cli
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
     homepage: https://github.com/coingecko/coingecko-cli
     description: CoinGecko CLI — cryptocurrency data at your fingertips
-    binaries:
-      - cg
+    license: MIT
+    install: |
+      bin.install "cg"
+    test: |
+      system "#{bin}/cg", "version"
