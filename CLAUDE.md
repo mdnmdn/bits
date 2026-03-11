@@ -103,8 +103,8 @@ coingecko-cli/
 
 ## Distribution
 
-- **Homebrew**: tap repo at `coingecko/homebrew-coingecko-cli` — goreleaser pushes cask formula on each tagged release
-- **Goreleaser**: `.goreleaser.yml` uses `homebrew_casks` with `binaries` field for CLI binary distribution
+- **Homebrew**: tap repo at `coingecko/homebrew-coingecko-cli` — goreleaser pushes formula on each tagged release
+- **Goreleaser**: `.goreleaser.yml` uses `brews` to generate Homebrew formula for CLI binary distribution
 - **Release workflow**: `.github/workflows/release.yml` triggers on `v*` tags, requires `HOMEBREW_TAP_TOKEN` repo secret for tap repo write access
 - **Tagging**: always tag from `main` after pulling latest — `git tag vX.Y.Z && git push origin vX.Y.Z`
 - **Install script**: `install.sh` downloads the latest release binary from GitHub Releases
