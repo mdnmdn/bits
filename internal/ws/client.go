@@ -109,10 +109,9 @@ func (c *Client) Close() error {
 
 	c.mu.Lock()
 	conn := c.conn
-	c.mu.Unlock()
-
 	if conn != nil {
-		// Send unsubscribe before closing.
+		// Send unsubscribe before closing. Hold mu to prevent concurrent
+		// writes from reconnect (gorilla/websocket doesn't support concurrent writers).
 		unsub := actionCableCommand{
 			Command:    "unsubscribe",
 			Identifier: ChannelID,
@@ -122,6 +121,7 @@ func (c *Client) Close() error {
 		_ = conn.WriteMessage(websocket.CloseMessage,
 			websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 	}
+	c.mu.Unlock()
 
 	if c.started.Load() {
 		<-c.done
