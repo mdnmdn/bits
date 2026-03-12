@@ -54,6 +54,10 @@ func runWatch(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	if !cfg.IsPaid() {
+		return api.ErrPlanRestricted
+	}
+
 	var coinIDs []string
 	var preflights []dryRunOutput
 	dryRun := isDryRun(cmd)
@@ -141,7 +145,7 @@ func runWatch(cmd *cobra.Command, args []string) error {
 	defer cancel()
 
 	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, os.Interrupt)
+	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		select {
 		case <-sigCh:
@@ -268,10 +272,9 @@ func watchTable(ctx context.Context, updates <-chan *ws.CoinUpdate) error {
 // updateStatusLine overwrites just the status line in place using ANSI save/restore
 // cursor. No screen clear, no banner or table redraw.
 func updateStatusLine(dotFrame int) {
-	// Save cursor position, move to the status line (known position after
-	// banner: \n=row1, text=row2, \n\n=row3, status=row4), overwrite it,
-	// then restore cursor so the terminal stays visually stable.
-	fmt.Printf("\033[s\033[4;1H\033[2K"+statusLine+"\033[u", statusDots[dotFrame])
+	// Save cursor, move to the status line (banner rows + 1), overwrite, restore.
+	row := display.BannerLines + 1
+	fmt.Printf("\033[s\033[%d;1H\033[2K"+statusLine+"\033[u", row, statusDots[dotFrame])
 }
 
 // ANSI color constants for price flash.

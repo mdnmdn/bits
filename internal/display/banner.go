@@ -131,6 +131,11 @@ func boxRow(w *os.File, content string, visible int) string {
 	return fmt.Sprintf("| %s%s |", content, strings.Repeat(" ", pad))
 }
 
+// BannerLines is the number of terminal rows FprintBanner occupies
+// (leading \n + text + trailing \n\n). Used by watch to position the
+// status line without hardcoding a row number.
+const BannerLines = 3
+
 // FprintBanner writes a compact one-line CoinGecko banner to w.
 // Color is determined by the writer's fd (not the global ColorEnabled check),
 // so writing to stdout vs stderr each gets the right color decision.
