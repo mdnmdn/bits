@@ -310,7 +310,7 @@ cg top-gainers-losers --top-coins 300 --export gainers.csv
 
 ---
 
-### `cg watch` — Live Price Streaming (Exclusive for [Paid plan](https://www.coingecko.com/en/api/pricing))
+### `cg watch` — Live Price Streaming (Exclusive for [Analyst plan](https://www.coingecko.com/en/api/pricing) & above)
 
 Stream real-time price updates via CoinGecko's WebSocket API. Updates arrive approximately every 10 seconds. USD prices only.
 
@@ -420,7 +420,7 @@ Commands:
   trending             Show trending coins, NFTs, and categories (24h)
   history              Get historical price data for a coin
   top-gainers-losers   Show top gaining and losing coins (paid plans only)
-  watch                Stream live coin prices via WebSocket (paid plans only)
+  watch                Stream live coin prices via WebSocket (analyst or above)
   tui                  Interactive terminal UI (markets, trending)
   commands             List all commands with API metadata (for agents/LLMs)
   help                 Print help for a command

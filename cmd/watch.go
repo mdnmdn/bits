@@ -19,8 +19,8 @@ import (
 
 var watchCmd = &cobra.Command{
 	Use:   "watch",
-	Short: "Stream live coin prices via WebSocket (paid plans only)",
-	Long:  "Connect to CoinGecko's real-time WebSocket API and stream live price updates. Requires a paid plan.",
+	Short: "Stream live coin prices via WebSocket (analyst or above)",
+	Long:  "Connect to CoinGecko's real-time WebSocket API and stream live price updates. Requires an analyst plan or above.",
 	Example: `  cg watch --ids bitcoin,ethereum
   cg watch --symbols btc,eth
   cg watch --ids bitcoin -o json
