@@ -74,7 +74,7 @@ func (c *Client) SetURL(url string) {
 // the client is shut down or the context is canceled.
 func (c *Client) Connect(ctx context.Context) (<-chan *CoinUpdate, error) {
 	if !c.cfg.IsPaid() {
-		return nil, fmt.Errorf("this command requires a paid plan (analyst or above) — upgrade at https://www.coingecko.com/en/api/pricing (%w)", api.ErrPlanRestricted)
+		return nil, api.ErrPlanRestricted
 	}
 
 	if err := c.connect(ctx); err != nil {
