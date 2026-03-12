@@ -25,7 +25,7 @@ go test -race ./...
 ```
 coingecko-cli/
 ├── main.go                        # Entry point
-├── cmd/                           # Cobra commands (auth, status, price, markets, search, trending, history, top_gainers_losers, tui, version)
+├── cmd/                           # Cobra commands (auth, status, price, markets, search, trending, history, top_gainers_losers, watch, tui, version)
 ├── internal/
 │   ├── api/
 │   │   ├── client.go              # HTTP client, auth, error handling
@@ -43,6 +43,9 @@ coingecko-cli/
 │   │   └── color.go               # ANSI color (NO_COLOR/TTY aware)
 │   ├── export/
 │   │   └── csv.go                 # CSV file export
+│   ├── ws/
+│   │   ├── client.go              # WebSocket client (ActionCable protocol, reconnect, state machine)
+│   │   └── client_test.go         # WebSocket client tests (httptest + gorilla/websocket upgrader)
 │   └── tui/
 │       ├── styles.go              # Shared lipgloss styles, brand colors, frame/layout helpers
 │       ├── markets.go             # Markets TUI model
@@ -100,6 +103,7 @@ coingecko-cli/
 | `cg history --from/--to --interval hourly` | `/coins/{id}/market_chart/range` (batched) | `coins-id-market-chart-range` |
 | `cg history --from/--to --ohlc` | `/coins/{id}/ohlc/range` (batched for large ranges) | `coins-id-ohlc-range` |
 | `cg top-gainers-losers` | `/coins/top_gainers_losers` | `coins-top-gainers-losers` |
+| `cg watch` | `wss://stream.coingecko.com/v1` (WebSocket) | — |
 
 ## Distribution
 
@@ -114,7 +118,7 @@ coingecko-cli/
 
 - CoinGecko `/coins/{id}/market_chart/range` expects UNIX timestamps in seconds — CLI accepts `YYYY-MM-DD` and converts in the command layer
 - CoinGecko `/coins/{id}/history` uses `DD-MM-YYYY` date format — CLI accepts `YYYY-MM-DD` and converts
-- Symbol resolution (for `cg price --symbols`) uses `/search` endpoint, picks exact case-insensitive match with highest market_cap_rank
+- Symbol resolution: `cg price --symbols` uses `/simple/price?symbols=` directly (API accepts symbols natively). `cg watch --symbols` uses `/search` to resolve symbols to coin IDs (WebSocket requires coin IDs), picking exact case-insensitive match with highest market_cap_rank
 - TUI detail view fetches coin detail + OHLC concurrently via `tea.Batch`
 - `RateLimitError` typed error carries `RetryAfter` seconds, satisfies `errors.Is(err, ErrRateLimited)` via custom `Is()` method
 - API text (coin names, symbols) sanitized via `display.SanitizeCell` to strip terminal escape injection
@@ -124,6 +128,9 @@ coingecko-cli/
 - **OHLC range batching**: daily chunks ≤170 days (API limit 180), hourly chunks ≤30 days (API limit 31). `--ohlc --interval` requires paid plans
 - **`--interval` values**: only `daily` and `hourly` are accepted; `5m` is not supported (Enterprise-only)
 - **Hourly data availability**: CoinGecko hourly data is only available from 2018-01-30 onwards; 5-minute data from 2018-02-09 onwards. The CLI validates this client-side and rejects requests with `--interval hourly` before the cutoff date
-- **Command test seams**: `cmd/client_factory.go` exposes injectable `newAPIClient` and `loadConfig` vars so command integration tests can swap in `httptest` servers and test configs without touching real API or config files
+- **WebSocket streaming**: `cg watch` uses CoinGecko's ActionCable WebSocket API (`CGSimplePrice` channel) for real-time price updates (~10s). Paid-only, USD prices only. API key passed via `x_cg_pro_api_key` query param. Coin IDs are validated via `/simple/price` before connecting; invalid IDs are skipped with a warning
+- **WebSocket reconnect**: automatic reconnect with exponential backoff (1s→30s cap + jitter). `Close()` sets an atomic `closing` flag that suppresses reconnect. Single `readLoop` goroutine owns the connection lifecycle
+- **WebSocket test seams**: `cmd/client_factory.go` exposes `Streamer` interface + `newStreamer` factory for injecting test doubles in command tests. WS protocol tests use `httptest` + `gorilla/websocket.Upgrader`
+- **Command test seams**: `cmd/client_factory.go` exposes injectable `newAPIClient`, `loadConfig`, and `newStreamer` vars so command integration tests can swap in httptest servers and test configs without touching real API or config files
 - **Pagination helper**: `FetchAllMarkets` in `internal/api/coins.go` handles multi-page fetching (250/page) with trim-to-total, used by both `cg markets` and `cg tui markets`
 - **TUI trending tier awareness**: demo gets 15 coins, paid gets 30 via `show_max=coins` API param

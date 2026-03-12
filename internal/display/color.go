@@ -5,6 +5,7 @@ import (
 	"os"
 	"regexp"
 	"sync"
+	"unicode/utf8"
 
 	"golang.org/x/term"
 )
@@ -41,9 +42,26 @@ func StderrIsTerminal() bool {
 	return term.IsTerminal(int(os.Stderr.Fd()))
 }
 
+// StdoutIsTerminal reports whether stdout is connected to an interactive terminal.
+func StdoutIsTerminal() bool {
+	return term.IsTerminal(int(os.Stdout.Fd()))
+}
+
+// StdoutColorEnabled reports whether color output is appropriate for stdout.
+// Use this instead of ColorEnabled() when writing colored output to stdout
+// (e.g. the watch table), so colors work even when stderr is redirected.
+func StdoutColorEnabled() bool {
+	if os.Getenv("NO_COLOR") != "" {
+		return false
+	}
+	return term.IsTerminal(int(os.Stdout.Fd()))
+}
+
 // VisibleWidth returns the display width of a string after stripping ANSI escapes.
+// Uses rune count rather than byte length so multi-byte Unicode (e.g. ▲, ▼, •)
+// is measured as one cell per character.
 func VisibleWidth(s string) int {
-	return len(ansiRegex.ReplaceAllString(s, ""))
+	return utf8.RuneCountInString(ansiRegex.ReplaceAllString(s, ""))
 }
 
 // ColorHeader wraps s in bold #FFE866 (gold) when color output is enabled.

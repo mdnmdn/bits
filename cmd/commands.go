@@ -3,6 +3,7 @@ package cmd
 import (
 	"strings"
 
+	"github.com/coingecko/coingecko-cli/internal/ws"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -15,6 +16,7 @@ type commandAnnotation struct {
 	OASOperationID  string
 	OASOperationIDs map[string]string
 	OASSpec         string
+	Transport       string // "rest" (default) or "websocket"
 	PaidOnly        bool
 	RequiresAuth    bool
 }
@@ -68,6 +70,12 @@ var commandMeta = map[string]commandAnnotation{
 		OASSpec:        "coingecko-pro.json",
 		PaidOnly:       true,
 		RequiresAuth:   true,
+	},
+	"watch": {
+		APIEndpoint:  ws.DefaultWSURL,
+		Transport:    "websocket",
+		PaidOnly:     true,
+		RequiresAuth: true,
 	},
 }
 
@@ -126,6 +134,7 @@ type commandInfo struct {
 	OutputFormats   []string          `json:"output_formats"`
 	RequiresAuth    bool              `json:"requires_auth"`
 	PaidOnly        bool              `json:"paid_only"`
+	Transport       string            `json:"transport,omitempty"`
 	APIEndpoint     string            `json:"api_endpoint,omitempty"`
 	APIEndpoints    map[string]string `json:"api_endpoints,omitempty"`
 	OASOperationID  string            `json:"oas_operation_id,omitempty"`
@@ -207,6 +216,7 @@ func runCommands(cmd *cobra.Command, args []string) error {
 		if meta, ok := commandMeta[c.Name()]; ok {
 			info.PaidOnly = meta.PaidOnly
 			info.RequiresAuth = meta.RequiresAuth
+			info.Transport = meta.Transport
 			info.APIEndpoint = meta.APIEndpoint
 			info.APIEndpoints = meta.APIEndpoints
 			info.OASOperationID = meta.OASOperationID
