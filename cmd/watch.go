@@ -98,7 +98,7 @@ func runWatch(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	defer streamer.Close()
+	defer func() { _ = streamer.Close() }()
 
 	if jsonOut {
 		if err := watchJSON(ctx, updates); err != nil {

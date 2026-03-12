@@ -30,7 +30,7 @@ func newTestWSServer(t *testing.T, handler func(conn *websocket.Conn)) *httptest
 			t.Logf("upgrade error: %v", err)
 			return
 		}
-		defer conn.Close()
+		defer func() { _ = conn.Close() }()
 		handler(conn)
 	}))
 	t.Cleanup(srv.Close)
@@ -202,7 +202,7 @@ func TestReconnect_OnServerDisconnect(t *testing.T) {
 
 		if n == 1 {
 			// First connection: drop immediately after handshake.
-			conn.Close()
+			_ = conn.Close()
 			return
 		}
 
@@ -251,7 +251,7 @@ func TestContextCancelDuringBackoff(t *testing.T) {
 	// Server that drops connection immediately after handshake.
 	srv := newTestWSServer(t, func(conn *websocket.Conn) {
 		happyHandshake(t, conn)
-		conn.Close()
+		_ = conn.Close()
 	})
 
 	client := NewClient(paidCfg(), []string{"bitcoin"})
@@ -285,7 +285,7 @@ func TestCloseSuppressesReconnect(t *testing.T) {
 		happyHandshake(t, conn)
 		// Keep alive briefly then drop.
 		time.Sleep(50 * time.Millisecond)
-		conn.Close()
+		_ = conn.Close()
 	})
 
 	client := NewClient(paidCfg(), []string{"bitcoin"})
@@ -317,7 +317,7 @@ func TestNoGoroutineLeak(t *testing.T) {
 			sendJSON(conn, map[string]any{"type": "ping", "message": time.Now().Unix()})
 			time.Sleep(50 * time.Millisecond)
 		}
-		conn.Close()
+		_ = conn.Close()
 	})
 
 	client := NewClient(paidCfg(), []string{"bitcoin"})
