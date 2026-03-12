@@ -165,10 +165,9 @@ func (c *Client) subscribe(ctx context.Context) error {
 	data, _ := json.Marshal(sub)
 
 	c.mu.Lock()
-	conn := c.conn
+	err := c.conn.WriteMessage(websocket.TextMessage, data)
 	c.mu.Unlock()
-
-	if err := conn.WriteMessage(websocket.TextMessage, data); err != nil {
+	if err != nil {
 		return err
 	}
 
@@ -193,10 +192,9 @@ func (c *Client) setTokens() error {
 	data, _ := json.Marshal(msg)
 
 	c.mu.Lock()
-	conn := c.conn
+	err := c.conn.WriteMessage(websocket.TextMessage, data)
 	c.mu.Unlock()
-
-	return conn.WriteMessage(websocket.TextMessage, data)
+	return err
 }
 
 // readLoop reads messages from the WebSocket and dispatches updates.

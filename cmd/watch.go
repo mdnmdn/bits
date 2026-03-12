@@ -281,6 +281,22 @@ const (
 	colorReset      = "\033[0m"
 )
 
+// colorPercent formats a percentage with green/red color when colored is true.
+// Uses the pre-computed stdout color flag instead of display.ColorPercent()
+// which checks stderr.
+func colorPercent(pct float64, colored bool) string {
+	s := display.FormatPercent(pct)
+	if !colored {
+		return s
+	}
+	if pct > 0 {
+		return colorBrandGreen + s + colorReset
+	} else if pct < 0 {
+		return colorFlashRed + s + colorReset
+	}
+	return s
+}
+
 // colorPrice formats the price, coloring it briefly when a flash is active.
 // The colored flag should be pre-computed via display.StdoutColorEnabled() to
 // avoid repeated syscalls in the render loop.
@@ -313,7 +329,7 @@ func renderWatchTable(state map[string]*ws.CoinUpdate, flashes map[string]*price
 		rows = append(rows, []string{
 			display.SanitizeCell(id),
 			colorPrice(u.Price, flashes[id], colored),
-			display.ColorPercent(u.Change24h),
+			colorPercent(u.Change24h, colored),
 			display.FormatLargeNumber(u.MarketCap),
 			display.FormatLargeNumber(u.Volume24h),
 			formatTimestamp(u.UpdatedAt),
