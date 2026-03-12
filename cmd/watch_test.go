@@ -3,6 +3,8 @@ package cmd
 import (
 	"context"
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
@@ -48,12 +50,80 @@ func TestWatch_MissingFlags(t *testing.T) {
 	assert.Contains(t, err.Error(), "--ids or --symbols")
 }
 
+func TestWatch_UnresolvedSymbol(t *testing.T) {
+	// Search returns no matching coins for the symbol.
+	srv := newTestServer(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/search" {
+			w.WriteHeader(200)
+			_, _ = w.Write([]byte(`{"coins":[]}`))
+			return
+		}
+		w.WriteHeader(200)
+		_, _ = w.Write([]byte(`{}`))
+	})
+	defer srv.Close()
+	withTestClient(t, srv, "paid")
+
+	_, _, err := executeCommand(t, "watch", "--symbols", "zzzznotacoin", "-o", "json")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "none of the provided coins could be found")
+}
+
+func TestWatch_SymbolRankDisambiguation(t *testing.T) {
+	// Search returns two coins with the same symbol; should pick highest rank.
+	srv := newTestServer(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/search" {
+			w.WriteHeader(200)
+			_, _ = w.Write([]byte(`{"coins":[
+				{"id":"fake-btc","name":"Fake BTC","symbol":"btc","market_cap_rank":999},
+				{"id":"bitcoin","name":"Bitcoin","symbol":"BTC","market_cap_rank":1}
+			]}`))
+			return
+		}
+		w.WriteHeader(200)
+		_, _ = w.Write([]byte(`{}`))
+	})
+	defer srv.Close()
+	withTestClient(t, srv, "paid")
+
+	withFakeStreamer(t, &fakeStreamer{
+		updates: []*ws.CoinUpdate{
+			{CoinID: "bitcoin", Price: 45000},
+		},
+	})
+
+	stdout, _, err := executeCommand(t, "watch", "--symbols", "btc", "-o", "json")
+	require.NoError(t, err)
+
+	lines := splitNonEmpty(stdout)
+	require.Len(t, lines, 1)
+	var u ws.CoinUpdate
+	require.NoError(t, json.Unmarshal([]byte(lines[0]), &u))
+	assert.Equal(t, "bitcoin", u.CoinID)
+}
+
+// simplePriceServer returns a test server that responds to /simple/price
+// with valid price data for the requested coin IDs.
+func simplePriceServer(t *testing.T) *httptest.Server {
+	t.Helper()
+	srv := newTestServer(func(w http.ResponseWriter, r *http.Request) {
+		ids := strings.Split(r.URL.Query().Get("ids"), ",")
+		result := make(map[string]any)
+		for _, id := range ids {
+			if id != "" {
+				result[id] = map[string]any{"usd": 1000, "usd_24h_change": 0.5}
+			}
+		}
+		w.WriteHeader(200)
+		_ = json.NewEncoder(w).Encode(result)
+	})
+	t.Cleanup(srv.Close)
+	return srv
+}
+
 func TestWatch_DemoPlanRejected(t *testing.T) {
-	origLoad := loadConfig
-	loadConfig = func() (*config.Config, error) {
-		return &config.Config{APIKey: "test-key", Tier: "demo"}, nil
-	}
-	t.Cleanup(func() { loadConfig = origLoad })
+	srv := simplePriceServer(t)
+	withTestClient(t, srv, "demo")
 
 	withFakeStreamer(t, &fakeStreamer{
 		connectFn: func(ctx context.Context) (<-chan *ws.CoinUpdate, error) {
@@ -86,11 +156,8 @@ func TestWatch_DryRun(t *testing.T) {
 }
 
 func TestWatch_JSONOutput(t *testing.T) {
-	origLoad := loadConfig
-	loadConfig = func() (*config.Config, error) {
-		return &config.Config{APIKey: "test-key", Tier: "paid"}, nil
-	}
-	t.Cleanup(func() { loadConfig = origLoad })
+	srv := simplePriceServer(t)
+	withTestClient(t, srv, "paid")
 
 	withFakeStreamer(t, &fakeStreamer{
 		updates: []*ws.CoinUpdate{
@@ -111,6 +178,60 @@ func TestWatch_JSONOutput(t *testing.T) {
 	require.NoError(t, json.Unmarshal([]byte(lines[1]), &u2))
 	assert.Equal(t, "bitcoin", u1.CoinID)
 	assert.Equal(t, "ethereum", u2.CoinID)
+}
+
+func TestWatch_AllIDsInvalid(t *testing.T) {
+	// Server returns empty response for unknown IDs.
+	srv := newTestServer(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
+		_, _ = w.Write([]byte(`{}`))
+	})
+	defer srv.Close()
+	withTestClient(t, srv, "paid")
+
+	_, _, err := executeCommand(t, "watch", "--ids", "notacoin,fakecoin", "-o", "json")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "none of the provided coins could be found")
+}
+
+func TestWatch_PartialIDsInvalid(t *testing.T) {
+	// Server only recognizes "bitcoin", not "fakecoin".
+	srv := newTestServer(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
+		_, _ = w.Write([]byte(`{"bitcoin":{"usd":45000,"usd_24h_change":2.5}}`))
+	})
+	defer srv.Close()
+	withTestClient(t, srv, "paid")
+
+	withFakeStreamer(t, &fakeStreamer{
+		updates: []*ws.CoinUpdate{
+			{CoinID: "bitcoin", Price: 45000},
+		},
+	})
+
+	stdout, stderr, err := executeCommand(t, "watch", "--ids", "bitcoin,fakecoin", "-o", "json")
+	require.NoError(t, err)
+	assert.Contains(t, stderr, "not found")
+	assert.Contains(t, stderr, "fakecoin")
+
+	lines := splitNonEmpty(stdout)
+	require.Len(t, lines, 1)
+}
+
+func TestWatch_DryRunShowsPreflights(t *testing.T) {
+	origLoad := loadConfig
+	loadConfig = func() (*config.Config, error) {
+		return &config.Config{APIKey: "test-key", Tier: "paid"}, nil
+	}
+	t.Cleanup(func() { loadConfig = origLoad })
+
+	stdout, _, err := executeCommand(t, "watch", "--ids", "bitcoin", "--symbols", "eth", "--dry-run", "-o", "json")
+	require.NoError(t, err)
+
+	var out dryRunWSOutput
+	require.NoError(t, json.Unmarshal([]byte(stdout), &out))
+	// Should have two preflight requests: one for --ids validation, one for --symbols resolution.
+	assert.Len(t, out.PreflightRequests, 2)
 }
 
 func splitNonEmpty(s string) []string {

@@ -41,20 +41,22 @@ func printDryRunWithOp(cfg *config.Config, cmdName, opKey, endpoint string, para
 }
 
 type dryRunWSOutput struct {
-	Transport         string `json:"transport"`
-	URL               string `json:"url"`
-	SubscribePayload  any    `json:"subscribe_payload"`
-	SetTokensPayload  any    `json:"set_tokens_payload"`
-	Note              string `json:"note,omitempty"`
+	PreflightRequests []dryRunOutput `json:"preflight_requests,omitempty"`
+	Transport         string         `json:"transport"`
+	URL               string         `json:"url"`
+	SubscribePayload  any            `json:"subscribe_payload"`
+	SetTokensPayload  any            `json:"set_tokens_payload"`
+	Note              string         `json:"note,omitempty"`
 }
 
-func printDryRunWS(cfg *config.Config, coinIDs []string) error {
+func printDryRunWS(cfg *config.Config, coinIDs []string, preflights []dryRunOutput) error {
 	masked := cfg.MaskedKey()
 	url := ws.DefaultWSURL + "?x_cg_pro_api_key=" + masked
 
 	out := dryRunWSOutput{
-		Transport: "websocket",
-		URL:       url,
+		PreflightRequests: preflights,
+		Transport:         "websocket",
+		URL:               url,
 		SubscribePayload: map[string]string{
 			"command":    "subscribe",
 			"identifier": ws.ChannelID,

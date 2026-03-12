@@ -8,9 +8,11 @@ import (
 	"os"
 	"os/signal"
 	"sort"
+	"strings"
 	"syscall"
 	"time"
 
+	"github.com/coingecko/coingecko-cli/internal/api"
 	"github.com/coingecko/coingecko-cli/internal/display"
 	"github.com/coingecko/coingecko-cli/internal/ws"
 
@@ -44,7 +46,7 @@ func runWatch(cmd *cobra.Command, args []string) error {
 	}
 
 	if idsStr == "" && symbolsStr == "" {
-		return fmt.Errorf("provide --ids or --symbols")
+		return fmt.Errorf("specify coins to watch with --ids or --symbols")
 	}
 
 	cfg, err := loadConfig()
@@ -52,29 +54,86 @@ func runWatch(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Resolve coin IDs.
 	var coinIDs []string
+	var preflights []dryRunOutput
+	dryRun := isDryRun(cmd)
+
 	if idsStr != "" {
-		coinIDs = append(coinIDs, splitTrim(idsStr)...)
+		requested := splitTrim(idsStr)
+
+		if dryRun {
+			coinIDs = append(coinIDs, requested...)
+			headerKey, _ := cfg.AuthHeader()
+			preflights = append(preflights, dryRunOutput{
+				Method: "GET",
+				URL:    cfg.BaseURL() + "/simple/price",
+				Params: map[string]string{
+					"ids":            idsStr,
+					"vs_currencies":  "usd",
+					"include_24hr_change": "true",
+				},
+				Headers: map[string]string{
+					headerKey: cfg.MaskedKey(),
+					"Accept":  "application/json",
+				},
+				Note: "Validates coin IDs before connecting",
+			})
+		} else {
+			client := newAPIClient(cfg)
+			prices, err := client.SimplePrice(cmd.Context(), requested, "usd")
+			if err != nil {
+				return fmt.Errorf("validating coin IDs: %w", err)
+			}
+			for _, id := range requested {
+				if _, ok := prices[id]; ok {
+					coinIDs = append(coinIDs, id)
+				} else {
+					warnf("coin ID %q not found (use --symbols for ticker symbols like btc), skipping\n", id)
+				}
+			}
+		}
 	}
 
 	if symbolsStr != "" {
 		symbols := splitTrim(symbolsStr)
-		client := newAPIClient(cfg)
-		prices, err := client.SimplePriceBySymbols(cmd.Context(), symbols, "usd")
-		if err != nil {
-			return fmt.Errorf("resolving symbols: %w", err)
-		}
-		for id := range prices {
-			coinIDs = append(coinIDs, id)
-		}
-		if len(coinIDs) == 0 {
-			return fmt.Errorf("no coins found for symbols: %s", symbolsStr)
+		if dryRun {
+			for _, sym := range symbols {
+				headerKey, _ := cfg.AuthHeader()
+				preflights = append(preflights, dryRunOutput{
+					Method: "GET",
+					URL:    cfg.BaseURL() + "/search",
+					Params: map[string]string{
+						"query": sym,
+					},
+					Headers: map[string]string{
+						headerKey: cfg.MaskedKey(),
+						"Accept":  "application/json",
+					},
+					Note: fmt.Sprintf("Resolves symbol %q to coin ID", sym),
+				})
+			}
+		} else {
+			client := newAPIClient(cfg)
+			for _, sym := range symbols {
+				res, err := client.Search(cmd.Context(), sym)
+				if err != nil {
+					return fmt.Errorf("resolving symbol %q: %w", sym, err)
+				}
+				if id := matchSymbol(res.Coins, sym); id != "" {
+					coinIDs = append(coinIDs, id)
+				} else {
+					warnf("could not resolve symbol %q to a coin, skipping\n", sym)
+				}
+			}
 		}
 	}
 
-	if isDryRun(cmd) {
-		return printDryRunWS(cfg, coinIDs)
+	if dryRun {
+		return printDryRunWS(cfg, coinIDs, preflights)
+	}
+
+	if len(coinIDs) == 0 {
+		return fmt.Errorf("none of the provided coins could be found — verify your --ids (e.g. bitcoin) or --symbols (e.g. btc)")
 	}
 
 	// Set up context with signal handling.
@@ -288,4 +347,27 @@ func formatTimestamp(ts int64) string {
 		return "-"
 	}
 	return time.Unix(ts, 0).Format("15:04:05")
+}
+
+// matchSymbol picks the best coin ID from search results for a given symbol.
+// It returns the exact case-insensitive match with the highest market_cap_rank,
+// or "" if no match is found.
+func matchSymbol(coins []api.SearchCoin, symbol string) string {
+	var best string
+	var bestRank int
+	for _, c := range coins {
+		if !strings.EqualFold(c.Symbol, symbol) {
+			continue
+		}
+		// market_cap_rank 0 means unranked — treat as worst.
+		rank := c.MarketCapRank
+		if rank == 0 {
+			rank = 1<<31 - 1
+		}
+		if best == "" || rank < bestRank {
+			best = c.ID
+			bestRank = rank
+		}
+	}
+	return best
 }
