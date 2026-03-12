@@ -62,6 +62,12 @@ func runWatch(cmd *cobra.Command, args []string) error {
 	var preflights []dryRunOutput
 	dryRun := isDryRun(cmd)
 
+	// Create API client once for both ID validation and symbol resolution.
+	var client *api.Client
+	if !dryRun {
+		client = newAPIClient(cfg)
+	}
+
 	if idsStr != "" {
 		requested := splitTrim(idsStr)
 
@@ -83,7 +89,6 @@ func runWatch(cmd *cobra.Command, args []string) error {
 				Note: "Validates coin IDs before connecting",
 			})
 		} else {
-			client := newAPIClient(cfg)
 			prices, err := client.SimplePrice(cmd.Context(), requested, "usd")
 			if err != nil {
 				return fmt.Errorf("validating coin IDs: %w", err)
@@ -117,7 +122,6 @@ func runWatch(cmd *cobra.Command, args []string) error {
 				})
 			}
 		} else {
-			client := newAPIClient(cfg)
 			for _, sym := range symbols {
 				res, err := client.Search(cmd.Context(), sym)
 				if err != nil {
@@ -279,7 +283,7 @@ func updateStatusLine(dotFrame int) {
 
 // ANSI color constants for price flash.
 const (
-	colorBrandGreen = "\033[38;2;140;195;81m" // CoinGecko brand green (#8CC351)
+	colorFlashGreen = "\033[38;2;75;204;0m" // CoinGecko brand green (#4BCC00)
 	colorFlashRed   = "\033[31m"
 	colorReset      = "\033[0m"
 )
@@ -293,7 +297,7 @@ func colorPercent(pct float64, colored bool) string {
 		return s
 	}
 	if pct > 0 {
-		return colorBrandGreen + s + colorReset
+		return colorFlashGreen + s + colorReset
 	} else if pct < 0 {
 		return colorFlashRed + s + colorReset
 	}
@@ -309,7 +313,7 @@ func colorPrice(price float64, flash *priceFlash, colored bool) string {
 		return s
 	}
 	if flash.dir > 0 {
-		return colorBrandGreen + s + colorReset
+		return colorFlashGreen + s + colorReset
 	}
 	return colorFlashRed + s + colorReset
 }
