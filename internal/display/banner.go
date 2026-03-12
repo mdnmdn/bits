@@ -2,8 +2,11 @@ package display
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"strings"
+
+	"golang.org/x/term"
 )
 
 // Brand color: CoinGecko green #4BCC00 → RGB(75, 204, 0)
@@ -62,6 +65,7 @@ func PrintWelcomeBox() {
 	printCmdRow(w, "cg trending", "# Trending coins")
 	printCmdRow(w, "cg history bitcoin --days 30", "# 30-day price history")
 	printCmdRow(w, "cg top-gainers-losers", "# Top gainers (paid)")
+	printCmdRow(w, "cg watch --ids bitcoin", "# Live prices (paid)")
 	printCmdRow(w, "cg tui markets", "# Interactive TUI")
 	_, _ = fmt.Fprintln(w, blank)
 	_, _ = fmt.Fprintln(w, sep)
@@ -127,13 +131,26 @@ func boxRow(w *os.File, content string, visible int) string {
 	return fmt.Sprintf("| %s%s |", content, strings.Repeat(" ", pad))
 }
 
+// FprintBanner writes a compact one-line CoinGecko banner to w.
+// Color is determined by the writer's fd (not the global ColorEnabled check),
+// so writing to stdout vs stderr each gets the right color decision.
+func FprintBanner(w io.Writer) {
+	colored := false
+	if os.Getenv("NO_COLOR") == "" {
+		if f, ok := w.(*os.File); ok {
+			colored = term.IsTerminal(int(f.Fd()))
+		}
+	}
+	if !colored {
+		_, _ = fmt.Fprint(w, "\n  CoinGecko CLI  —  Real-time crypto data\n\n")
+		return
+	}
+	_, _ = fmt.Fprintf(w, "\n  %s◆ CoinGecko%s %sCLI  —  Real-time crypto data%s\n\n",
+		brandGreen, colorReset, dimColor, colorReset)
+}
+
 // PrintBanner prints a compact one-line CoinGecko banner to stderr.
 // Writing to stderr keeps stdout clean for piped data.
 func PrintBanner() {
-	if !ColorEnabled() {
-		_, _ = fmt.Fprint(os.Stderr, "\n  CoinGecko CLI  —  Real-time crypto data\n\n")
-		return
-	}
-	_, _ = fmt.Fprintf(os.Stderr, "\n  %s◆ CoinGecko%s %sCLI  —  Real-time crypto data%s\n\n",
-		brandGreen, colorReset, dimColor, colorReset)
+	FprintBanner(os.Stderr)
 }

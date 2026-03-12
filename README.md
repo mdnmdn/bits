@@ -17,6 +17,7 @@ A fast, full-featured terminal interface for the [CoinGecko API](https://docs.co
 - **📊 Unlimited Markets** — Fetch 1,000+ coins with automatic pagination
 - **🔥 Trending & Top Movers** — Real-time trending coins, NFTs, and categories
 - **📥 CSV Export** — Export any market or history query for analysis in Excel or Python
+- **📡 Live WebSocket Streaming** — Real-time price updates via `cg watch` with NDJSON output for piping
 - **⌨️ JSON Output** — Machine-readable `-o json` for scripting and pipelines
 - **🤖 Agent/LLM Friendly** — `--dry-run` mode and `cg commands` for tool integration
 
@@ -309,6 +310,29 @@ cg top-gainers-losers --top-coins 300 --export gainers.csv
 
 ---
 
+### `cg watch` — Live Price Streaming (Exclusive for [Paid plan](https://www.coingecko.com/en/api/pricing))
+
+Stream real-time price updates via CoinGecko's WebSocket API. Updates arrive approximately every 10 seconds. USD prices only.
+
+```sh
+cg watch --ids bitcoin,ethereum          # Live updating table
+cg watch --symbols btc,eth               # Resolve symbols, then stream
+cg watch --ids bitcoin -o json           # NDJSON output (pipe-friendly)
+cg watch --ids bitcoin -o json | jq .price  # Stream prices with jq
+cg watch --ids bitcoin --dry-run         # Show WebSocket request info
+```
+
+| Flag | Default | Description |
+|---|---|---|
+| `--ids` | — | Comma-separated coin IDs |
+| `--symbols` | — | Comma-separated symbols (resolved to IDs) |
+
+**Table mode** (default): clears screen and re-renders on each update. Press `Ctrl+C` to quit.
+
+**JSON mode** (`-o json`): one JSON object per line per update to stdout. Exits cleanly on broken pipe.
+
+---
+
 ## Category Filtering
 
 CoinGecko tracks 500+ categories including Real World Assets, commodities, and tokenized stocks. Use the `--category` flag to filter:
@@ -396,6 +420,7 @@ Commands:
   trending             Show trending coins, NFTs, and categories (24h)
   history              Get historical price data for a coin
   top-gainers-losers   Show top gaining and losing coins (paid plans only)
+  watch                Stream live coin prices via WebSocket (paid plans only)
   tui                  Interactive terminal UI (markets, trending)
   commands             List all commands with API metadata (for agents/LLMs)
   help                 Print help for a command
@@ -440,6 +465,7 @@ make lint
 | [lipgloss](https://github.com/charmbracelet/lipgloss) | Terminal styling and layout |
 | [huh](https://github.com/charmbracelet/huh) | Interactive auth prompts |
 | [ntcharts](https://github.com/NimbleMarkets/ntcharts) | Braille terminal charts |
+| [gorilla/websocket](https://github.com/gorilla/websocket) | WebSocket client for live price streaming |
 | [goreleaser](https://goreleaser.com) | Cross-platform release builds |
 
 ## License

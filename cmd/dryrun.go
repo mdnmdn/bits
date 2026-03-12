@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"github.com/coingecko/coingecko-cli/internal/config"
+	"github.com/coingecko/coingecko-cli/internal/ws"
 	"github.com/spf13/cobra"
 )
 
@@ -37,6 +38,36 @@ func printDryRun(cfg *config.Config, cmdName, endpoint string, params map[string
 
 func printDryRunWithOp(cfg *config.Config, cmdName, opKey, endpoint string, params map[string]string, pagination *paginationInfo) error {
 	return printDryRunFull(cfg, cmdName, opKey, endpoint, params, pagination, "")
+}
+
+type dryRunWSOutput struct {
+	Transport         string `json:"transport"`
+	URL               string `json:"url"`
+	SubscribePayload  any    `json:"subscribe_payload"`
+	SetTokensPayload  any    `json:"set_tokens_payload"`
+	Note              string `json:"note,omitempty"`
+}
+
+func printDryRunWS(cfg *config.Config, coinIDs []string) error {
+	masked := cfg.MaskedKey()
+	url := ws.DefaultWSURL + "?x_cg_pro_api_key=" + masked
+
+	out := dryRunWSOutput{
+		Transport: "websocket",
+		URL:       url,
+		SubscribePayload: map[string]string{
+			"command":    "subscribe",
+			"identifier": ws.ChannelID,
+		},
+		SetTokensPayload: map[string]any{
+			"command":    "message",
+			"identifier": ws.ChannelID,
+			"data":       map[string]any{"action": "set_tokens", "coin_id": coinIDs},
+		},
+		Note: "Paid plan required. Updates stream as NDJSON (~every 10s). USD prices only.",
+	}
+
+	return printJSONRaw(out)
 }
 
 func printDryRunFull(cfg *config.Config, cmdName, opKey, endpoint string, params map[string]string, pagination *paginationInfo, note string) error {
