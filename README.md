@@ -312,7 +312,7 @@ cg top-gainers-losers --top-coins 300 --export gainers.csv
 
 ### `cg watch` — Live Price Streaming (Exclusive for [Analyst plan](https://www.coingecko.com/en/api/pricing) & above)
 
-Stream real-time price updates via CoinGecko's WebSocket API. Updates arrive approximately every 10 seconds. USD prices only.
+Stream real-time price updates via CoinGecko's WebSocket API. USD prices only.
 
 ```sh
 cg watch --ids bitcoin,ethereum          # Live updating table
