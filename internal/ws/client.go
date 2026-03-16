@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand/v2"
+	"net/http"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -41,9 +42,10 @@ type CoinUpdate struct {
 
 // Client manages a WebSocket connection to CoinGecko's streaming API.
 type Client struct {
-	cfg     *config.Config
-	coinIDs []string
-	wsURL   string
+	cfg       *config.Config
+	coinIDs   []string
+	wsURL     string
+	UserAgent string // sent with WebSocket handshake; set by cmd layer
 
 	conn    *websocket.Conn
 	updates chan *CoinUpdate
@@ -134,11 +136,17 @@ func (c *Client) Close() error {
 func (c *Client) connect(ctx context.Context) error {
 	url := c.wsURL + "?x_cg_pro_api_key=" + c.cfg.APIKey
 
+	var header http.Header
+	if c.UserAgent != "" {
+		header = http.Header{}
+		header.Set("User-Agent", c.UserAgent)
+	}
+
 	dialer := websocket.Dialer{
 		HandshakeTimeout: 10 * time.Second,
 	}
 
-	conn, _, err := dialer.DialContext(ctx, url, nil)
+	conn, _, err := dialer.DialContext(ctx, url, header)
 	if err != nil {
 		return err
 	}

@@ -8,10 +8,15 @@ import (
 	"github.com/coingecko/coingecko-cli/internal/ws"
 )
 
+// userAgent is the User-Agent header sent with all API and WebSocket requests.
+var userAgent = "coingecko-cli/" + version
+
 // newAPIClient is the factory used by command handlers to create API clients.
 // Tests override this to inject httptest-backed clients.
 var newAPIClient = func(cfg *config.Config) *api.Client {
-	return api.NewClient(cfg)
+	c := api.NewClient(cfg)
+	c.UserAgent = userAgent
+	return c
 }
 
 // loadConfig is the function used by command handlers to load configuration.
@@ -27,5 +32,7 @@ type Streamer interface {
 // newStreamer is the factory used by command handlers to create WebSocket clients.
 // Tests override this to inject test doubles.
 var newStreamer = func(cfg *config.Config, coinIDs []string) Streamer {
-	return ws.NewClient(cfg, coinIDs)
+	c := ws.NewClient(cfg, coinIDs)
+	c.UserAgent = userAgent
+	return c
 }
