@@ -207,9 +207,7 @@ func (c *Client) get(ctx context.Context, path string, result any) error {
 	}
 	c.cfg.ApplyAuth(req)
 	req.Header.Set("Accept", "application/json")
-	if c.UserAgent != "" {
-		req.Header.Set("User-Agent", c.UserAgent)
-	}
+	req.Header.Set("User-Agent", c.UserAgent)
 
 	resp, err := c.http.Do(req)
 	if err != nil {

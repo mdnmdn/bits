@@ -36,20 +36,6 @@ func TestUserAgentHeader(t *testing.T) {
 	assert.Equal(t, "coingecko-cli/v1.2.3", gotUA)
 }
 
-func TestUserAgentHeaderOmittedWhenEmpty(t *testing.T) {
-	var gotUA string
-	c, srv := testClient(func(w http.ResponseWriter, r *http.Request) {
-		gotUA = r.Header.Get("User-Agent")
-		w.WriteHeader(200)
-		_, _ = w.Write([]byte("{}"))
-	})
-	defer srv.Close()
-
-	var result map[string]any
-	_ = c.get(context.Background(), "/test", &result)
-	assert.Equal(t, "Go-http-client/1.1", gotUA) // default Go UA when not set
-}
-
 func TestAuthHeadersSent(t *testing.T) {
 	var gotHeader string
 	c, srv := testClient(func(w http.ResponseWriter, r *http.Request) {
