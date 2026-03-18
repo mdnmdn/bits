@@ -81,6 +81,7 @@ func printDryRunFull(cfg *config.Config, cmdName, opKey, endpoint string, params
 		headers[headerKey] = masked
 	}
 	headers["Accept"] = "application/json"
+	headers["User-Agent"] = userAgent
 
 	out := dryRunOutput{
 		Method:     "GET",

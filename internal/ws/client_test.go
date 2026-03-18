@@ -379,6 +379,44 @@ func TestConnect_APIKeyInQueryParam(t *testing.T) {
 	require.NoError(t, client.Close())
 }
 
+func TestConnect_UserAgentHeader(t *testing.T) {
+	var gotUA string
+	var mu sync.Mutex
+
+	srv := newTestWSServer(t, func(conn *websocket.Conn) {
+		happyHandshake(t, conn)
+		for {
+			if _, _, err := conn.ReadMessage(); err != nil {
+				return
+			}
+		}
+	})
+	// Wrap handler to capture User-Agent from the handshake request.
+	origHandler := srv.Config.Handler
+	srv.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		gotUA = r.Header.Get("User-Agent")
+		mu.Unlock()
+		origHandler.ServeHTTP(w, r)
+	})
+
+	client := NewClient(paidCfg(), []string{"bitcoin"})
+	client.SetURL(wsURL(srv))
+	client.UserAgent = "coingecko-cli/v1.2.3"
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	_, err := client.Connect(ctx)
+	require.NoError(t, err)
+
+	mu.Lock()
+	assert.Equal(t, "coingecko-cli/v1.2.3", gotUA)
+	mu.Unlock()
+
+	require.NoError(t, client.Close())
+}
+
 func TestCloseWithoutConnect(t *testing.T) {
 	client := NewClient(paidCfg(), []string{"bitcoin"})
 	// Close() should not hang if Connect() was never called.

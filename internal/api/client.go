@@ -170,6 +170,7 @@ type Client struct {
 	http       *http.Client
 	baseURLVal string // override; empty = use cfg.BaseURL()
 	cfg        *config.Config
+	UserAgent  string // sent with every request; set by cmd layer
 }
 
 func NewClient(cfg *config.Config) *Client {
@@ -206,6 +207,7 @@ func (c *Client) get(ctx context.Context, path string, result any) error {
 	}
 	c.cfg.ApplyAuth(req)
 	req.Header.Set("Accept", "application/json")
+	req.Header.Set("User-Agent", c.UserAgent)
 
 	resp, err := c.http.Do(req)
 	if err != nil {

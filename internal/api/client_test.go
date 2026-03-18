@@ -21,6 +21,21 @@ func testClient(handler http.HandlerFunc) (*Client, *httptest.Server) {
 	return c, srv
 }
 
+func TestUserAgentHeader(t *testing.T) {
+	var gotUA string
+	c, srv := testClient(func(w http.ResponseWriter, r *http.Request) {
+		gotUA = r.Header.Get("User-Agent")
+		w.WriteHeader(200)
+		_, _ = w.Write([]byte("{}"))
+	})
+	defer srv.Close()
+
+	c.UserAgent = "coingecko-cli/v1.2.3"
+	var result map[string]any
+	_ = c.get(context.Background(), "/test", &result)
+	assert.Equal(t, "coingecko-cli/v1.2.3", gotUA)
+}
+
 func TestAuthHeadersSent(t *testing.T) {
 	var gotHeader string
 	c, srv := testClient(func(w http.ResponseWriter, r *http.Request) {
