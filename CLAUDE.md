@@ -28,25 +28,18 @@ bits/
 ├── cmd/                           # Cobra commands (auth, status, price, markets, search, trending, history, top_gainers_losers, watch, tui, version)
 ├── internal/
 │   ├── provider/                  # Provider interfaces and registry
-│   │   ├── types.go               # Provider interface definition
+│   │   ├── types.go               # Provider interface definition (Capabilities)
 │   │   ├── registry.go            # Provider factory
-│   │   └── coingecko/             # CoinGecko provider implementation
-│   │       ├── client.go          # HTTP client, auth, error handling
-│   │       ├── coins.go           # API endpoint methods
-│   │       └── types.go           # JSON response structs
+│   │   ├── coingecko/             # CoinGecko implementation (All capabilities)
+│   │   ├── binance/               # Binance implementation (Prices, Tickers, OrderBook)
+│   │   └── bitget/                # Bitget implementation (Prices, Tickers)
 │   ├── config/
-│   │   ├── config.go              # Viper-based config (API key, tier)
-│   │   └── config_test.go
-│   ├── display/
-│   │   ├── banner.go              # ASCII logo, welcome box, brand banner
-│   │   ├── table.go               # Table rendering
-│   │   ├── format.go              # Price/number formatting
-│   │   └── color.go               # ANSI color (NO_COLOR/TTY aware)
-│   ├── export/
-│   │   └── csv.go                 # CSV file export
+│   │   ├── config.go              # Multi-provider config (YAML + Env)
+│   ├── auth/
+│   │   └── signature.go           # Shared HMAC-SHA256 signature helpers
 │   ├── ws/
-│   │   ├── client.go              # WebSocket client
-│   │   └── client_test.go         # WebSocket client tests
+│   │   ├── base_client.go         # Generic WebSocket client (reconnect, backoff)
+│   │   ├── client.go              # CoinGecko WebSocket client
 │   └── tui/
 │       ├── styles.go              # Shared lipgloss styles
 │       ├── markets.go             # Markets TUI model

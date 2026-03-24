@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/coingecko/coingecko-cli/internal/config"
+	"github.com/coingecko/coingecko-cli/internal/model"
 	"github.com/coingecko/coingecko-cli/internal/provider"
 	"github.com/coingecko/coingecko-cli/internal/ws"
 	"github.com/spf13/cobra"
@@ -51,7 +52,7 @@ var loadConfig = config.Load
 
 // Streamer abstracts the WebSocket streaming client for testability.
 type Streamer interface {
-	Connect(ctx context.Context) (<-chan *ws.CoinUpdate, error)
+	Connect(ctx context.Context) (<-chan *model.CoinUpdate, error)
 	Close() error
 }
 

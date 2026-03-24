@@ -30,16 +30,6 @@ const (
 	livenessTimeout = 60 * time.Second
 )
 
-// CoinUpdate represents a parsed price update from the WebSocket stream.
-type CoinUpdate struct {
-	CoinID    string  `json:"coin_id"`
-	Price     float64 `json:"price"`
-	Change24h float64 `json:"change_24h_pct"`
-	MarketCap float64 `json:"market_cap"`
-	Volume24h float64 `json:"volume_24h"`
-	UpdatedAt int64   `json:"updated_at"`
-}
-
 // Client manages a WebSocket connection to CoinGecko's streaming API.
 type Client struct {
 	cfg       *config.Config
@@ -48,7 +38,7 @@ type Client struct {
 	UserAgent string // sent with WebSocket handshake; set by cmd layer
 
 	conn    *websocket.Conn
-	updates chan *CoinUpdate
+	updates chan *model.CoinUpdate
 	done    chan struct{} // closed when readLoop exits for good
 	started atomic.Bool  // true once readLoop goroutine is launched
 	closing atomic.Bool  // set by Close(), suppresses reconnect
@@ -61,7 +51,7 @@ func NewClient(cfg *config.Config, coinIDs []string) *Client {
 		cfg:     cfg,
 		coinIDs: coinIDs,
 		wsURL:   DefaultWSURL,
-		updates: make(chan *CoinUpdate, 64),
+		updates: make(chan *model.CoinUpdate, 64),
 		done:    make(chan struct{}),
 	}
 }
@@ -74,7 +64,7 @@ func (c *Client) SetURL(url string) {
 // Connect establishes the WebSocket connection and starts reading updates.
 // Returns a channel that receives price updates. The channel is closed when
 // the client is shut down or the context is canceled.
-func (c *Client) Connect(ctx context.Context) (<-chan *CoinUpdate, error) {
+func (c *Client) Connect(ctx context.Context) (<-chan *model.CoinUpdate, error) {
 	if !c.cfg.IsPaid() {
 		return nil, model.ErrPlanRestricted
 	}
@@ -339,7 +329,7 @@ func (c *Client) waitForType(msgType string, timeout time.Duration) error {
 // ActionCable envelope):
 //
 //	{"c":"C1","i":"bitcoin","p":69982.9,"pp":-0.11,"m":1.39e12,"v":4.68e10,"t":1773277871}
-func (c *Client) parseMessage(raw []byte) *CoinUpdate {
+func (c *Client) parseMessage(raw []byte) *model.CoinUpdate {
 	// Try bare payload first (most common message type).
 	var data wsPayload
 	if err := json.Unmarshal(raw, &data); err != nil {
@@ -352,7 +342,7 @@ func (c *Client) parseMessage(raw []byte) *CoinUpdate {
 		return nil
 	}
 
-	return &CoinUpdate{
+	return &model.CoinUpdate{
 		CoinID:    data.CoinID,
 		Price:     data.Price,
 		Change24h: data.PricePct,

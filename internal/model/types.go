@@ -227,3 +227,13 @@ type OrderBookEntry struct {
 	Price    float64 `json:"price"`
 	Quantity float64 `json:"quantity"`
 }
+
+// CoinUpdate represents a real-time price update.
+type CoinUpdate struct {
+	CoinID    string  `json:"coin_id"`
+	Price     float64 `json:"price"`
+	Change24h float64 `json:"change_24h_pct"`
+	MarketCap float64 `json:"market_cap"`
+	Volume24h float64 `json:"volume_24h"`
+	UpdatedAt int64   `json:"updated_at"`
+}

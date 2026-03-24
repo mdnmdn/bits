@@ -2,24 +2,21 @@ package bitget
 
 import (
 	"bytes"
-	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/coingecko/coingecko-cli/internal/auth"
 )
 
 // generateSignature generates HMAC-SHA256 signature for Bitget API.
 // The message format is: timestamp + method + path + body.
 func (c *Client) generateSignature(method, path, body, timestamp string) string {
 	message := timestamp + method + path + body
-	h := hmac.New(sha256.New, []byte(c.config.Secret))
-	h.Write([]byte(message))
-	return base64.StdEncoding.EncodeToString(h.Sum(nil))
+	return auth.GenerateHMACSHA256Base64(message, c.config.Secret)
 }
 
 // signedRequest creates and executes a signed HTTP request to the Bitget API.

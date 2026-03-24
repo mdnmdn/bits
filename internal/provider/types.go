@@ -67,3 +67,20 @@ type TickerProvider interface {
 type OrderBookProvider interface {
 	OrderBook(ctx context.Context, symbol string, limit int) (*model.OrderBook, error)
 }
+
+// StreamProvider is the base interface for all streaming capabilities.
+type StreamProvider interface {
+	ID() string
+}
+
+// OrderBookStreamProvider supports real-time order book updates.
+type OrderBookStreamProvider interface {
+	StreamProvider
+	WatchOrderBook(ctx context.Context, symbols []string, limit int) (<-chan *model.OrderBook, error)
+}
+
+// PriceStreamProvider supports real-time price updates.
+type PriceStreamProvider interface {
+	StreamProvider
+	WatchPrices(ctx context.Context, ids []string) (<-chan *model.CoinUpdate, error)
+}

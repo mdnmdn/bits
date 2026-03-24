@@ -15,7 +15,6 @@ import (
 	"github.com/coingecko/coingecko-cli/internal/display"
 	"github.com/coingecko/coingecko-cli/internal/model"
 	"github.com/coingecko/coingecko-cli/internal/provider"
-	"github.com/coingecko/coingecko-cli/internal/ws"
 
 	"github.com/spf13/cobra"
 )
@@ -186,7 +185,7 @@ func runWatch(cmd *cobra.Command, args []string) error {
 	return watchTable(ctx, updates)
 }
 
-func watchJSON(ctx context.Context, updates <-chan *ws.CoinUpdate) error {
+func watchJSON(ctx context.Context, updates <-chan *model.CoinUpdate) error {
 	enc := json.NewEncoder(os.Stdout)
 
 	for {
@@ -219,10 +218,10 @@ var statusDots = [4]string{"   ", ".  ", ".. ", "..."}
 // always 3 characters wide so \r + overwrite replaces it cleanly.
 const statusLine = "Streaming live prices%s (ctrl+c to quit)"
 
-func watchTable(ctx context.Context, updates <-chan *ws.CoinUpdate) error {
+func watchTable(ctx context.Context, updates <-chan *model.CoinUpdate) error {
 	warnf("Streaming live prices... (ctrl+c to quit)\n\n")
 
-	state := make(map[string]*ws.CoinUpdate)
+	state := make(map[string]*model.CoinUpdate)
 	prevPrices := make(map[string]float64)
 	flashes := make(map[string]*priceFlash)
 	var dotFrame int
@@ -323,7 +322,7 @@ func colorPrice(price float64, flash *priceFlash, colored bool) string {
 	return colorFlashRed + s + colorReset
 }
 
-func renderWatchTable(state map[string]*ws.CoinUpdate, flashes map[string]*priceFlash, dotFrame int) {
+func renderWatchTable(state map[string]*model.CoinUpdate, flashes map[string]*priceFlash, dotFrame int) {
 	// Sort coin IDs for stable output.
 	ids := make([]string, 0, len(state))
 	for id := range state {
