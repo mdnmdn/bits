@@ -10,8 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/coingecko/coingecko-cli/internal/api"
 	"github.com/coingecko/coingecko-cli/internal/config"
+	"github.com/coingecko/coingecko-cli/internal/provider"
+	"github.com/coingecko/coingecko-cli/internal/provider/coingecko"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -30,18 +31,18 @@ func withInstantRetrySleep(t *testing.T) {
 	t.Cleanup(func() { retrySleep = orig })
 }
 
-func testAPIClient(handler http.HandlerFunc) (*api.Client, *httptest.Server) {
+func testAPIClient(handler http.HandlerFunc) (provider.Provider, *httptest.Server) {
 	srv := httptest.NewServer(handler)
 	cfg := &config.Config{APIKey: "test-key", Tier: config.TierDemo}
-	c := api.NewClient(cfg)
+	c := coingecko.NewClient(cfg)
 	c.SetBaseURL(srv.URL)
 	return c, srv
 }
 
-func testPaidAPIClient(handler http.HandlerFunc) (*api.Client, *httptest.Server) {
+func testPaidAPIClient(handler http.HandlerFunc) (provider.Provider, *httptest.Server) {
 	srv := httptest.NewServer(handler)
 	cfg := &config.Config{APIKey: "test-key", Tier: config.TierPaid}
-	c := api.NewClient(cfg)
+	c := coingecko.NewClient(cfg)
 	c.SetBaseURL(srv.URL)
 	return c, srv
 }
@@ -123,7 +124,7 @@ func TestFetchMarketChartBatched_SingleChunk(t *testing.T) {
 	var calls int32
 	client, srv := testAPIClient(func(w http.ResponseWriter, r *http.Request) {
 		atomic.AddInt32(&calls, 1)
-		resp := api.MarketChartResponse{
+		resp := coingecko.MarketChartResponse{
 			Prices:       [][]float64{{1000, 50000}, {2000, 51000}},
 			MarketCaps:   [][]float64{{1000, 900e9}, {2000, 910e9}},
 			TotalVolumes: [][]float64{{1000, 30e9}, {2000, 31e9}},
@@ -146,7 +147,7 @@ func TestFetchMarketChartBatched_HourlyOmitsInterval(t *testing.T) {
 	var gotIntervals []string
 	client, srv := testAPIClient(func(w http.ResponseWriter, r *http.Request) {
 		gotIntervals = append(gotIntervals, r.URL.Query().Get("interval"))
-		_ = json.NewEncoder(w).Encode(api.MarketChartResponse{
+		_ = json.NewEncoder(w).Encode(coingecko.MarketChartResponse{
 			Prices: [][]float64{{1000, 50000}},
 		})
 	})
@@ -167,7 +168,7 @@ func TestFetchMarketChartBatched_MultipleChunks(t *testing.T) {
 	client, srv := testAPIClient(func(w http.ResponseWriter, r *http.Request) {
 		callNum := atomic.AddInt32(&calls, 1)
 		base := float64(callNum) * 1e6
-		resp := api.MarketChartResponse{
+		resp := coingecko.MarketChartResponse{
 			Prices:       [][]float64{{base + 1, 50000}, {base + 2, 51000}},
 			MarketCaps:   [][]float64{{base + 1, 900e9}, {base + 2, 910e9}},
 			TotalVolumes: [][]float64{{base + 1, 30e9}, {base + 2, 31e9}},
@@ -190,16 +191,16 @@ func TestFetchMarketChartBatched_Deduplication(t *testing.T) {
 	callCount := 0
 	client, srv := testAPIClient(func(w http.ResponseWriter, r *http.Request) {
 		callCount++
-		var resp api.MarketChartResponse
+		var resp coingecko.MarketChartResponse
 		if callCount == 1 {
-			resp = api.MarketChartResponse{
+			resp = coingecko.MarketChartResponse{
 				Prices:       [][]float64{{1000, 50000}, {2000, 51000}, {3000, 52000}},
 				MarketCaps:   [][]float64{{1000, 900e9}, {2000, 910e9}, {3000, 920e9}},
 				TotalVolumes: [][]float64{{1000, 30e9}, {2000, 31e9}, {3000, 32e9}},
 			}
 		} else {
 			// Overlapping: timestamp 3000 appears in both chunks.
-			resp = api.MarketChartResponse{
+			resp = coingecko.MarketChartResponse{
 				Prices:       [][]float64{{3000, 52000}, {4000, 53000}},
 				MarketCaps:   [][]float64{{3000, 920e9}, {4000, 930e9}},
 				TotalVolumes: [][]float64{{3000, 32e9}, {4000, 33e9}},
@@ -228,7 +229,7 @@ func TestFetchMarketChartBatched_ContextCancellation(t *testing.T) {
 		if n == 1 {
 			cancel()
 		}
-		resp := api.MarketChartResponse{
+		resp := coingecko.MarketChartResponse{
 			Prices: [][]float64{{float64(n) * 1000, 50000}},
 		}
 		_ = json.NewEncoder(w).Encode(resp)
@@ -252,7 +253,7 @@ func TestFetchMarketChartBatched_APIError(t *testing.T) {
 			_, _ = fmt.Fprint(w, `{"status":{"error_code":500,"error_message":"Internal error"}}`)
 			return
 		}
-		resp := api.MarketChartResponse{
+		resp := coingecko.MarketChartResponse{
 			Prices: [][]float64{{float64(callCount) * 1000, 50000}},
 		}
 		_ = json.NewEncoder(w).Encode(resp)
@@ -270,7 +271,7 @@ func TestFetchMarketChartBatched_EmptyChunk(t *testing.T) {
 	callCount := 0
 	client, srv := testAPIClient(func(w http.ResponseWriter, r *http.Request) {
 		callCount++
-		var resp api.MarketChartResponse
+		var resp coingecko.MarketChartResponse
 		if callCount == 1 {
 			resp.Prices = [][]float64{{1000, 50000}}
 			resp.MarketCaps = [][]float64{{1000, 900e9}}
@@ -298,7 +299,7 @@ func TestFetchMarketChartBatched_ChunkBoundaries(t *testing.T) {
 			"from": q.Get("from"),
 			"to":   q.Get("to"),
 		})
-		_ = json.NewEncoder(w).Encode(api.MarketChartResponse{})
+		_ = json.NewEncoder(w).Encode(coingecko.MarketChartResponse{})
 	})
 	defer srv.Close()
 
@@ -329,7 +330,7 @@ func TestFetchOHLCRangeBatched_FutureToUnixCapped(t *testing.T) {
 	var requestTos []string
 	client, srv := testPaidAPIClient(func(w http.ResponseWriter, r *http.Request) {
 		requestTos = append(requestTos, r.URL.Query().Get("to"))
-		_ = json.NewEncoder(w).Encode(api.OHLCData{{1000, 1, 2, 3, 4}})
+		_ = json.NewEncoder(w).Encode(coingecko.OHLCData{{1000, 1, 2, 3, 4}})
 	})
 	defer srv.Close()
 
@@ -352,7 +353,7 @@ func TestFetchMarketChartBatched_FutureToUnixCapped(t *testing.T) {
 	var requestTos []string
 	client, srv := testAPIClient(func(w http.ResponseWriter, r *http.Request) {
 		requestTos = append(requestTos, r.URL.Query().Get("to"))
-		_ = json.NewEncoder(w).Encode(api.MarketChartResponse{
+		_ = json.NewEncoder(w).Encode(coingecko.MarketChartResponse{
 			Prices: [][]float64{{1000, 50000}},
 		})
 	})
@@ -379,7 +380,7 @@ func TestFetchOHLCRangeBatched_MultipleChunks(t *testing.T) {
 	client, srv := testPaidAPIClient(func(w http.ResponseWriter, r *http.Request) {
 		callNum := atomic.AddInt32(&calls, 1)
 		base := float64(callNum) * 1e9
-		data := api.OHLCData{
+		data := coingecko.OHLCData{
 			{base + 1, 100, 110, 90, 105},
 			{base + 2, 105, 115, 95, 110},
 		}
@@ -399,15 +400,15 @@ func TestFetchOHLCRangeBatched_Deduplication(t *testing.T) {
 	callCount := 0
 	client, srv := testPaidAPIClient(func(w http.ResponseWriter, r *http.Request) {
 		callCount++
-		var data api.OHLCData
+		var data coingecko.OHLCData
 		if callCount == 1 {
-			data = api.OHLCData{
+			data = coingecko.OHLCData{
 				{1000, 100, 110, 90, 105},
 				{2000, 105, 115, 95, 110},
 			}
 		} else {
 			// Overlapping timestamp 2000
-			data = api.OHLCData{
+			data = coingecko.OHLCData{
 				{2000, 105, 115, 95, 110},
 				{3000, 110, 120, 100, 115},
 			}
@@ -442,7 +443,7 @@ func TestWithRateLimitRetry_TransientRateLimit(t *testing.T) {
 	err := withRateLimitRetry(context.Background(), "test", func() error {
 		calls++
 		if calls <= 2 {
-			return &api.RateLimitError{RetryAfter: 1}
+			return &coingecko.RateLimitError{RetryAfter: 1}
 		}
 		return nil
 	})
@@ -455,10 +456,10 @@ func TestWithRateLimitRetry_ExhaustedRetries(t *testing.T) {
 	calls := 0
 	err := withRateLimitRetry(context.Background(), "test", func() error {
 		calls++
-		return &api.RateLimitError{RetryAfter: 1}
+		return &coingecko.RateLimitError{RetryAfter: 1}
 	})
 	require.Error(t, err)
-	assert.ErrorIs(t, err, api.ErrRateLimited)
+	assert.ErrorIs(t, err, coingecko.ErrRateLimited)
 	assert.Equal(t, maxChunkRetries+1, calls) // initial + 3 retries
 }
 
@@ -480,7 +481,7 @@ func TestWithRateLimitRetry_ContextCancelled(t *testing.T) {
 	err := withRateLimitRetry(ctx, "test", func() error {
 		calls++
 		cancel() // cancel during first rate limit
-		return &api.RateLimitError{RetryAfter: 0}
+		return &coingecko.RateLimitError{RetryAfter: 0}
 	})
 	require.Error(t, err)
 	assert.ErrorIs(t, err, context.Canceled)
@@ -496,7 +497,7 @@ func TestFetchMarketChartBatched_RateLimitRetry(t *testing.T) {
 			w.WriteHeader(429)
 			return
 		}
-		_ = json.NewEncoder(w).Encode(api.MarketChartResponse{
+		_ = json.NewEncoder(w).Encode(coingecko.MarketChartResponse{
 			Prices: [][]float64{{1000, 50000}},
 		})
 	})
@@ -534,7 +535,7 @@ func TestFetchMarketChartBatched_RateLimitResetRetry(t *testing.T) {
 			w.WriteHeader(429)
 			return
 		}
-		_ = json.NewEncoder(w).Encode(api.MarketChartResponse{
+		_ = json.NewEncoder(w).Encode(coingecko.MarketChartResponse{
 			Prices: [][]float64{{1000, 50000}},
 		})
 	})
@@ -569,7 +570,7 @@ func TestWithRateLimitRetry_ResetAtBranch(t *testing.T) {
 	err := withRateLimitRetry(context.Background(), "test", func() error {
 		calls++
 		if calls == 1 {
-			return &api.RateLimitError{
+			return &coingecko.RateLimitError{
 				ResetAt: time.Now().Add(10 * time.Second),
 			}
 		}
@@ -590,7 +591,7 @@ func TestFetchOHLCRangeBatched_ContextCancellation(t *testing.T) {
 		if n == 1 {
 			cancel()
 		}
-		_ = json.NewEncoder(w).Encode(api.OHLCData{{float64(n) * 1000, 1, 2, 3, 4}})
+		_ = json.NewEncoder(w).Encode(coingecko.OHLCData{{float64(n) * 1000, 1, 2, 3, 4}})
 	})
 	defer srv.Close()
 

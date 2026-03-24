@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/coingecko/coingecko-cli/internal/api"
 	"github.com/coingecko/coingecko-cli/internal/display"
+	"github.com/coingecko/coingecko-cli/internal/provider"
+	"github.com/coingecko/coingecko-cli/internal/provider/coingecko"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -20,11 +21,11 @@ const (
 )
 
 type TrendingModel struct {
-	client  *api.Client
+	client  provider.Provider
 	vs      string
 	showMax string
 	limit   int
-	coins   []api.TrendingCoinWrapper
+	coins   []coingecko.TrendingCoinWrapper
 	cursor  int
 	state   trendingState
 	detail  DetailModel
@@ -34,11 +35,11 @@ type TrendingModel struct {
 }
 
 type trendingLoadedMsg struct {
-	resp *api.TrendingResponse
+	resp *coingecko.TrendingResponse
 	err  error
 }
 
-func NewTrendingModel(client *api.Client, vs, showMax string) TrendingModel {
+func NewTrendingModel(client provider.Provider, vs, showMax string) TrendingModel {
 	limit := 15
 	if showMax != "" {
 		limit = 30

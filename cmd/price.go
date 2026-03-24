@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/coingecko/coingecko-cli/internal/api"
+	"github.com/coingecko/coingecko-cli/internal/provider/coingecko"
 	"github.com/coingecko/coingecko-cli/internal/display"
 
 	"github.com/spf13/cobra"
@@ -67,7 +67,7 @@ func runPrice(cmd *cobra.Command, args []string) error {
 
 	// Fetch prices by IDs and/or symbols directly — no /search resolution needed.
 	// The API's symbols lookup returns the top-ranked match by market cap.
-	var prices api.PriceResponse
+	var prices coingecko.PriceResponse
 	var requestedIDs []string // track user-requested IDs for missing-coin warnings (symbols can't be checked — response keys are coin IDs)
 
 	if idsStr != "" {

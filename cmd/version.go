@@ -21,7 +21,7 @@ var versionCmd = &cobra.Command{
 				"arch":    runtime.GOARCH,
 			})
 		}
-		fmt.Printf("cg %s\n", version)
+		fmt.Printf("bits %s\n", version)
 		fmt.Printf("  commit: %s\n", commit)
 		fmt.Printf("  built:  %s\n", date)
 		fmt.Printf("  go:     %s\n", runtime.Version())

@@ -3,8 +3,8 @@ package cmd
 import (
 	"context"
 
-	"github.com/coingecko/coingecko-cli/internal/api"
 	"github.com/coingecko/coingecko-cli/internal/config"
+	"github.com/coingecko/coingecko-cli/internal/provider"
 	"github.com/coingecko/coingecko-cli/internal/ws"
 )
 
@@ -13,11 +13,13 @@ var userAgent = "coingecko-cli/" + version
 
 // newAPIClient is the factory used by command handlers to create API clients.
 // Tests override this to inject httptest-backed clients.
-var newAPIClient = func(cfg *config.Config) *api.Client {
-	c := api.NewClient(cfg)
-	c.UserAgent = userAgent
+var newAPIClient = func(cfg *config.Config) provider.Provider {
+	// Default to coingecko provider for now.
+	c, _ := provider.NewProvider("coingecko", cfg)
+	c.SetUserAgent(userAgent)
 	return c
 }
+
 
 // loadConfig is the function used by command handlers to load configuration.
 // Tests override this to inject test configs without touching the real config file.

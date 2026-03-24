@@ -10,7 +10,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/coingecko/coingecko-cli/internal/api"
+	"github.com/coingecko/coingecko-cli/internal/provider/coingecko"
 	"github.com/coingecko/coingecko-cli/internal/config"
 	"github.com/gorilla/websocket"
 )
@@ -76,7 +76,7 @@ func (c *Client) SetURL(url string) {
 // the client is shut down or the context is canceled.
 func (c *Client) Connect(ctx context.Context) (<-chan *CoinUpdate, error) {
 	if !c.cfg.IsPaid() {
-		return nil, api.ErrPlanRestricted
+		return nil, coingecko.ErrPlanRestricted
 	}
 
 	if err := c.connect(ctx); err != nil {

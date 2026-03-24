@@ -1,9 +1,9 @@
 version: 2
 
-project_name: cg
+project_name: bits
 
 builds:
-  - binary: cg
+  - binary: bits
     main: .
     ldflags:
       - -s -w -X github.com/coingecko/coingecko-cli/cmd.version={{.Version}} -X github.com/coingecko/coingecko-cli/cmd.commit={{.Commit}} -X github.com/coingecko/coingecko-cli/cmd.date={{.Date}}
@@ -36,9 +36,9 @@ brews:
       name: homebrew-coingecko-cli
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
     homepage: https://github.com/coingecko/coingecko-cli
-    description: CoinGecko CLI — cryptocurrency data at your fingertips
+    description: bits CLI — cryptocurrency data at your fingertips
     license: MIT
     install: |
-      bin.install "cg"
+      bin.install "bits"
     test: |
-      system "#{bin}/cg", "version"
+      system "#{bin}/bits", "version"

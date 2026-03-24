@@ -6,19 +6,20 @@ import (
 	"strings"
 	"time"
 
-	"github.com/coingecko/coingecko-cli/internal/api"
 	"github.com/coingecko/coingecko-cli/internal/display"
+	"github.com/coingecko/coingecko-cli/internal/provider"
+	"github.com/coingecko/coingecko-cli/internal/provider/coingecko"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
 
 type DetailModel struct {
-	client  *api.Client
+	client  provider.Provider
 	coinID  string
 	vs      string
-	coin    *api.CoinDetail
-	ohlc    api.OHLCData
+	coin    *coingecko.CoinDetail
+	ohlc    coingecko.OHLCData
 	loading int // count of pending fetches
 	Done    bool
 	err     error
@@ -27,16 +28,16 @@ type DetailModel struct {
 }
 
 type coinDetailMsg struct {
-	coin *api.CoinDetail
+	coin *coingecko.CoinDetail
 	err  error
 }
 
 type ohlcMsg struct {
-	data api.OHLCData
+	data coingecko.OHLCData
 	err  error
 }
 
-func NewDetailModel(client *api.Client, coinID, vs string, width, height int) DetailModel {
+func NewDetailModel(client provider.Provider, coinID, vs string, width, height int) DetailModel {
 	return DetailModel{
 		client:  client,
 		coinID:  coinID,

@@ -1,11 +1,11 @@
 #!/bin/sh
 set -e
 
-# CoinGecko CLI installer
+# bits CLI installer
 # Usage: curl -sSfL https://raw.githubusercontent.com/coingecko/coingecko-cli/main/install.sh | sh
 
 REPO="coingecko/coingecko-cli"
-BINARY="cg"
+BINARY="bits"
 INSTALL_DIR="/usr/local/bin"
 
 detect_os() {

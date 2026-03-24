@@ -12,8 +12,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/coingecko/coingecko-cli/internal/api"
 	"github.com/coingecko/coingecko-cli/internal/display"
+	"github.com/coingecko/coingecko-cli/internal/provider"
+	"github.com/coingecko/coingecko-cli/internal/provider/coingecko"
 	"github.com/coingecko/coingecko-cli/internal/ws"
 
 	"github.com/spf13/cobra"
@@ -55,7 +56,7 @@ func runWatch(cmd *cobra.Command, args []string) error {
 	}
 
 	if !cfg.IsPaid() {
-		return api.ErrPlanRestricted
+		return coingecko.ErrPlanRestricted
 	}
 
 	var coinIDs []string
@@ -63,7 +64,7 @@ func runWatch(cmd *cobra.Command, args []string) error {
 	dryRun := isDryRun(cmd)
 
 	// Create API client once for both ID validation and symbol resolution.
-	var client *api.Client
+	var client provider.Provider
 	if !dryRun {
 		client = newAPIClient(cfg)
 	}
@@ -375,7 +376,7 @@ func formatTimestamp(ts int64) string {
 // matchSymbol picks the best coin ID from search results for a given symbol.
 // It returns the exact case-insensitive match with the highest market_cap_rank,
 // or "" if no match is found.
-func matchSymbol(coins []api.SearchCoin, symbol string) string {
+func matchSymbol(coins []coingecko.SearchCoin, symbol string) string {
 	var best string
 	var bestRank int
 	for _, c := range coins {

@@ -1,24 +1,24 @@
 # Project Features
 
-This document provides a comprehensive map of the features available in the CoinGecko CLI (`cg`).
+This document provides a comprehensive map of the features available in the CoinGecko CLI (`bits`).
 
 ## 1. Core CLI Commands
 
 The CLI provides several standard commands to fetch cryptocurrency data directly to your terminal.
 
-### `cg price`
+### `bits price`
 - Fetch current prices for one or more coins.
 - Supports both CoinGecko IDs (`--ids bitcoin`) and ticker symbols (`--symbols btc`).
 - Multi-currency support via `--vs` (default: `usd`).
 - Displays 24h price change.
 
-### `cg markets`
+### `bits markets`
 - List top coins by market cap.
 - Supports filtering by category (`--category`).
 - Pagination and custom result counts (`--total`).
 - Sorting options (market cap, volume, etc.).
 
-### `cg history`
+### `bits history`
 - Comprehensive historical data retrieval with three modes:
   - **Snapshot**: Get coin data for a specific date (`--date YYYY-MM-DD`).
   - **Recent**: Get data for the last N days (`--days N`).
@@ -27,38 +27,38 @@ The CLI provides several standard commands to fetch cryptocurrency data directly
 - Adjustable granularity via `--interval` (daily, hourly).
 - **Auto-batching**: Large date ranges are automatically split into multiple API requests to overcome API limits.
 
-### `cg search`
+### `bits search`
 - Search for coins, exchanges, or NFTs by query string.
 - Returns name, symbol, CoinGecko ID, and market cap rank.
 
-### `cg trending`
+### `bits trending`
 - Fetch the top-7 (Demo) or top-15/30 (Paid) trending coins on CoinGecko.
 
-### `cg top-gainers-losers`
+### `bits top-gainers-losers`
 - List coins with the highest gains and losses over a 24h period.
 
-### `cg status`
+### `bits status`
 - Display current CLI configuration, including API tier and masked API key.
 
 ---
 
 ## 2. Interactive TUI (Terminal User Interface)
 
-Launch a rich, interactive experience using `cg tui`.
+Launch a rich, interactive experience using `bits tui`.
 
-### `cg tui markets`
+### `bits tui markets`
 - Scrollable list of top coins.
 - **Detail View**: Select a coin to see detailed stats, description, and a price chart.
 - **Braille Chart**: Real-time rendered price chart using `ntcharts`.
 
-### `cg tui trending`
+### `bits tui trending`
 - Interactive view of currently trending coins.
 
 ---
 
 ## 3. Real-time Monitoring
 
-### `cg watch`
+### `bits watch`
 - Live price updates via WebSocket.
 - Tracks multiple coins simultaneously.
 - Automatic reconnection with exponential backoff.
@@ -73,7 +73,7 @@ Launch a rich, interactive experience using `cg tui`.
 - **JSON Mode** (`-o json`): Raw API response output, ideal for piping to `jq` or other tools.
 
 ### CSV Export
-- Use `--export <path>.csv` with `cg history` to save historical data for analysis in Excel/Google Sheets.
+- Use `--export <path>.csv` with `bits history` to save historical data for analysis in Excel/Google Sheets.
 
 ### ASCII Aesthetics
 - Branded banners and welcome boxes.
@@ -101,7 +101,7 @@ Launch a rich, interactive experience using `cg tui`.
 - Masked API key display in status.
 
 ### Command Catalog
-- `cg commands` (hidden): Outputs a machine-readable JSON catalog of all commands and their metadata.
+- `bits commands` (hidden): Outputs a machine-readable JSON catalog of all commands and their metadata.
 
 ---
 
@@ -113,8 +113,8 @@ Beyond user-facing commands, the project implements several key technical featur
 - **Pagination Helper**: `FetchAllMarkets` handles multi-page fetching (250/page) with trim-to-total logic, used by both CLI and TUI.
 - **Concurrent TUI Fetching**: The coin detail view fetches coin data and OHLC history concurrently using Bubble Tea's `tea.Batch` for faster rendering.
 - **Symbol Resolution**: 
-  - `cg price` uses the API's native symbol lookup.
-  - `cg watch` (which requires coin IDs) uses a custom resolution strategy that picks the highest-ranked coin for a given symbol.
+  - `bits price` uses the API's native symbol lookup.
+  - `bits watch` (which requires coin IDs) uses a custom resolution strategy that picks the highest-ranked coin for a given symbol.
 
 ### Security & Robustness
 - **Terminal Safety**: All API-returned text (names, symbols) is sanitized via `display.SanitizeCell` to strip potential terminal escape sequence injections.

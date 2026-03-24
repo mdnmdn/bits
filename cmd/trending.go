@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/coingecko/coingecko-cli/internal/api"
+	"github.com/coingecko/coingecko-cli/internal/provider/coingecko"
 	"github.com/coingecko/coingecko-cli/internal/display"
 
 	"github.com/spf13/cobra"
@@ -37,7 +37,7 @@ func runTrending(cmd *cobra.Command, args []string) error {
 	}
 
 	if showMax != "" && !cfg.IsPaid() {
-		return fmt.Errorf("--show-max: %w", api.ErrPlanRestricted)
+		return fmt.Errorf("--show-max: %w", coingecko.ErrPlanRestricted)
 	}
 
 	if isDryRun(cmd) {

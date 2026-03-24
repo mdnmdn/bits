@@ -10,7 +10,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/coingecko/coingecko-cli/internal/api"
+	"github.com/coingecko/coingecko-cli/internal/provider/coingecko"
+	"github.com/coingecko/coingecko-cli/internal/provider"
 	"github.com/coingecko/coingecko-cli/internal/config"
 	"github.com/coingecko/coingecko-cli/internal/display"
 
@@ -96,7 +97,7 @@ func runHistory(cmd *cobra.Command, args []string) error {
 	}
 
 	if ohlc && (fromStr != "" || toStr != "") && !cfg.IsPaid() {
-		return fmt.Errorf("--ohlc with --from/--to: %w", api.ErrPlanRestricted)
+		return fmt.Errorf("--ohlc with --from/--to: %w", coingecko.ErrPlanRestricted)
 	}
 
 	if interval != "" && interval != "daily" && interval != "hourly" {
@@ -104,7 +105,7 @@ func runHistory(cmd *cobra.Command, args []string) error {
 	}
 
 	if ohlc && interval != "" && !cfg.IsPaid() {
-		return fmt.Errorf("--ohlc with --interval: %w", api.ErrPlanRestricted)
+		return fmt.Errorf("--ohlc with --interval: %w", coingecko.ErrPlanRestricted)
 	}
 
 	if ohlc && daysStr != "" && !validEnum("history", "days", daysStr) {
@@ -242,7 +243,7 @@ func parseRange(fromStr, toStr string) (fromUnix, toUnix int64, err error) {
 	return fromTime.UTC().Unix(), endOfDayUnix(toTime), nil
 }
 
-func historyDate(ctx context.Context, client *api.Client, coinID, dateStr, vs string, jsonOut bool) error {
+func historyDate(ctx context.Context, client provider.Provider, coinID, dateStr, vs string, jsonOut bool) error {
 	t, err := parseDate("--date", dateStr)
 	if err != nil {
 		return err
@@ -274,7 +275,7 @@ func historyDate(ctx context.Context, client *api.Client, coinID, dateStr, vs st
 	return nil
 }
 
-func historyDays(ctx context.Context, client *api.Client, coinID, vs, days, interval, exportPath string, jsonOut bool) error {
+func historyDays(ctx context.Context, client provider.Provider, coinID, vs, days, interval, exportPath string, jsonOut bool) error {
 	// For hourly, always route through /range with auto-granularity.
 	// Omit the interval param; ≤90-day chunks trigger hourly auto-granularity on all plans.
 	// Auto-granularity requires ≥2 days for hourly; pad 1-day requests to 2 days then trim.
@@ -322,11 +323,12 @@ func historyDays(ctx context.Context, client *api.Client, coinID, vs, days, inte
 	return renderPriceTable(data.Prices, vs, exportPath)
 }
 
-func historyRange(ctx context.Context, client *api.Client, coinID, vs, fromStr, toStr, interval, exportPath string, jsonOut bool) error {
+func historyRange(ctx context.Context, client provider.Provider, coinID, vs, fromStr, toStr, interval, exportPath string, jsonOut bool) error {
 	fromUnix, toUnix, err := parseRange(fromStr, toStr)
 	if err != nil {
 		return err
 	}
+
 
 	// For hourly, always batch with auto-granularity (omit interval param).
 	// ≤90-day chunks trigger hourly auto-granularity on all plans.
@@ -382,7 +384,7 @@ func historyRange(ctx context.Context, client *api.Client, coinID, vs, fromStr, 
 	return renderPriceTable(data.Prices, vs, exportPath)
 }
 
-func historyOHLC(ctx context.Context, client *api.Client, coinID, vs, days, interval, exportPath string, jsonOut bool) error {
+func historyOHLC(ctx context.Context, client provider.Provider, coinID, vs, days, interval, exportPath string, jsonOut bool) error {
 	data, err := client.CoinOHLC(ctx, coinID, vs, days, interval)
 	if err != nil {
 		return err
@@ -395,11 +397,12 @@ func historyOHLC(ctx context.Context, client *api.Client, coinID, vs, days, inte
 	return renderOHLCTable(data, vs, exportPath)
 }
 
-func historyOHLCRange(ctx context.Context, client *api.Client, coinID, vs, fromStr, toStr, interval, exportPath string, jsonOut bool) error {
+func historyOHLCRange(ctx context.Context, client provider.Provider, coinID, vs, fromStr, toStr, interval, exportPath string, jsonOut bool) error {
 	fromUnix, toUnix, err := parseRange(fromStr, toStr)
 	if err != nil {
 		return err
 	}
+
 
 	if interval == "hourly" {
 		if err := checkHourlyAvailability(fromUnix); err != nil {
@@ -510,7 +513,7 @@ func withRateLimitRetry(ctx context.Context, chunkLabel string, fn func() error)
 		if err == nil {
 			return nil
 		}
-		var rle *api.RateLimitError
+		var rle *coingecko.RateLimitError
 		if !errors.As(err, &rle) {
 			return err // not rate limited, don't retry
 		}
@@ -589,7 +592,7 @@ func progressClear() {
 }
 
 // fetchOHLCRangeBatched splits a large OHLC date range into chunks and merges results.
-func fetchOHLCRangeBatched(ctx context.Context, client *api.Client, coinID, vs string, fromUnix, toUnix int64, interval string, chunkDays int) (api.OHLCData, error) {
+func fetchOHLCRangeBatched(ctx context.Context, client provider.Provider, coinID, vs string, fromUnix, toUnix int64, interval string, chunkDays int) (coingecko.OHLCData, error) {
 	// Cap toUnix at current time — the OHLC range endpoint rejects future dates.
 	if now := time.Now().Unix(); toUnix > now {
 		toUnix = now
@@ -597,7 +600,7 @@ func fetchOHLCRangeBatched(ctx context.Context, client *api.Client, coinID, vs s
 	chunkSec := int64(chunkDays) * secsPerDay
 	totalChunks := int((toUnix - fromUnix + chunkSec - 1) / chunkSec)
 
-	var merged api.OHLCData
+	var merged coingecko.OHLCData
 	seen := make(map[int64]bool)
 
 	for i := 0; i < totalChunks; i++ {
@@ -614,7 +617,7 @@ func fetchOHLCRangeBatched(ctx context.Context, client *api.Client, coinID, vs s
 		chunkLabel := fmt.Sprintf("chunk %d/%d", i+1, totalChunks)
 		progressBar(i, totalChunks)
 
-		var data api.OHLCData
+		var data coingecko.OHLCData
 		err := withRateLimitRetry(ctx, chunkLabel, func() error {
 			var fetchErr error
 			data, fetchErr = client.CoinOHLCRange(ctx, coinID, vs, chunkFrom, chunkTo, interval)
@@ -633,7 +636,7 @@ func fetchOHLCRangeBatched(ctx context.Context, client *api.Client, coinID, vs s
 }
 
 // fetchMarketChartBatched splits a large date range into chunks and merges results.
-func fetchMarketChartBatched(ctx context.Context, client *api.Client, coinID, vs string, fromUnix, toUnix int64, interval string, chunkDays int) (*api.MarketChartResponse, error) {
+func fetchMarketChartBatched(ctx context.Context, client provider.Provider, coinID, vs string, fromUnix, toUnix int64, interval string, chunkDays int) (*coingecko.MarketChartResponse, error) {
 	// Cap toUnix at current time — some endpoints reject future dates.
 	if now := time.Now().Unix(); toUnix > now {
 		toUnix = now
@@ -642,7 +645,7 @@ func fetchMarketChartBatched(ctx context.Context, client *api.Client, coinID, vs
 	// Calculate number of chunks.
 	totalChunks := int((toUnix - fromUnix + chunkSec - 1) / chunkSec)
 
-	merged := &api.MarketChartResponse{}
+	merged := &coingecko.MarketChartResponse{}
 	seenPrices := make(map[int64]bool)
 	seenMCaps := make(map[int64]bool)
 	seenVols := make(map[int64]bool)
@@ -661,7 +664,7 @@ func fetchMarketChartBatched(ctx context.Context, client *api.Client, coinID, vs
 		chunkLabel := fmt.Sprintf("chunk %d/%d", i+1, totalChunks)
 		progressBar(i, totalChunks)
 
-		var data *api.MarketChartResponse
+		var data *coingecko.MarketChartResponse
 		err := withRateLimitRetry(ctx, chunkLabel, func() error {
 			var fetchErr error
 			data, fetchErr = client.CoinMarketChartRange(ctx, coinID, vs, chunkFrom, chunkTo, interval)
@@ -715,7 +718,7 @@ func renderPriceTable(prices [][]float64, vs, exportPath string) error {
 	return nil
 }
 
-func renderOHLCTable(data api.OHLCData, vs, exportPath string) error {
+func renderOHLCTable(data coingecko.OHLCData, vs, exportPath string) error {
 	headers := []string{"Date", "Open", "High", "Low", "Close"}
 	rows := make([][]string, 0, len(data))
 	var csvRows [][]string

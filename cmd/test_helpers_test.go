@@ -9,8 +9,9 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/coingecko/coingecko-cli/internal/api"
 	"github.com/coingecko/coingecko-cli/internal/config"
+	"github.com/coingecko/coingecko-cli/internal/provider"
+	"github.com/coingecko/coingecko-cli/internal/provider/coingecko"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -29,8 +30,8 @@ func withTestClient(t *testing.T, srv *httptest.Server, tier string) {
 
 	// Override newAPIClient to point at the test server.
 	origClient := newAPIClient
-	newAPIClient = func(cfg *config.Config) *api.Client {
-		c := api.NewClient(cfg)
+	newAPIClient = func(cfg *config.Config) provider.Provider {
+		c := coingecko.NewClient(cfg)
 		c.SetBaseURL(srv.URL)
 		return c
 	}

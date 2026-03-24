@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/coingecko/coingecko-cli/internal/api"
+	"github.com/coingecko/coingecko-cli/internal/provider/coingecko"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -55,7 +55,7 @@ func TestPrice_ByIDs_JSONOutput(t *testing.T) {
 	srv := newTestServer(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "/simple/price", r.URL.Path)
 		assert.Equal(t, "bitcoin", r.URL.Query().Get("ids"))
-		resp := api.PriceResponse{
+		resp := coingecko.PriceResponse{
 			"bitcoin": {"usd": 50000, "usd_24h_change": 2.5},
 		}
 		_ = json.NewEncoder(w).Encode(resp)
@@ -66,7 +66,7 @@ func TestPrice_ByIDs_JSONOutput(t *testing.T) {
 	stdout, _, err := executeCommand(t, "price", "--ids", "bitcoin", "-o", "json")
 	require.NoError(t, err)
 
-	var prices api.PriceResponse
+	var prices coingecko.PriceResponse
 	require.NoError(t, json.Unmarshal([]byte(stdout), &prices))
 	assert.Equal(t, float64(50000), prices["bitcoin"]["usd"])
 }
@@ -77,7 +77,7 @@ func TestPrice_BySymbols_JSONOutput(t *testing.T) {
 		assert.Equal(t, "/simple/price", r.URL.Path)
 		assert.Equal(t, "btc", r.URL.Query().Get("symbols"))
 		assert.Equal(t, "usd", r.URL.Query().Get("vs_currencies"))
-		resp := api.PriceResponse{
+		resp := coingecko.PriceResponse{
 			"bitcoin": {"usd": 50000},
 		}
 		_ = json.NewEncoder(w).Encode(resp)
@@ -88,7 +88,7 @@ func TestPrice_BySymbols_JSONOutput(t *testing.T) {
 	stdout, _, err := executeCommand(t, "price", "--symbols", "btc", "-o", "json")
 	require.NoError(t, err)
 
-	var prices api.PriceResponse
+	var prices coingecko.PriceResponse
 	require.NoError(t, json.Unmarshal([]byte(stdout), &prices))
 	assert.Contains(t, prices, "bitcoin")
 }
@@ -96,7 +96,7 @@ func TestPrice_BySymbols_JSONOutput(t *testing.T) {
 func TestPrice_SymbolNoResults(t *testing.T) {
 	srv := newTestServer(func(w http.ResponseWriter, r *http.Request) {
 		// API returns empty response for unknown symbol.
-		_ = json.NewEncoder(w).Encode(api.PriceResponse{})
+		_ = json.NewEncoder(w).Encode(coingecko.PriceResponse{})
 	})
 	defer srv.Close()
 	withTestClientDemo(t, srv)
@@ -109,7 +109,7 @@ func TestPrice_SymbolNoResults(t *testing.T) {
 func TestPrice_BySymbols_TableOutput_NoFalseWarning(t *testing.T) {
 	srv := newTestServer(func(w http.ResponseWriter, r *http.Request) {
 		// API returns coin ID as key, not the requested symbol.
-		resp := api.PriceResponse{
+		resp := coingecko.PriceResponse{
 			"bitcoin": {"usd": 50000, "usd_24h_change": 1.0},
 		}
 		_ = json.NewEncoder(w).Encode(resp)
@@ -125,7 +125,7 @@ func TestPrice_BySymbols_TableOutput_NoFalseWarning(t *testing.T) {
 func TestPrice_PartialMiss_WarnsOnStderr(t *testing.T) {
 	srv := newTestServer(func(w http.ResponseWriter, r *http.Request) {
 		// Only return data for bitcoin, not for "missing".
-		resp := api.PriceResponse{
+		resp := coingecko.PriceResponse{
 			"bitcoin": {"usd": 50000, "usd_24h_change": 1.0},
 		}
 		_ = json.NewEncoder(w).Encode(resp)

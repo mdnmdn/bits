@@ -1,4 +1,4 @@
-package api
+package coingecko
 
 import (
 	"context"
@@ -185,6 +185,14 @@ func NewClientWithHTTP(cfg *config.Config, httpClient *http.Client) *Client {
 		http: httpClient,
 		cfg:  cfg,
 	}
+}
+
+func (c *Client) ID() string {
+	return "coingecko"
+}
+
+func (c *Client) SetUserAgent(ua string) {
+	c.UserAgent = ua
 }
 
 func (c *Client) SetBaseURL(url string) {

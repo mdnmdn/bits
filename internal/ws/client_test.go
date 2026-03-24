@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/coingecko/coingecko-cli/internal/api"
+	"github.com/coingecko/coingecko-cli/internal/provider/coingecko"
 	"github.com/coingecko/coingecko-cli/internal/config"
 	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
@@ -117,7 +117,7 @@ func TestConnect_HappyPath(t *testing.T) {
 func TestConnect_DemoPlanRejected(t *testing.T) {
 	client := NewClient(demoCfg(), []string{"bitcoin"})
 	_, err := client.Connect(context.Background())
-	require.ErrorIs(t, err, api.ErrPlanRestricted)
+	require.ErrorIs(t, err, coingecko.ErrPlanRestricted)
 }
 
 func TestParseMessage_PriceUpdate(t *testing.T) {

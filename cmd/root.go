@@ -15,9 +15,9 @@ var (
 )
 
 var rootCmd = &cobra.Command{
-	Use:     "cg",
-	Short:   "CoinGecko CLI — cryptocurrency data at your fingertips",
-	Long:    "A command-line tool for accessing CoinGecko cryptocurrency market data.",
+	Use:     "bits",
+	Short:   "bits CLI — cryptocurrency data at your fingertips",
+	Long:    "A command-line tool for accessing multi-provider cryptocurrency market data.",
 	Version: version,
 	Run: func(cmd *cobra.Command, args []string) {
 		display.PrintLogo()

@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/coingecko/coingecko-cli/internal/api"
+	"github.com/coingecko/coingecko-cli/internal/provider/coingecko"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -33,8 +33,8 @@ func TestSearch_JSONOutput(t *testing.T) {
 	srv := newTestServer(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "/search", r.URL.Path)
 		assert.Equal(t, "btc", r.URL.Query().Get("query"))
-		resp := api.SearchResponse{
-			Coins: []api.SearchCoin{
+		resp := coingecko.SearchResponse{
+			Coins: []coingecko.SearchCoin{
 				{ID: "bitcoin", Name: "Bitcoin", Symbol: "btc", MarketCapRank: 1},
 				{ID: "bitcoin-cash", Name: "Bitcoin Cash", Symbol: "bch", MarketCapRank: 20},
 			},
@@ -47,7 +47,7 @@ func TestSearch_JSONOutput(t *testing.T) {
 	stdout, _, err := executeCommand(t, "search", "btc", "--limit", "1", "-o", "json")
 	require.NoError(t, err)
 
-	var coins []api.SearchCoin
+	var coins []coingecko.SearchCoin
 	require.NoError(t, json.Unmarshal([]byte(stdout), &coins))
 	assert.Len(t, coins, 1)
 	assert.Equal(t, "bitcoin", coins[0].ID)
@@ -55,8 +55,8 @@ func TestSearch_JSONOutput(t *testing.T) {
 
 func TestSearch_NegativeLimit(t *testing.T) {
 	srv := newTestServer(func(w http.ResponseWriter, r *http.Request) {
-		resp := api.SearchResponse{
-			Coins: []api.SearchCoin{
+		resp := coingecko.SearchResponse{
+			Coins: []coingecko.SearchCoin{
 				{ID: "bitcoin", Name: "Bitcoin", Symbol: "btc", MarketCapRank: 1},
 			},
 		}
@@ -68,7 +68,7 @@ func TestSearch_NegativeLimit(t *testing.T) {
 	stdout, _, err := executeCommand(t, "search", "btc", "--limit", "-1", "-o", "json")
 	require.NoError(t, err)
 
-	var coins []api.SearchCoin
+	var coins []coingecko.SearchCoin
 	require.NoError(t, json.Unmarshal([]byte(stdout), &coins))
 	assert.Len(t, coins, 0)
 }

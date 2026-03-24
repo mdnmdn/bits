@@ -1,9 +1,9 @@
-# cg — CoinGecko CLI
+# bits — bits CLI
 
 A fast, full-featured terminal interface for the [CoinGecko API](https://docs.coingecko.com), built in Go. Includes an interactive TUI with 7-day price charts, CSV export, 50+ currency symbols, 500+ categories, and more than 10 years of historical data. 
 
 > [!NOTE]
-> CoinGecko CLI is currently in Beta.
+> bits CLI is currently in Beta.
 > We're constantly improving, and your feedback is crucial. Please share your feedback via this [form](https://forms.gle/VgpVbwsSJLgE7D8Q7), or submit a PR.
 
 <img width="584" height="705" alt="Screenshot 2026-03-07 at 4 31 27 PM" src="https://github.com/user-attachments/assets/7973c959-233b-4cb4-8f9e-37f3954c67a3" />
@@ -17,9 +17,9 @@ A fast, full-featured terminal interface for the [CoinGecko API](https://docs.co
 - **📊 Unlimited Markets** — Fetch 1,000+ coins with automatic pagination
 - **🔥 Trending & Top Movers** — Real-time trending coins, NFTs, and categories
 - **📥 CSV Export** — Export any market or history query for analysis in Excel or Python
-- **📡 Live WebSocket Streaming** — Real-time price updates via `cg watch` with NDJSON output for piping
+- **📡 Live WebSocket Streaming** — Real-time price updates via `bits watch` with NDJSON output for piping
 - **⌨️ JSON Output** — Machine-readable `-o json` for scripting and pipelines
-- **🤖 Agent/LLM Friendly** — `--dry-run` mode and `cg commands` for tool integration
+- **🤖 Agent/LLM Friendly** — `--dry-run` mode and `bits commands` for tool integration
 
 <img width="701" height="412" alt="Screenshot 2026-03-07 at 4 06 14 PM" src="https://github.com/user-attachments/assets/a62b26d3-da95-4040-b421-371409202e82" />
 <img width="774" height="562" alt="Screenshot 2026-03-07 at 4 07 19 PM" src="https://github.com/user-attachments/assets/b2d34cc7-7cc0-48b5-9f24-4c2e909d434e" />
@@ -32,14 +32,14 @@ A fast, full-featured terminal interface for the [CoinGecko API](https://docs.co
 ### Homebrew (macOS/Linux)
 
 ```sh
-brew install coingecko/coingecko-cli/cg
+brew install coingecko/coingecko-cli/bits
 ```
 
 Or tap first, then install:
 
 ```sh
 brew tap coingecko/coingecko-cli
-brew install cg
+brew install bits
 ```
 
 ### Shell script
@@ -56,7 +56,7 @@ go install github.com/coingecko/coingecko-cli@latest
 
 ### Manual
 
-Download the binary for your platform from [Releases](https://github.com/coingecko/coingecko-cli/releases), extract, and place `cg` in your `$PATH`.
+Download the binary for your platform from [Releases](https://github.com/coingecko/coingecko-cli/releases), extract, and place `bits` in your `$PATH`.
 
 ---
 
@@ -66,20 +66,20 @@ Get a free API key at [coingecko.com/en/api](https://www.coingecko.com/en/api), 
 
 ```sh
 # Interactive setup (recommended — input is masked)
-cg auth
+bits auth
 
 # Or via environment variables (avoids shell history exposure)
-CG_API_KEY=YOUR_API_KEY CG_API_TIER=demo cg auth
+CG_API_KEY=YOUR_API_KEY CG_API_TIER=demo bits auth
 
 # Or with flags (note: key may be visible in shell history and process listings)
-cg auth --key YOUR_API_KEY --tier demo
+bits auth --key YOUR_API_KEY --tier demo
 ```
 
 Tiers: `demo` (free, public API), `paid` (pro API with full historical data and extra endpoints)
 
 ```sh
 # Verify configuration
-cg status
+bits status
 ```
 
 ---
@@ -88,11 +88,11 @@ cg status
 
 ```sh
 # JSON output (for scripting and automation)
-cg price --ids bitcoin -o json
-cg markets --total 10 -o json | jq '.[0].name'
+bits price --ids bitcoin -o json
+bits markets --total 10 -o json | jq '.[0].name'
 
 # Dry-run mode (shows the API request without executing it)
-cg price --ids bitcoin --dry-run
+bits price --ids bitcoin --dry-run
 ```
 
 All data commands support `-o json` / `--output json` for machine-readable output. Diagnostics and warnings are written to stderr, so stdout is always clean data.
@@ -101,7 +101,7 @@ All data commands support `-o json` / `--output json` for machine-readable outpu
 
 ## Commands
 
-### `cg price` — Live Coin Prices
+### `bits price` — Live Coin Prices
 
 Fetch the current price of one or more coins. Supports both CoinGecko IDs and ticker symbols.
 
@@ -109,13 +109,13 @@ Fetch the current price of one or more coins. Supports both CoinGecko IDs and ti
 
 ```sh
 # By CoinGecko ID
-cg price --ids bitcoin,ethereum
+bits price --ids bitcoin,ethereum
 
 # By ticker symbol (for coins that share the same symbol, the coin with highest market cap will be prioritised)
-cg price --symbols btc,eth
+bits price --symbols btc,eth
 
 # Different target currency
-cg price --ids bitcoin --vs eur
+bits price --ids bitcoin --vs eur
 ```
 
 #### Supported Currencies
@@ -199,16 +199,16 @@ For `--vs` currency, refer below for the full supported currency IDs. By default
 
 ---
 
-### `cg markets` — Top Coins by Market Cap
+### `bits markets` — Top Coins by Market Cap
 
 Fetch ranked market data with automatic pagination. The API is queried in 250-coin pages, so `--total 1000` makes exactly 4 API calls.
 
 ```sh
-cg markets
-cg markets --total 100
-cg markets --total 500 --vs eur
-cg markets --total 250 --order gecko_desc
-cg markets --total 250 --export data.csv
+bits markets
+bits markets --total 100
+bits markets --total 500 --vs eur
+bits markets --total 250 --order gecko_desc
+bits markets --total 250 --export data.csv
 ```
 
 | Flag | Default | Description |
@@ -223,13 +223,13 @@ cg markets --total 250 --export data.csv
 
 ---
 
-### `cg search` — Search Coins
+### `bits search` — Search Coins
 
 Search for any coin by name or symbol. Returns the top matches with their CoinGecko coin IDs.
 
 ```sh
-cg search solana
-cg search dog --limit 5
+bits search solana
+bits search dog --limit 5
 ```
 
 | Flag | Default | Description |
@@ -240,12 +240,12 @@ cg search dog --limit 5
 
 ---
 
-### `cg trending` — Trending (24h)
+### `bits trending` — Trending (24h)
 
 Shows the three trending tables in one view:
 
 ```sh
-cg trending
+bits trending
 ```
 
 - **Top 15 trending coins** — with market cap rank
@@ -254,28 +254,28 @@ cg trending
 
 ---
 
-### `cg history` — Historical Price Data
+### `bits history` — Historical Price Data
 
 Three modes for querying historical data. All modes support `--vs` currency and `--export`.
 
 **Single date snapshot:**
 ```sh
-cg history bitcoin --date 2024-01-15
-cg history ethereum --date 2024-06-01 --vs eur
+bits history bitcoin --date 2024-01-15
+bits history ethereum --date 2024-06-01 --vs eur
 ```
 
 **Past N days (price data):**
 ```sh
-cg history bitcoin --days 7
-cg history bitcoin --days 30 --export btc_30d.csv
-cg history bitcoin --days 7 --ohlc          # OHLC candle data instead
+bits history bitcoin --days 7
+bits history bitcoin --days 30 --export btc_30d.csv
+bits history bitcoin --days 7 --ohlc          # OHLC candle data instead
 ```
 
 **Custom date range:**
 ```sh
-cg history bitcoin --from 2024-01-01 --to 2024-06-30
-cg history bitcoin --from 2024-01-01 --to 2024-03-31 --export q1.csv
-cg history bitcoin --from 2024-01-01 --to 2024-06-30 --ohlc   # OHLC output
+bits history bitcoin --from 2024-01-01 --to 2024-06-30
+bits history bitcoin --from 2024-01-01 --to 2024-03-31 --export q1.csv
+bits history bitcoin --from 2024-01-01 --to 2024-06-30 --ohlc   # OHLC output
 ```
 
 | Flag | Description |
@@ -292,12 +292,12 @@ Note: `hourly` and `5m` interval data are only available from **February 2, 2018
 
 ---
 
-### `cg top-gainers-losers` — Top Movers (Exclusive for [Analyst plan](https://www.coingecko.com/en/api/pricing) & above)
+### `bits top-gainers-losers` — Top Movers (Exclusive for [Analyst plan](https://www.coingecko.com/en/api/pricing) & above)
 
 ```sh
-cg top-gainers-losers
-cg top-gainers-losers --losers --duration 7d
-cg top-gainers-losers --top-coins 300 --export gainers.csv
+bits top-gainers-losers
+bits top-gainers-losers --losers --duration 7d
+bits top-gainers-losers --top-coins 300 --export gainers.csv
 ```
 
 | Flag | Default | Description |
@@ -310,16 +310,16 @@ cg top-gainers-losers --top-coins 300 --export gainers.csv
 
 ---
 
-### `cg watch` — Live Price Streaming (Exclusive for [Analyst plan](https://www.coingecko.com/en/api/pricing) & above)
+### `bits watch` — Live Price Streaming (Exclusive for [Analyst plan](https://www.coingecko.com/en/api/pricing) & above)
 
 Stream real-time price updates via CoinGecko's WebSocket API. USD prices only.
 
 ```sh
-cg watch --ids bitcoin,ethereum          # Live updating table
-cg watch --symbols btc,eth               # Resolve symbols, then stream
-cg watch --ids bitcoin -o json           # NDJSON output (pipe-friendly)
-cg watch --ids bitcoin -o json | jq .price  # Stream prices with jq
-cg watch --ids bitcoin --dry-run         # Show WebSocket request info
+bits watch --ids bitcoin,ethereum          # Live updating table
+bits watch --symbols btc,eth               # Resolve symbols, then stream
+bits watch --ids bitcoin -o json           # NDJSON output (pipe-friendly)
+bits watch --ids bitcoin -o json | jq .price  # Stream prices with jq
+bits watch --ids bitcoin --dry-run         # Show WebSocket request info
 ```
 
 | Flag | Default | Description |
@@ -338,14 +338,14 @@ cg watch --ids bitcoin --dry-run         # Show WebSocket request info
 CoinGecko tracks 500+ categories including Real World Assets, commodities, and tokenized stocks. Use the `--category` flag to filter:
 
 ```sh
-cg markets --category tokenized-gold              # Gold & Silver pegged assets
-cg markets --category real-world-assets-rwa        # Real Estate & T-Bills
-cg markets --category artificial-intelligence      # Top AI coins
-cg markets --category layer-2 --export l2.csv      # Export all L2 tokens
-cg tui markets --category solana-meme-coins        # Browse in TUI mode
+bits markets --category tokenized-gold              # Gold & Silver pegged assets
+bits markets --category real-world-assets-rwa        # Real Estate & T-Bills
+bits markets --category artificial-intelligence      # Top AI coins
+bits markets --category layer-2 --export l2.csv      # Export all L2 tokens
+bits tui markets --category solana-meme-coins        # Browse in TUI mode
 ```
 
-The `--category` flag works in both `cg markets` and `cg tui markets`. In TUI mode, the active category is displayed in the header.
+The `--category` flag works in both `bits markets` and `bits tui markets`. In TUI mode, the active category is displayed in the header.
 
 > **Tip:** Find category IDs by browsing the [CoinGecko categories page](https://www.coingecko.com/en/categories) and copying the ID from the URL. You can also get the full list via this [endpoint](https://docs.coingecko.com/reference/coins-categories-list) or [Google Sheet](https://docs.google.com/spreadsheets/d/1wTTuxXt8n9q7C4NDXqQpI3wpKu1_5bGVmP9Xz0XGSyU/edit?gid=214581757#gid=214581757).
 
@@ -356,10 +356,10 @@ The `--category` flag works in both `cg markets` and `cg tui markets`. In TUI mo
 `markets` and `history` commands can export raw data to CSV for analysis in Excel, Python, etc.
 
 ```sh
-cg markets --total 500 --export top500.csv
-cg history bitcoin --days 30 --export btc_30d.csv
-cg history bitcoin --from 2024-01-01 --to 2024-12-31 --export btc_2024.csv
-cg top-gainers-losers --export gainers.csv
+bits markets --total 500 --export top500.csv
+bits history bitcoin --days 30 --export btc_30d.csv
+bits history bitcoin --from 2024-01-01 --to 2024-12-31 --export btc_2024.csv
+bits top-gainers-losers --export gainers.csv
 ```
 
 CSV files contain raw numbers (not formatted strings), making them directly usable in data pipelines.
@@ -368,19 +368,19 @@ CSV files contain raw numbers (not formatted strings), making them directly usab
 
 ## Interactive TUI
 
-### `cg tui markets` — Top Market Cap Ranked Coins
+### `bits tui markets` — Top Market Cap Ranked Coins
 
 ```sh
-cg tui markets
-cg tui markets --category layer-1
+bits tui markets
+bits tui markets --category layer-1
 ```
 
 Launches a live interactive table of the top 50 coins by market cap.
 
-### `cg tui trending` — Trending Coins
+### `bits tui trending` — Trending Coins
 
 ```sh
-cg tui trending
+bits tui trending
 ```
 
 Launches a live interactive table of the top 15 trending coins (up to 30 on paid plans).
@@ -409,7 +409,7 @@ Pressing `Enter` on any coin opens a split-panel detail view:
 ## Full Command Reference
 
 ```
-cg [command]
+bits [command]
 
 Commands:
   auth                 Save your CoinGecko API key and tier (demo/paid)
@@ -435,9 +435,9 @@ Global Flags:
 For per-command help:
 
 ```sh
-cg price --help
-cg markets --help
-cg history --help
+bits price --help
+bits markets --help
+bits history --help
 ```
 
 ---

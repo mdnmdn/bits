@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/coingecko/coingecko-cli/internal/api"
 	"github.com/coingecko/coingecko-cli/internal/display"
+	"github.com/coingecko/coingecko-cli/internal/provider"
+	"github.com/coingecko/coingecko-cli/internal/provider/coingecko"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -21,11 +22,11 @@ const (
 )
 
 type MarketsModel struct {
-	client   *api.Client
+	client   provider.Provider
 	vs       string
 	category string
 	total    int
-	coins    []api.MarketCoin
+	coins    []coingecko.MarketCoin
 	cursor   int
 	state    marketsState
 	detail   DetailModel
@@ -35,11 +36,11 @@ type MarketsModel struct {
 }
 
 type coinsLoadedMsg struct {
-	coins []api.MarketCoin
+	coins []coingecko.MarketCoin
 	err   error
 }
 
-func NewMarketsModel(client *api.Client, vs, category string, total int) MarketsModel {
+func NewMarketsModel(client provider.Provider, vs, category string, total int) MarketsModel {
 	return MarketsModel{
 		client:   client,
 		vs:       vs,

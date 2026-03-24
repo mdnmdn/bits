@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/coingecko/coingecko-cli/internal/api"
+	"github.com/coingecko/coingecko-cli/internal/provider/coingecko"
 	"github.com/coingecko/coingecko-cli/internal/export"
 
 	"github.com/spf13/cobra"
@@ -52,7 +52,7 @@ func formatError(cmd *cobra.Command, err error) error {
 }
 
 func classifyError(err error) CLIError {
-	var rle *api.RateLimitError
+	var rle *coingecko.RateLimitError
 	if errors.As(err, &rle) {
 		ce := CLIError{Error: "rate_limited", Message: rle.Error()}
 		if rle.RetryAfter > 0 {
@@ -60,10 +60,10 @@ func classifyError(err error) CLIError {
 		}
 		return ce
 	}
-	if errors.Is(err, api.ErrInvalidAPIKey) {
+	if errors.Is(err, coingecko.ErrInvalidAPIKey) {
 		return CLIError{Error: "invalid_api_key", Message: err.Error()}
 	}
-	if errors.Is(err, api.ErrPlanRestricted) {
+	if errors.Is(err, coingecko.ErrPlanRestricted) {
 		return CLIError{Error: "plan_restricted", Message: err.Error()}
 	}
 	return CLIError{Error: "error", Message: err.Error()}
