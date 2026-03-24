@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/coingecko/coingecko-cli/internal/display"
-	"github.com/coingecko/coingecko-cli/internal/provider"
-	"github.com/coingecko/coingecko-cli/internal/model"
+	"github.com/mdnmdn/bits/internal/display"
+	"github.com/mdnmdn/bits/internal/provider"
+	"github.com/mdnmdn/bits/internal/model"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"

@@ -3,8 +3,8 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/coingecko/coingecko-cli/internal/display"
-	"github.com/coingecko/coingecko-cli/internal/provider"
+	"github.com/mdnmdn/bits/internal/display"
+	"github.com/mdnmdn/bits/internal/provider"
 
 	"github.com/spf13/cobra"
 )

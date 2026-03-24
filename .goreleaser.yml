@@ -6,7 +6,7 @@ builds:
   - binary: bits
     main: .
     ldflags:
-      - -s -w -X github.com/coingecko/coingecko-cli/cmd.version={{.Version}} -X github.com/coingecko/coingecko-cli/cmd.commit={{.Commit}} -X github.com/coingecko/coingecko-cli/cmd.date={{.Date}}
+      - -s -w -X github.com/mdnmdn/bits/cmd.version={{.Version}} -X github.com/mdnmdn/bits/cmd.commit={{.Commit}} -X github.com/mdnmdn/bits/cmd.date={{.Date}}
     goos:
       - linux
       - darwin
@@ -35,7 +35,7 @@ brews:
       owner: coingecko
       name: homebrew-coingecko-cli
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
-    homepage: https://github.com/coingecko/coingecko-cli
+    homepage: https://github.com/mdnmdn/bits
     description: bits CLI — cryptocurrency data at your fingertips
     license: MIT
     install: |

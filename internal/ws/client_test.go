@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/coingecko/coingecko-cli/internal/model"
-	"github.com/coingecko/coingecko-cli/internal/config"
+	"github.com/mdnmdn/bits/internal/model"
+	"github.com/mdnmdn/bits/internal/config"
 	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -422,4 +422,3 @@ func TestCloseWithoutConnect(t *testing.T) {
 	// Close() should not hang if Connect() was never called.
 	require.NoError(t, client.Close())
 }
-

@@ -9,9 +9,9 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/coingecko/coingecko-cli/internal/config"
-	"github.com/coingecko/coingecko-cli/internal/provider"
-	"github.com/coingecko/coingecko-cli/internal/provider/coingecko"
+	"github.com/mdnmdn/bits/internal/config"
+	"github.com/mdnmdn/bits/internal/provider"
+	"github.com/mdnmdn/bits/internal/provider/coingecko"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )

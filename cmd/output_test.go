@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/coingecko/coingecko-cli/internal/model"
+	"github.com/mdnmdn/bits/internal/model"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

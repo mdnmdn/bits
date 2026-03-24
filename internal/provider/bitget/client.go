@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/coingecko/coingecko-cli/internal/config"
+	"github.com/mdnmdn/bits/internal/config"
 )
 
 const (

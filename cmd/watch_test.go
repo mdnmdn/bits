@@ -8,9 +8,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/coingecko/coingecko-cli/internal/model"
-	"github.com/coingecko/coingecko-cli/internal/config"
-	"github.com/coingecko/coingecko-cli/internal/ws"
+	"github.com/mdnmdn/bits/internal/model"
+	"github.com/mdnmdn/bits/internal/config"
+	"github.com/mdnmdn/bits/internal/ws"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

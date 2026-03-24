@@ -1,6 +1,6 @@
 package coingecko
 
-import "github.com/coingecko/coingecko-cli/internal/model"
+import "github.com/mdnmdn/bits/internal/model"
 
 func toModelMarketCoin(c MarketCoin) model.MarketCoin {
 	return model.MarketCoin{

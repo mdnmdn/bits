@@ -32,31 +32,31 @@ A fast, full-featured terminal interface for the [CoinGecko API](https://docs.co
 ### Homebrew (macOS/Linux)
 
 ```sh
-brew install coingecko/coingecko-cli/bits
+brew install mdnmdn/bits/bits
 ```
 
 Or tap first, then install:
 
 ```sh
-brew tap coingecko/coingecko-cli
+brew tap mdnmdn/bits
 brew install bits
 ```
 
 ### Shell script
 
 ```sh
-curl -sSfL https://raw.githubusercontent.com/coingecko/coingecko-cli/main/install.sh | sh
+curl -sSfL https://raw.githubusercontent.com/mdnmdn/bits/main/install.sh | sh
 ```
 
 ### Go install
 
 ```sh
-go install github.com/coingecko/coingecko-cli@latest
+go install github.com/mdnmdn/bits@latest
 ```
 
 ### Manual
 
-Download the binary for your platform from [Releases](https://github.com/coingecko/coingecko-cli/releases), extract, and place `bits` in your `$PATH`.
+Download the binary for your platform from [Releases](https://github.com/mdnmdn/bits/releases), extract, and place `bits` in your `$PATH`.
 
 ---
 

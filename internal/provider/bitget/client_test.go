@@ -3,7 +3,7 @@ package bitget
 import (
 	"testing"
 
-	"github.com/coingecko/coingecko-cli/internal/config"
+	"github.com/mdnmdn/bits/internal/config"
 	"github.com/stretchr/testify/assert"
 )
 

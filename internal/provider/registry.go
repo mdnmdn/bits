@@ -3,10 +3,10 @@ package provider
 import (
 	"fmt"
 
-	"github.com/coingecko/coingecko-cli/internal/config"
-	"github.com/coingecko/coingecko-cli/internal/provider/binance"
-	"github.com/coingecko/coingecko-cli/internal/provider/bitget"
-	"github.com/coingecko/coingecko-cli/internal/provider/coingecko"
+	"github.com/mdnmdn/bits/internal/config"
+	"github.com/mdnmdn/bits/internal/provider/binance"
+	"github.com/mdnmdn/bits/internal/provider/bitget"
+	"github.com/mdnmdn/bits/internal/provider/coingecko"
 )
 
 // AvailableProviders lists all supported provider names.

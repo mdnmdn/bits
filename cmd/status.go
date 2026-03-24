@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/coingecko/coingecko-cli/internal/display"
+	"github.com/mdnmdn/bits/internal/display"
 
 	"github.com/spf13/cobra"
 )

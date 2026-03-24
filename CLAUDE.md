@@ -56,7 +56,7 @@ bits/
 
 - **Go version**: 1.26 (pinned in go.mod and CI)
 - **Binary name**: `bits`
-- **Module path**: `github.com/coingecko/coingecko-cli`
+- **Module path**: `github.com/mdnmdn/bits`
 - **Test framework**: `testify/assert` + `net/http/httptest`
 - **Provider Pattern**: All commands use `provider.Provider` interface via `newAPIClient` factory.
 - **Config location**: `~/.config/coingecko-cli/config.yaml`
@@ -98,4 +98,4 @@ bits/
 - **Homebrew**: tap repo at `coingecko/homebrew-coingecko-cli`
 - **Goreleaser**: `.goreleaser.yml` generates Homebrew formula
 - **Install script**: `install.sh` downloads the latest release binary
-- **Go install**: `go install github.com/coingecko/coingecko-cli@latest`
+- **Go install**: `go install github.com/mdnmdn/bits@latest`

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/coingecko/coingecko-cli/internal/model"
-	"github.com/coingecko/coingecko-cli/internal/display"
+	"github.com/mdnmdn/bits/internal/model"
+	"github.com/mdnmdn/bits/internal/display"
 
 	"github.com/NimbleMarkets/ntcharts/canvas"
 	"github.com/NimbleMarkets/ntcharts/canvas/graph"

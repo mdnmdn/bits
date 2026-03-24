@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/coingecko/coingecko-cli/internal/model"
-	"github.com/coingecko/coingecko-cli/internal/ws"
+	"github.com/mdnmdn/bits/internal/model"
+	"github.com/mdnmdn/bits/internal/ws"
 )
 
 // WatchOrderBook implements OrderBookStreamProvider.

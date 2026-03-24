@@ -10,10 +10,10 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/coingecko/coingecko-cli/internal/model"
-	"github.com/coingecko/coingecko-cli/internal/provider"
-	"github.com/coingecko/coingecko-cli/internal/config"
-	"github.com/coingecko/coingecko-cli/internal/display"
+	"github.com/mdnmdn/bits/internal/model"
+	"github.com/mdnmdn/bits/internal/provider"
+	"github.com/mdnmdn/bits/internal/config"
+	"github.com/mdnmdn/bits/internal/display"
 
 	"github.com/spf13/cobra"
 )

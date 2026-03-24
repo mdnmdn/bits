@@ -5,8 +5,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/coingecko/coingecko-cli/internal/config"
-	"github.com/coingecko/coingecko-cli/internal/display"
+	"github.com/mdnmdn/bits/internal/config"
+	"github.com/mdnmdn/bits/internal/display"
 
 	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"

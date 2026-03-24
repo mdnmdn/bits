@@ -3,10 +3,10 @@ package cmd
 import (
 	"context"
 
-	"github.com/coingecko/coingecko-cli/internal/config"
-	"github.com/coingecko/coingecko-cli/internal/model"
-	"github.com/coingecko/coingecko-cli/internal/provider"
-	"github.com/coingecko/coingecko-cli/internal/ws"
+	"github.com/mdnmdn/bits/internal/config"
+	"github.com/mdnmdn/bits/internal/model"
+	"github.com/mdnmdn/bits/internal/provider"
+	"github.com/mdnmdn/bits/internal/ws"
 	"github.com/spf13/cobra"
 )
 

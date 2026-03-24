@@ -3,7 +3,7 @@ package cmd
 import (
 	"strings"
 
-	"github.com/coingecko/coingecko-cli/internal/ws"
+	"github.com/mdnmdn/bits/internal/ws"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )

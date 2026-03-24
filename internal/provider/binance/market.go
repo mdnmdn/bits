@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/coingecko/coingecko-cli/internal/model"
+	"github.com/mdnmdn/bits/internal/model"
 )
 
 // SimplePrice returns current prices for the given Binance symbols.

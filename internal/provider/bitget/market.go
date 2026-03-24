@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/coingecko/coingecko-cli/internal/model"
+	"github.com/mdnmdn/bits/internal/model"
 )
 
 // SimplePrice implements the Provider interface.

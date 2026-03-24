@@ -2,7 +2,7 @@ package binance
 
 import (
 	binance "github.com/adshao/go-binance/v2"
-	"github.com/coingecko/coingecko-cli/internal/config"
+	"github.com/mdnmdn/bits/internal/config"
 )
 
 const providerID = "binance"

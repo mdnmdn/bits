@@ -1,6 +1,6 @@
 package main
 
-import "github.com/coingecko/coingecko-cli/cmd"
+import "github.com/mdnmdn/bits/cmd"
 
 func main() {
 	cmd.Execute()

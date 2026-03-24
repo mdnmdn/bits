@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/coingecko/coingecko-cli/internal/auth"
+	"github.com/mdnmdn/bits/internal/auth"
 )
 
 // generateSignature generates HMAC-SHA256 signature for Bitget API.

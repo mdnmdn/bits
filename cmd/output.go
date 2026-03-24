@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/coingecko/coingecko-cli/internal/model"
-	"github.com/coingecko/coingecko-cli/internal/export"
+	"github.com/mdnmdn/bits/internal/model"
+	"github.com/mdnmdn/bits/internal/export"
 
 	"github.com/spf13/cobra"
 )

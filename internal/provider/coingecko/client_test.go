@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/coingecko/coingecko-cli/internal/config"
+	"github.com/mdnmdn/bits/internal/config"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -365,4 +365,3 @@ func TestRequirePaid(t *testing.T) {
 	c2 := NewClient(cfg2)
 	assert.NoError(t, c2.requirePaid())
 }
-

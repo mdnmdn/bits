@@ -3,7 +3,7 @@ package provider
 import (
 	"context"
 
-	"github.com/coingecko/coingecko-cli/internal/model"
+	"github.com/mdnmdn/bits/internal/model"
 )
 
 // Provider is the base interface all data providers must implement.

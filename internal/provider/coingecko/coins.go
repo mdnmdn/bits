@@ -6,7 +6,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/coingecko/coingecko-cli/internal/model"
+	"github.com/mdnmdn/bits/internal/model"
 )
 
 // SimplePrice fetches current prices for the given coin IDs.

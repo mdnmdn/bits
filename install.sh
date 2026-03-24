@@ -2,9 +2,9 @@
 set -e
 
 # bits CLI installer
-# Usage: curl -sSfL https://raw.githubusercontent.com/coingecko/coingecko-cli/main/install.sh | sh
+# Usage: curl -sSfL https://raw.githubusercontent.com/mdnmdn/bits/main/install.sh | sh
 
-REPO="coingecko/coingecko-cli"
+REPO="mdnmdn/bits"
 BINARY="bits"
 INSTALL_DIR="/usr/local/bin"
 
