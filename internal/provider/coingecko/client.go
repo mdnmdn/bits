@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/coingecko/coingecko-cli/internal/config"
+	"github.com/coingecko/coingecko-cli/internal/model"
 )
 
 const (
@@ -19,30 +20,13 @@ const (
 )
 
 var (
-	ErrInvalidAPIKey  = fmt.Errorf("invalid API key — check your key with `cg status` or set a new one with `cg auth`")
-	ErrPlanRestricted = fmt.Errorf("this endpoint requires a paid plan — upgrade at https://www.coingecko.com/en/api/pricing")
-	ErrRateLimited    = fmt.Errorf("rate limited — please wait and try again")
+	ErrInvalidAPIKey  = model.ErrInvalidAPIKey
+	ErrPlanRestricted = model.ErrPlanRestricted
+	ErrRateLimited    = model.ErrRateLimited
 )
 
-// RateLimitError carries rate-limit metadata from a 429 response.
-type RateLimitError struct {
-	RetryAfter int       // seconds from Retry-After header; 0 if absent
-	ResetAt    time.Time // from x-ratelimit-reset header; zero if absent
-}
-
-func (e *RateLimitError) Error() string {
-	if e.RetryAfter > 0 {
-		return fmt.Sprintf("rate limited — retry after %d seconds", e.RetryAfter)
-	}
-	if !e.ResetAt.IsZero() {
-		return fmt.Sprintf("rate limited — resets at %s", e.ResetAt.UTC().Format("15:04:05 UTC"))
-	}
-	return "rate limited — please wait and try again"
-}
-
-func (e *RateLimitError) Is(target error) bool {
-	return target == ErrRateLimited
-}
+// RateLimitError is an alias for model.RateLimitError for backward compatibility.
+type RateLimitError = model.RateLimitError
 
 // apiErrorResponse covers CoinGecko's error JSON formats.
 // The API may return:

@@ -6,14 +6,14 @@ import (
 	"os"
 	"testing"
 
-	"github.com/coingecko/coingecko-cli/internal/provider/coingecko"
+	"github.com/coingecko/coingecko-cli/internal/model"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestClassifyError_RateLimited(t *testing.T) {
-	rle := &coingecko.RateLimitError{RetryAfter: 30}
+	rle := &model.RateLimitError{RetryAfter: 30}
 	ce := classifyError(rle)
 	assert.Equal(t, "rate_limited", ce.Error)
 	assert.NotNil(t, ce.RetryAfter)
@@ -21,19 +21,19 @@ func TestClassifyError_RateLimited(t *testing.T) {
 }
 
 func TestClassifyError_RateLimitedNoRetryAfter(t *testing.T) {
-	rle := &coingecko.RateLimitError{}
+	rle := &model.RateLimitError{}
 	ce := classifyError(rle)
 	assert.Equal(t, "rate_limited", ce.Error)
 	assert.Nil(t, ce.RetryAfter)
 }
 
 func TestClassifyError_InvalidAPIKey(t *testing.T) {
-	ce := classifyError(coingecko.ErrInvalidAPIKey)
+	ce := classifyError(model.ErrInvalidAPIKey)
 	assert.Equal(t, "invalid_api_key", ce.Error)
 }
 
 func TestClassifyError_PlanRestricted(t *testing.T) {
-	ce := classifyError(coingecko.ErrPlanRestricted)
+	ce := classifyError(model.ErrPlanRestricted)
 	assert.Equal(t, "plan_restricted", ce.Error)
 }
 
@@ -57,7 +57,7 @@ func TestFormatError_JSONMode_WritesStderr(t *testing.T) {
 	require.NotNil(t, cmd)
 	_ = cmd.Flags().Set("output", "json")
 
-	err := formatError(cmd, coingecko.ErrInvalidAPIKey)
+	err := formatError(cmd, model.ErrInvalidAPIKey)
 	require.Error(t, err) // formatError returns the original error
 
 	_ = wErr.Close()
@@ -82,7 +82,7 @@ func TestFormatError_TableMode_NoJSON(t *testing.T) {
 	require.NotNil(t, cmd)
 	_ = cmd.Flags().Set("output", "table")
 
-	err := formatError(cmd, coingecko.ErrInvalidAPIKey)
+	err := formatError(cmd, model.ErrInvalidAPIKey)
 	require.Error(t, err)
 
 	_ = wErr.Close()

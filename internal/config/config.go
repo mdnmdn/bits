@@ -23,9 +23,33 @@ const (
 
 var ValidTiers = []string{TierDemo, TierPaid}
 
+// BinanceConfig holds Binance API credentials.
+type BinanceConfig struct {
+	APIKey     string `mapstructure:"api_key"`
+	APISecret  string `mapstructure:"api_secret"`
+	BaseURL    string `mapstructure:"base_url"`
+	UseTestnet bool   `mapstructure:"use_testnet"`
+}
+
+// BitgetConfig holds Bitget API credentials.
+type BitgetConfig struct {
+	Key        string `mapstructure:"key"`
+	Secret     string `mapstructure:"secret"`
+	Passphrase string `mapstructure:"passphrase"`
+	BaseURL    string `mapstructure:"base_url"`
+}
+
 type Config struct {
+	// Active provider (coingecko, binance, bitget)
+	Provider string `mapstructure:"provider"`
+
+	// CoinGecko credentials (backward compatible)
 	APIKey string `mapstructure:"api_key"`
 	Tier   string `mapstructure:"tier"`
+
+	// Exchange provider configs
+	Binance BinanceConfig `mapstructure:"binance"`
+	Bitget  BitgetConfig  `mapstructure:"bitget"`
 }
 
 func configDir() (string, error) {
@@ -45,19 +69,62 @@ func Load() (*Config, error) {
 	v := viper.New()
 	v.SetConfigFile(filepath.Join(dir, "config.yaml"))
 	v.SetDefault("tier", TierDemo)
+	v.SetDefault("provider", "coingecko")
 
 	if err := v.ReadInConfig(); err != nil {
-		if os.IsNotExist(err) {
-			return &Config{Tier: TierDemo}, nil
+		if !os.IsNotExist(err) {
+			return nil, fmt.Errorf("failed to read config: %w", err)
 		}
-		return nil, fmt.Errorf("failed to read config: %w", err)
 	}
 
 	var cfg Config
 	if err := v.Unmarshal(&cfg); err != nil {
 		return nil, fmt.Errorf("failed to parse config: %w", err)
 	}
+
+	// Apply env var overrides (BITS_ prefix, env vars take priority)
+	applyEnvOverrides(&cfg)
+
 	return &cfg, nil
+}
+
+// applyEnvOverrides applies BITS_* environment variable overrides to the config.
+func applyEnvOverrides(cfg *Config) {
+	if v := os.Getenv("BITS_PROVIDER"); v != "" {
+		cfg.Provider = v
+	}
+	// CoinGecko
+	if v := os.Getenv("BITS_COINGECKO_API_KEY"); v != "" {
+		cfg.APIKey = v
+	}
+	if v := os.Getenv("BITS_COINGECKO_TIER"); v != "" {
+		cfg.Tier = v
+	}
+	// Binance
+	if v := os.Getenv("BITS_BINANCE_API_KEY"); v != "" {
+		cfg.Binance.APIKey = v
+	}
+	if v := os.Getenv("BITS_BINANCE_API_SECRET"); v != "" {
+		cfg.Binance.APISecret = v
+	}
+	// Bitget
+	if v := os.Getenv("BITS_BITGET_KEY"); v != "" {
+		cfg.Bitget.Key = v
+	}
+	if v := os.Getenv("BITS_BITGET_SECRET"); v != "" {
+		cfg.Bitget.Secret = v
+	}
+	if v := os.Getenv("BITS_BITGET_PASSPHRASE"); v != "" {
+		cfg.Bitget.Passphrase = v
+	}
+}
+
+// ActiveProvider returns the configured provider name, defaulting to "coingecko".
+func (c *Config) ActiveProvider() string {
+	if c.Provider == "" {
+		return "coingecko"
+	}
+	return c.Provider
 }
 
 func Save(cfg *Config) error {

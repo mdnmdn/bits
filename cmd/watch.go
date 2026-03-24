@@ -13,8 +13,8 @@ import (
 	"time"
 
 	"github.com/coingecko/coingecko-cli/internal/display"
+	"github.com/coingecko/coingecko-cli/internal/model"
 	"github.com/coingecko/coingecko-cli/internal/provider"
-	"github.com/coingecko/coingecko-cli/internal/provider/coingecko"
 	"github.com/coingecko/coingecko-cli/internal/ws"
 
 	"github.com/spf13/cobra"
@@ -56,7 +56,7 @@ func runWatch(cmd *cobra.Command, args []string) error {
 	}
 
 	if !cfg.IsPaid() {
-		return coingecko.ErrPlanRestricted
+		return model.ErrPlanRestricted
 	}
 
 	var coinIDs []string
@@ -123,8 +123,12 @@ func runWatch(cmd *cobra.Command, args []string) error {
 				})
 			}
 		} else {
+			searcher, ok := client.(provider.Searcher)
+			if !ok {
+				return fmt.Errorf("%s provider does not support symbol search", client.ID())
+			}
 			for _, sym := range symbols {
-				res, err := client.Search(cmd.Context(), sym)
+				res, err := searcher.Search(cmd.Context(), sym)
 				if err != nil {
 					return fmt.Errorf("resolving symbol %q: %w", sym, err)
 				}
@@ -376,7 +380,7 @@ func formatTimestamp(ts int64) string {
 // matchSymbol picks the best coin ID from search results for a given symbol.
 // It returns the exact case-insensitive match with the highest market_cap_rank,
 // or "" if no match is found.
-func matchSymbol(coins []coingecko.SearchCoin, symbol string) string {
+func matchSymbol(coins []model.SearchCoin, symbol string) string {
 	var best string
 	var bestRank int
 	for _, c := range coins {

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/coingecko/coingecko-cli/internal/provider/coingecko"
+	"github.com/coingecko/coingecko-cli/internal/model"
 	"github.com/coingecko/coingecko-cli/internal/config"
 	"github.com/coingecko/coingecko-cli/internal/ws"
 	"github.com/stretchr/testify/assert"
@@ -127,13 +127,13 @@ func TestWatch_DemoPlanRejected(t *testing.T) {
 
 	withFakeStreamer(t, &fakeStreamer{
 		connectFn: func(ctx context.Context) (<-chan *ws.CoinUpdate, error) {
-			return nil, coingecko.ErrPlanRestricted
+			return nil, model.ErrPlanRestricted
 		},
 	})
 
 	_, _, err := executeCommand(t, "watch", "--ids", "bitcoin", "-o", "json")
 	require.Error(t, err)
-	assert.ErrorIs(t, err, coingecko.ErrPlanRestricted)
+	assert.ErrorIs(t, err, model.ErrPlanRestricted)
 }
 
 func TestWatch_DryRun(t *testing.T) {

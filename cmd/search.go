@@ -1,7 +1,10 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/coingecko/coingecko-cli/internal/display"
+	"github.com/coingecko/coingecko-cli/internal/provider"
 
 	"github.com/spf13/cobra"
 )
@@ -44,7 +47,11 @@ func runSearch(cmd *cobra.Command, args []string) error {
 	client := newAPIClient(cfg)
 	ctx := cmd.Context()
 
-	resp, err := client.Search(ctx, args[0])
+	s, ok := client.(provider.Searcher)
+	if !ok {
+		return fmt.Errorf("%s provider does not support search", client.ID())
+	}
+	resp, err := s.Search(ctx, args[0])
 	if err != nil {
 		return err
 	}

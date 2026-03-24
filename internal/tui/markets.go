@@ -7,7 +7,7 @@ import (
 
 	"github.com/coingecko/coingecko-cli/internal/display"
 	"github.com/coingecko/coingecko-cli/internal/provider"
-	"github.com/coingecko/coingecko-cli/internal/provider/coingecko"
+	"github.com/coingecko/coingecko-cli/internal/model"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -26,7 +26,7 @@ type MarketsModel struct {
 	vs       string
 	category string
 	total    int
-	coins    []coingecko.MarketCoin
+	coins    []model.MarketCoin
 	cursor   int
 	state    marketsState
 	detail   DetailModel
@@ -36,7 +36,7 @@ type MarketsModel struct {
 }
 
 type coinsLoadedMsg struct {
-	coins []coingecko.MarketCoin
+	coins []model.MarketCoin
 	err   error
 }
 
@@ -56,7 +56,11 @@ func (m MarketsModel) Init() tea.Cmd {
 
 func (m MarketsModel) fetchCoins() tea.Cmd {
 	return func() tea.Msg {
-		coins, err := m.client.FetchAllMarkets(context.Background(), m.vs, m.total, "market_cap_desc", m.category)
+		ml, ok := m.client.(provider.MarketLister)
+		if !ok {
+			return coinsLoadedMsg{err: model.ErrNotSupported}
+		}
+		coins, err := ml.FetchAllMarkets(context.Background(), m.vs, m.total, "market_cap_desc", m.category)
 		return coinsLoadedMsg{coins: coins, err: err}
 	}
 }

@@ -8,7 +8,7 @@ import (
 
 	"github.com/coingecko/coingecko-cli/internal/display"
 	"github.com/coingecko/coingecko-cli/internal/provider"
-	"github.com/coingecko/coingecko-cli/internal/provider/coingecko"
+	"github.com/coingecko/coingecko-cli/internal/model"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -18,8 +18,8 @@ type DetailModel struct {
 	client  provider.Provider
 	coinID  string
 	vs      string
-	coin    *coingecko.CoinDetail
-	ohlc    coingecko.OHLCData
+	coin    *model.CoinDetail
+	ohlc    model.OHLCData
 	loading int // count of pending fetches
 	Done    bool
 	err     error
@@ -28,12 +28,12 @@ type DetailModel struct {
 }
 
 type coinDetailMsg struct {
-	coin *coingecko.CoinDetail
+	coin *model.CoinDetail
 	err  error
 }
 
 type ohlcMsg struct {
-	data coingecko.OHLCData
+	data model.OHLCData
 	err  error
 }
 
@@ -57,7 +57,11 @@ func (m DetailModel) Init() tea.Cmd {
 
 func (m DetailModel) fetchDetail() tea.Cmd {
 	return func() tea.Msg {
-		coin, err := m.client.CoinDetail(context.Background(), m.coinID)
+		dp, ok := m.client.(provider.DetailProvider)
+		if !ok {
+			return coinDetailMsg{err: model.ErrNotSupported}
+		}
+		coin, err := dp.CoinDetail(context.Background(), m.coinID)
 		return coinDetailMsg{coin: coin, err: err}
 	}
 }

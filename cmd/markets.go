@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/coingecko/coingecko-cli/internal/display"
+	"github.com/coingecko/coingecko-cli/internal/provider"
 
 	"github.com/spf13/cobra"
 )
@@ -65,7 +66,11 @@ func runMarkets(cmd *cobra.Command, args []string) error {
 		})
 	}
 
-	allCoins, err := client.FetchAllMarkets(ctx, vs, total, order, category)
+	ml, ok := client.(provider.MarketLister)
+	if !ok {
+		return fmt.Errorf("%s provider does not support market listings", client.ID())
+	}
+	allCoins, err := ml.FetchAllMarkets(ctx, vs, total, order, category)
 	if err != nil {
 		return err
 	}

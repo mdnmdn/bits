@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/coingecko/coingecko-cli/internal/provider/coingecko"
+	"github.com/coingecko/coingecko-cli/internal/model"
 	"github.com/coingecko/coingecko-cli/internal/display"
 
 	"github.com/NimbleMarkets/ntcharts/canvas"
@@ -12,7 +12,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-func renderBrailleChart(ohlc coingecko.OHLCData, width, height int, vs string) string {
+func renderBrailleChart(ohlc model.OHLCData, width, height int, vs string) string {
 	if len(ohlc) == 0 || width < 10 || height < 5 {
 		return "No data"
 	}

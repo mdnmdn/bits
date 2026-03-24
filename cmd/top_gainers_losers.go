@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/coingecko/coingecko-cli/internal/display"
+	"github.com/coingecko/coingecko-cli/internal/provider"
 
 	"github.com/spf13/cobra"
 )
@@ -69,7 +70,11 @@ func runTopGainersLosers(cmd *cobra.Command, args []string) error {
 	client := newAPIClient(cfg)
 	ctx := cmd.Context()
 
-	resp, err := client.TopGainersLosers(ctx, vs, duration, topCoinsStr, priceChangePct)
+	gl, ok := client.(provider.GainersLosersProvider)
+	if !ok {
+		return fmt.Errorf("%s provider does not support top gainers/losers", client.ID())
+	}
+	resp, err := gl.TopGainersLosers(ctx, vs, duration, topCoinsStr, priceChangePct)
 	if err != nil {
 		return err
 	}

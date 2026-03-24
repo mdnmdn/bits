@@ -7,7 +7,7 @@ import (
 
 	"github.com/coingecko/coingecko-cli/internal/display"
 	"github.com/coingecko/coingecko-cli/internal/provider"
-	"github.com/coingecko/coingecko-cli/internal/provider/coingecko"
+	"github.com/coingecko/coingecko-cli/internal/model"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -25,7 +25,7 @@ type TrendingModel struct {
 	vs      string
 	showMax string
 	limit   int
-	coins   []coingecko.TrendingCoinWrapper
+	coins   []model.TrendingCoinWrapper
 	cursor  int
 	state   trendingState
 	detail  DetailModel
@@ -35,7 +35,7 @@ type TrendingModel struct {
 }
 
 type trendingLoadedMsg struct {
-	resp *coingecko.TrendingResponse
+	resp *model.TrendingResponse
 	err  error
 }
 
@@ -55,7 +55,11 @@ func NewTrendingModel(client provider.Provider, vs, showMax string) TrendingMode
 
 func (m TrendingModel) Init() tea.Cmd {
 	return func() tea.Msg {
-		resp, err := m.client.SearchTrending(context.Background(), m.showMax)
+		tp, ok := m.client.(provider.TrendingProvider)
+		if !ok {
+			return trendingLoadedMsg{err: model.ErrNotSupported}
+		}
+		resp, err := tp.SearchTrending(context.Background(), m.showMax)
 		return trendingLoadedMsg{resp: resp, err: err}
 	}
 }

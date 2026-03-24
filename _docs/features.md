@@ -1,22 +1,48 @@
 # Project Features
 
-This document provides a comprehensive map of the features available in the CoinGecko CLI (`bits`).
+This document provides a comprehensive map of the features available in the Multi-Provider Crypto CLI (`bits`).
 
-## 1. Core CLI Commands
+## 1. Multi-Provider Support
 
-The CLI provides several standard commands to fetch cryptocurrency data directly to your terminal.
+`bits` supports multiple data providers, allowing you to fetch market data from different sources:
+
+- **CoinGecko** (Default): Comprehensive market data, historical charts, and trending coins.
+- **Binance**: Real-time prices, 24h ticker stats, and order book depth from the world's largest exchange.
+- **Bitget**: Real-time prices and 24h ticker stats from Bitget.
+
+Use the `--provider` or `-p` flag to select a provider:
+```bash
+bits price --ids bitcoin                    # CoinGecko (default)
+bits price --ids BTCUSDT -p binance         # Binance
+bits ticker BTCUSDT -p binance              # Binance 24h stats
+bits orderbook BTCUSDT -p binance           # Binance order book
+```
+
+## 2. Core CLI Commands
 
 ### `bits price`
 - Fetch current prices for one or more coins.
 - Supports both CoinGecko IDs (`--ids bitcoin`) and ticker symbols (`--symbols btc`).
 - Multi-currency support via `--vs` (default: `usd`).
 - Displays 24h price change.
+- Works across all providers (CoinGecko, Binance, Bitget).
+
+### `bits ticker` [New]
+- Fetch 24-hour ticker statistics for a trading pair.
+- Displays last price, 24h change, high/low, and volume.
+- Supported by: Binance, Bitget.
+
+### `bits orderbook` [New]
+- Fetch real-time order book depth (bids and asks).
+- Customizable depth via `--limit`.
+- Supported by: Binance.
 
 ### `bits markets`
 - List top coins by market cap.
 - Supports filtering by category (`--category`).
 - Pagination and custom result counts (`--total`).
 - Sorting options (market cap, volume, etc.).
+- Supported by: CoinGecko.
 
 ### `bits history`
 - Comprehensive historical data retrieval with three modes:
@@ -26,23 +52,27 @@ The CLI provides several standard commands to fetch cryptocurrency data directly
 - Support for **OHLC** (Open, High, Low, Close) data via `--ohlc`.
 - Adjustable granularity via `--interval` (daily, hourly).
 - **Auto-batching**: Large date ranges are automatically split into multiple API requests to overcome API limits.
+- Supported by: CoinGecko.
 
 ### `bits search`
 - Search for coins, exchanges, or NFTs by query string.
 - Returns name, symbol, CoinGecko ID, and market cap rank.
+- Supported by: CoinGecko.
 
 ### `bits trending`
 - Fetch the top-7 (Demo) or top-15/30 (Paid) trending coins on CoinGecko.
+- Supported by: CoinGecko.
 
 ### `bits top-gainers-losers`
 - List coins with the highest gains and losses over a 24h period.
+- Supported by: CoinGecko.
 
 ### `bits status`
-- Display current CLI configuration, including API tier and masked API key.
+- Display current CLI configuration, including active provider, API tiers, and masked keys.
 
 ---
 
-## 2. Interactive TUI (Terminal User Interface)
+## 3. Interactive TUI (Terminal User Interface)
 
 Launch a rich, interactive experience using `bits tui`.
 
@@ -56,28 +86,13 @@ Launch a rich, interactive experience using `bits tui`.
 
 ---
 
-## 3. Real-time Monitoring
+## 4. Real-time Monitoring
 
 ### `bits watch`
 - Live price updates via WebSocket.
 - Tracks multiple coins simultaneously.
 - Automatic reconnection with exponential backoff.
-- *Note: Requires a paid CoinGecko API plan.*
-
----
-
-## 4. Output & Export
-
-### Global Output Formats
-- **Table Mode** (Default): Pretty-printed tables for human readability.
-- **JSON Mode** (`-o json`): Raw API response output, ideal for piping to `jq` or other tools.
-
-### CSV Export
-- Use `--export <path>.csv` with `bits history` to save historical data for analysis in Excel/Google Sheets.
-
-### ASCII Aesthetics
-- Branded banners and welcome boxes.
-- ANSI color support (detects `NO_COLOR` and TTY).
+- Supported by: CoinGecko (Requires a paid API plan).
 
 ---
 

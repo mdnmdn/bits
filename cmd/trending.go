@@ -3,8 +3,9 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/coingecko/coingecko-cli/internal/provider/coingecko"
 	"github.com/coingecko/coingecko-cli/internal/display"
+	"github.com/coingecko/coingecko-cli/internal/model"
+	"github.com/coingecko/coingecko-cli/internal/provider"
 
 	"github.com/spf13/cobra"
 )
@@ -37,7 +38,7 @@ func runTrending(cmd *cobra.Command, args []string) error {
 	}
 
 	if showMax != "" && !cfg.IsPaid() {
-		return fmt.Errorf("--show-max: %w", coingecko.ErrPlanRestricted)
+		return fmt.Errorf("--show-max: %w", model.ErrPlanRestricted)
 	}
 
 	if isDryRun(cmd) {
@@ -51,7 +52,12 @@ func runTrending(cmd *cobra.Command, args []string) error {
 	client := newAPIClient(cfg)
 	ctx := cmd.Context()
 
-	resp, err := client.SearchTrending(ctx, showMax)
+	tp, ok := client.(provider.TrendingProvider)
+	if !ok {
+		return fmt.Errorf("%s provider does not support trending data", client.ID())
+	}
+
+	resp, err := tp.SearchTrending(ctx, showMax)
 	if err != nil {
 		return err
 	}
