@@ -17,12 +17,18 @@ var userAgent = "coingecko-cli/" + version
 // Empty means use config default.
 var providerOverride string
 
+// marketTypeOverride is set by the --market-type flag via PersistentPreRun on rootCmd.
+var marketTypeOverride string
+
 func init() {
 	// Resolve --provider flag before any subcommand runs.
 	existing := rootCmd.PersistentPreRun
 	rootCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
 		if p, _ := cmd.Flags().GetString("provider"); p != "" {
 			providerOverride = p
+		}
+		if m, _ := cmd.Flags().GetString("market-type"); m != "" {
+			marketTypeOverride = m
 		}
 		if existing != nil {
 			existing(cmd, args)
@@ -37,6 +43,13 @@ var newAPIClient = func(cfg *config.Config) provider.Provider {
 	if providerOverride != "" {
 		name = providerOverride
 	}
+
+	// Apply market type override to the relevant config section
+	if marketTypeOverride != "" {
+		cfg.Binance.MarketType = marketTypeOverride
+		cfg.Bitget.MarketType = marketTypeOverride
+	}
+
 	c, err := provider.NewProvider(name, cfg)
 	if err != nil {
 		// Fall back to coingecko on unknown provider.

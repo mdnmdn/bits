@@ -14,6 +14,10 @@ const (
 	TierDemo = "demo"
 	TierPaid = "paid"
 
+	MarketTypeSpot   = "spot"
+	MarketTypeMargin = "margin"
+	MarketTypeFuture = "future"
+
 	demoBaseURL = "https://api.coingecko.com/api/v3"
 	proBaseURL  = "https://pro-api.coingecko.com/api/v3"
 
@@ -29,6 +33,7 @@ type BinanceConfig struct {
 	APISecret  string `mapstructure:"api_secret"`
 	BaseURL    string `mapstructure:"base_url"`
 	UseTestnet bool   `mapstructure:"use_testnet"`
+	MarketType string `mapstructure:"market_type"`
 }
 
 // BitgetConfig holds Bitget API credentials.
@@ -37,6 +42,7 @@ type BitgetConfig struct {
 	Secret     string `mapstructure:"secret"`
 	Passphrase string `mapstructure:"passphrase"`
 	BaseURL    string `mapstructure:"base_url"`
+	MarketType string `mapstructure:"market_type"`
 }
 
 type Config struct {
@@ -107,6 +113,9 @@ func applyEnvOverrides(cfg *Config) {
 	if v := os.Getenv("BITS_BINANCE_API_SECRET"); v != "" {
 		cfg.Binance.APISecret = v
 	}
+	if v := os.Getenv("BITS_BINANCE_MARKET_TYPE"); v != "" {
+		cfg.Binance.MarketType = v
+	}
 	// Bitget
 	if v := os.Getenv("BITS_BITGET_KEY"); v != "" {
 		cfg.Bitget.Key = v
@@ -116,6 +125,9 @@ func applyEnvOverrides(cfg *Config) {
 	}
 	if v := os.Getenv("BITS_BITGET_PASSPHRASE"); v != "" {
 		cfg.Bitget.Passphrase = v
+	}
+	if v := os.Getenv("BITS_BITGET_MARKET_TYPE"); v != "" {
+		cfg.Bitget.MarketType = v
 	}
 }
 

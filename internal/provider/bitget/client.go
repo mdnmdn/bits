@@ -22,6 +22,7 @@ const (
 // Client represents a Bitget API client that implements the Provider interface.
 type Client struct {
 	config     config.BitgetConfig
+	marketType string
 	httpClient *http.Client
 	userAgent  string
 
@@ -36,8 +37,13 @@ func NewClient(cfg config.BitgetConfig) *Client {
 	if cfg.BaseURL == "" {
 		cfg.BaseURL = DefaultBaseURL
 	}
+	marketType := cfg.MarketType
+	if marketType == "" {
+		marketType = config.MarketTypeSpot
+	}
 	return &Client{
 		config:     cfg,
+		marketType: marketType,
 		httpClient: &http.Client{Timeout: 30 * time.Second},
 	}
 }
@@ -117,7 +123,32 @@ func formatToScale(value float64, scale int) string {
 }
 
 // convertGranularityFormat converts granularity from CLI format to Bitget API format.
-func convertGranularityFormat(granularity string) string {
+func convertGranularityFormat(granularity, marketType string) string {
+	if marketType == config.MarketTypeFuture {
+		switch granularity {
+		case "1m":
+			return "1m"
+		case "5m":
+			return "5m"
+		case "15m":
+			return "15m"
+		case "30m":
+			return "30m"
+		case "1h", "hourly":
+			return "1H"
+		case "4h":
+			return "4H"
+		case "12h":
+			return "12H"
+		case "1d", "daily":
+			return "1D"
+		case "1w":
+			return "1W"
+		default:
+			return granularity
+		}
+	}
+
 	switch granularity {
 	case "1m":
 		return "1min"

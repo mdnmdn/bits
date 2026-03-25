@@ -28,6 +28,7 @@ var rootCmd = &cobra.Command{
 func init() {
 	rootCmd.PersistentFlags().StringP("output", "o", "table", "Output format (table, json)")
 	rootCmd.PersistentFlags().StringP("provider", "p", "", "Data provider (coingecko, binance, bitget)")
+	rootCmd.PersistentFlags().StringP("market-type", "m", "", "Market type (spot, margin, future)")
 }
 
 func Execute() {

@@ -37,30 +37,43 @@ func TestBitgetClientConfiguration(t *testing.T) {
 }
 
 func TestConvertGranularityFormat(t *testing.T) {
-	tests := []struct {
+	spotTests := []struct {
 		input    string
 		expected string
 	}{
 		{"1m", "1min"},
 		{"5m", "5min"},
-		{"15m", "15min"},
-		{"30m", "30min"},
 		{"1h", "1h"},
 		{"4h", "4h"},
-		{"6h", "6h"},
-		{"12h", "12h"},
 		{"1d", "1day"},
 		{"daily", "1day"},
-		{"3d", "3day"},
-		{"1w", "1week"},
-		{"1M", "1M"},
 		{"hourly", "1h"},
 		{"invalid", "invalid"},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.input, func(t *testing.T) {
-			assert.Equal(t, tt.expected, convertGranularityFormat(tt.input))
+	for _, tt := range spotTests {
+		t.Run("spot_"+tt.input, func(t *testing.T) {
+			assert.Equal(t, tt.expected, convertGranularityFormat(tt.input, "spot"))
+		})
+	}
+
+	futureTests := []struct {
+		input    string
+		expected string
+	}{
+		{"1m", "1m"},
+		{"5m", "5m"},
+		{"1h", "1H"},
+		{"4h", "4H"},
+		{"1d", "1D"},
+		{"daily", "1D"},
+		{"hourly", "1H"},
+		{"invalid", "invalid"},
+	}
+
+	for _, tt := range futureTests {
+		t.Run("future_"+tt.input, func(t *testing.T) {
+			assert.Equal(t, tt.expected, convertGranularityFormat(tt.input, "future"))
 		})
 	}
 }

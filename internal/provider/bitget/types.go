@@ -185,3 +185,26 @@ type HistoricalCandlesResponse struct {
 	Msg  string     `json:"msg"`
 	Data [][]string `json:"data"` // Array of arrays: [timestamp, open, high, low, close, volume, ...]
 }
+
+// FuturesTickerData represents ticker data from the Futures API response.
+type FuturesTickerData struct {
+	Symbol             string `json:"symbol"`
+	Last               string `json:"last"`
+	BestAsk            string `json:"bestAsk"`
+	BestBid            string `json:"bestBid"`
+	High24h            string `json:"high24h"`
+	Low24h             string `json:"low24h"`
+	PriceChangePercent string `json:"priceChangePercent"`
+	BaseVolume         string `json:"baseVolume"`
+	QuoteVolume        string `json:"quoteVolume"`
+	Ts                 string `json:"ts"`
+	OpenUtc            string `json:"openUtc"` // Open price at UTC 0
+}
+
+// FuturesTickerResponse represents the ticker response from Bitget Futures API.
+type FuturesTickerResponse struct {
+	Code        string            `json:"code"`
+	Msg         string            `json:"msg"`
+	RequestTime int64             `json:"requestTime"`
+	Data        FuturesTickerData `json:"data"`
+}
