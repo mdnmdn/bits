@@ -298,7 +298,7 @@ type ItemError struct { Symbol string; Err error }
 
 ---
 
-## Phase 3 — New provider interfaces
+## Phase 3 — New provider interfaces ✅ COMPLETED
 
 **Parallel (tasks 3.2–3.5). Preceded by sequential task 3.1.**
 
@@ -313,14 +313,18 @@ type ItemError struct { Symbol string; Err error }
 
 **Gate:** `go build ./internal/provider/...`
 
+### Completion notes
+
+Six files created in `internal/provider/`: `provider.go` (base `Provider` interface), `exchange.go` (`ExchangeProvider`), `aggregator.go` (`AggregatorProvider`), `capability.go` (`PriceProvider`, `CandleProvider`, `TickerProvider`, `OrderBookProvider`), `stream.go` (`PriceStreamProvider`, `OrderBookStreamProvider`), `registry.go` (stub `NewProvider` + `RegisteredProviderIDs`). All methods return `model.Response[T]`. `go build` and `go vet` pass.
+
 ---
 
-## Phase 4 — Resolution, Rendering, Processing layers
+## Phase 4 — Resolution, Rendering, Processing layers ✅ COMPLETED
 
 **All three sub-phases are parallel.** Each is a single agent. All depend on
 Phase 2 (model) and Phase 3 (interfaces); none depend on each other.
 
-### Phase 4a — Resolution layer (`internal/resolve/`)
+### Phase 4a — Resolution layer (`internal/resolve/`) ✅
 
 **Single agent.**
 
@@ -343,7 +347,10 @@ func (r *Resolver) Resolve(feature capability.Feature, opts ResolutionOpts) (pro
 
 **Gate:** `go build ./internal/resolve/...`
 
-### Phase 4b — Rendering layer (`internal/render/`)
+### Completion notes
+`require.go` (`Require[T]`), `fanout.go` (`FanOut[T]` — parallel fan-out), `resolver.go` (`Resolver`, `ResolutionOpts`, `Resolve()` with market + provider fallback). Build and vet pass.
+
+### Phase 4b — Rendering layer (`internal/render/`) ✅
 
 **Single agent.** Core interfaces first, then type-specific renderers in parallel within the task.
 
@@ -357,7 +364,10 @@ func (r *Resolver) Resolve(feature capability.Feature, opts ResolutionOpts) (pro
 
 **Gate:** `go build ./internal/render/...`
 
-### Phase 4c — Processing layer (`internal/process/`)
+### Completion notes
+`render/renderer.go` (`Format` type + `ParseFormat`), `render/provenance.go` (`FallbackFootnote`, `ProviderLabel`), `render/json/generic.go` (generic JSON envelope with provenance), `render/table/` (7 table renderers: server_time, exchange_info, price, ticker, orderbook, candles, markets). Build and vet pass.
+
+### Phase 4c — Processing layer (`internal/process/`) ✅
 
 **Single agent.**
 
@@ -369,6 +379,9 @@ func (r *Resolver) Resolve(feature capability.Feature, opts ResolutionOpts) (pro
 | 4c.4 | `candles.go` — `CandleStats`: VWAP, typical price, body/wick ratios into `Extra` |
 
 **Gate:** `go build ./internal/process/...`
+
+### Completion notes
+`process.go` (`Processor[T]` type + `Apply` combinator), `time.go` (`TimeEnricher`), `orderbook.go` (`SpreadCalculator`), `candles.go` (`CandleStats`). Build and vet pass.
 
 ---
 
