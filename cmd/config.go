@@ -30,7 +30,7 @@ func init() {
 	configCmd.AddCommand(configShowCmd)
 	configCmd.AddCommand(configInitCmd)
 	configInitCmd.Flags().BoolVarP(&initLocal, "local", "l", false, "Create config in current directory")
-	rootCmd.AddCommand(configCmd)
+	RootCmd.AddCommand(configCmd)
 }
 
 func runConfigShow(cmd *cobra.Command, args []string) error {

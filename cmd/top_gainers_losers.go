@@ -28,7 +28,7 @@ func init() {
 	topGainersLosersCmd.Flags().String("price-change-percentage", "", "Include extra change %: 1h, 24h, 7d, 14d, 30d, 200d, 1y (comma-separated)")
 	topGainersLosersCmd.Flags().Bool("losers", false, "Show losers instead of gainers")
 	topGainersLosersCmd.Flags().String("export", "", "Export to CSV file path")
-	rootCmd.AddCommand(topGainersLosersCmd)
+	RootCmd.AddCommand(topGainersLosersCmd)
 }
 
 func runTopGainersLosers(cmd *cobra.Command, args []string) error {

@@ -14,7 +14,7 @@ var (
 	date    = "unknown"
 )
 
-var rootCmd = &cobra.Command{
+var RootCmd = &cobra.Command{
 	Use:     "bits",
 	Short:   "bits CLI — cryptocurrency data at your fingertips",
 	Long:    "A command-line tool for accessing multi-provider cryptocurrency market data.",
@@ -26,17 +26,17 @@ var rootCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringP("output", "o", "table", "Output format (table, json)")
-	rootCmd.PersistentFlags().StringP("provider", "p", "", "Data provider (coingecko, binance, bitget)")
-	rootCmd.PersistentFlags().StringP("market-type", "m", "", "Market type (spot, margin, future)")
+	RootCmd.PersistentFlags().StringP("output", "o", "table", "Output format (table, json)")
+	RootCmd.PersistentFlags().StringP("provider", "p", "", "Data provider (coingecko, binance, bitget)")
+	RootCmd.PersistentFlags().StringP("market-type", "m", "", "Market type (spot, margin, future)")
 }
 
 func Execute() {
-	rootCmd.SilenceUsage = true
-	rootCmd.SilenceErrors = true
-	if err := rootCmd.Execute(); err != nil {
+	RootCmd.SilenceUsage = true
+	RootCmd.SilenceErrors = true
+	if err := RootCmd.Execute(); err != nil {
 		// Emit structured JSON error to stderr when -o json, otherwise plain text.
-		cmd, _, _ := rootCmd.Find(os.Args[1:])
+		cmd, _, _ := RootCmd.Find(os.Args[1:])
 		if cmd != nil && outputJSON(cmd) {
 			_ = formatError(cmd, err)
 		} else {

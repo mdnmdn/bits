@@ -21,7 +21,7 @@ var capabilitiesCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(capabilitiesCmd)
+	RootCmd.AddCommand(capabilitiesCmd)
 }
 
 type capabilityRow struct {

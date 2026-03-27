@@ -20,7 +20,7 @@ var searchCmd = &cobra.Command{
 
 func init() {
 	searchCmd.Flags().Int("limit", 10, "Max results to show")
-	rootCmd.AddCommand(searchCmd)
+	RootCmd.AddCommand(searchCmd)
 }
 
 func runSearch(cmd *cobra.Command, args []string) error {

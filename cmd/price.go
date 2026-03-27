@@ -26,7 +26,7 @@ func init() {
 	priceCmd.Flags().String("ids", "", "Comma-separated coin IDs (e.g. bitcoin,ethereum)")
 	priceCmd.Flags().String("symbols", "", "Comma-separated symbols (e.g. btc,eth)")
 	priceCmd.Flags().String("vs", "usd", "Target currency")
-	rootCmd.AddCommand(priceCmd)
+	RootCmd.AddCommand(priceCmd)
 }
 
 func runPrice(cmd *cobra.Command, args []string) error {

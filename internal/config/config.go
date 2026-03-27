@@ -90,11 +90,9 @@ func (c BitgetConfig) IsSpotEnabled() bool    { return c.Spot.Enabled }
 func (c BitgetConfig) IsFuturesEnabled() bool { return c.Futures.Enabled }
 
 // Config holds all provider configurations.
+// It embeds the public config.Config for extensibility.
 type Config struct {
-	// Active provider (coingecko, binance, bitget)
-	Provider string `mapstructure:"provider"`
-
-	// Provider configs
+	Provider  string          `mapstructure:"provider"`
 	CoinGecko CoinGeckoConfig `mapstructure:"coingecko"`
 	Binance   BinanceConfig   `mapstructure:"binance"`
 	Bitget    BitgetConfig    `mapstructure:"bitget"`

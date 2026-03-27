@@ -51,9 +51,9 @@ func TestFormatError_JSONMode_WritesStderr(t *testing.T) {
 	os.Stderr = wErr
 
 	// Prepare a command with -o json set.
-	resetAllFlags(rootCmd)
-	rootCmd.SetArgs([]string{"search", "-o", "json"})
-	cmd, _, _ := rootCmd.Find([]string{"search", "-o", "json"})
+	resetAllFlags(RootCmd)
+	RootCmd.SetArgs([]string{"search", "-o", "json"})
+	cmd, _, _ := RootCmd.Find([]string{"search", "-o", "json"})
 	require.NotNil(t, cmd)
 	_ = cmd.Flags().Set("output", "json")
 
@@ -76,9 +76,9 @@ func TestFormatError_TableMode_NoJSON(t *testing.T) {
 	rErr, wErr, _ := os.Pipe()
 	os.Stderr = wErr
 
-	resetAllFlags(rootCmd)
-	rootCmd.SetArgs([]string{"search"})
-	cmd, _, _ := rootCmd.Find([]string{"search"})
+	resetAllFlags(RootCmd)
+	RootCmd.SetArgs([]string{"search"})
+	cmd, _, _ := RootCmd.Find([]string{"search"})
 	require.NotNil(t, cmd)
 	_ = cmd.Flags().Set("output", "table")
 

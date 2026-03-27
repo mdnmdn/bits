@@ -10,10 +10,10 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/mdnmdn/bits/internal/model"
-	"github.com/mdnmdn/bits/internal/provider"
 	"github.com/mdnmdn/bits/internal/config"
 	"github.com/mdnmdn/bits/internal/display"
+	"github.com/mdnmdn/bits/internal/model"
+	"github.com/mdnmdn/bits/internal/provider"
 
 	"github.com/spf13/cobra"
 )
@@ -50,7 +50,7 @@ func init() {
 	historyCmd.Flags().String("interval", "", "Data interval: daily, hourly (auto-batched for large ranges)")
 	historyCmd.Flags().Bool("ohlc", false, "Output OHLC data instead of price (for --days and --from/--to); --days only accepts 1,7,14,30,90,180,365,max in OHLC mode")
 	historyCmd.Flags().String("export", "", "Export to CSV file path")
-	rootCmd.AddCommand(historyCmd)
+	RootCmd.AddCommand(historyCmd)
 }
 
 func runHistory(cmd *cobra.Command, args []string) error {
@@ -337,7 +337,6 @@ func historyRange(ctx context.Context, client provider.HistoricalProvider, coinI
 		return err
 	}
 
-
 	// For hourly, always batch with auto-granularity (omit interval param).
 	// ≤90-day chunks trigger hourly auto-granularity on all plans.
 	if interval == "hourly" {
@@ -410,7 +409,6 @@ func historyOHLCRange(ctx context.Context, client provider.HistoricalProvider, c
 	if err != nil {
 		return err
 	}
-
 
 	if interval == "hourly" {
 		if err := checkHourlyAvailability(fromUnix); err != nil {

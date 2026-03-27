@@ -7,7 +7,7 @@ import (
 )
 
 func init() {
-	rootCmd.PersistentFlags().Bool("dry-run", false, "Preview API request without executing (JSON output)")
+	RootCmd.PersistentFlags().Bool("dry-run", false, "Preview API request without executing (JSON output)")
 }
 
 func isDryRun(cmd *cobra.Command) bool {

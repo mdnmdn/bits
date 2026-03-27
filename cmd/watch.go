@@ -33,7 +33,7 @@ var watchCmd = &cobra.Command{
 func init() {
 	watchCmd.Flags().String("ids", "", "Comma-separated coin IDs (e.g. bitcoin,ethereum)")
 	watchCmd.Flags().String("symbols", "", "Comma-separated symbols (e.g. btc,eth)")
-	rootCmd.AddCommand(watchCmd)
+	RootCmd.AddCommand(watchCmd)
 }
 
 func runWatch(cmd *cobra.Command, args []string) error {
@@ -78,8 +78,8 @@ func runWatch(cmd *cobra.Command, args []string) error {
 				Method: "GET",
 				URL:    cfg.BaseURL() + "/simple/price",
 				Params: map[string]string{
-					"ids":            idsStr,
-					"vs_currencies":  "usd",
+					"ids":                 idsStr,
+					"vs_currencies":       "usd",
 					"include_24hr_change": "true",
 				},
 				Headers: map[string]string{

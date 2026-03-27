@@ -41,7 +41,7 @@ func init() {
 
 	tuiCmd.AddCommand(tuiMarketsCmd)
 	tuiCmd.AddCommand(tuiTrendingCmd)
-	rootCmd.AddCommand(tuiCmd)
+	RootCmd.AddCommand(tuiCmd)
 }
 
 func runTUIMarkets(cmd *cobra.Command, args []string) error {

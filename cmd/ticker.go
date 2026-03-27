@@ -21,7 +21,7 @@ var tickerCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(tickerCmd)
+	RootCmd.AddCommand(tickerCmd)
 }
 
 func runTicker(cmd *cobra.Command, args []string) error {

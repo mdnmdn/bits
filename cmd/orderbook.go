@@ -22,7 +22,7 @@ var orderbookCmd = &cobra.Command{
 
 func init() {
 	orderbookCmd.Flags().Int("limit", 20, "Number of bid/ask levels to show")
-	rootCmd.AddCommand(orderbookCmd)
+	RootCmd.AddCommand(orderbookCmd)
 }
 
 func runOrderbook(cmd *cobra.Command, args []string) error {

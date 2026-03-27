@@ -24,8 +24,8 @@ var marketTypeOverride string
 
 func init() {
 	// Resolve --provider flag before any subcommand runs.
-	existing := rootCmd.PersistentPreRun
-	rootCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
+	existing := RootCmd.PersistentPreRun
+	RootCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
 		if p, _ := cmd.Flags().GetString("provider"); p != "" {
 			providerOverride = p
 		}

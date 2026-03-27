@@ -23,7 +23,7 @@ var authCmd = &cobra.Command{
 func init() {
 	authCmd.Flags().String("key", "", "CoinGecko API key")
 	authCmd.Flags().String("tier", "", "API tier (demo, paid)")
-	rootCmd.AddCommand(authCmd)
+	RootCmd.AddCommand(authCmd)
 }
 
 func runAuth(cmd *cobra.Command, args []string) error {

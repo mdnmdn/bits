@@ -155,7 +155,7 @@ var commandsCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(commandsCmd)
+	RootCmd.AddCommand(commandsCmd)
 }
 
 func runCommands(cmd *cobra.Command, args []string) error {
@@ -164,7 +164,7 @@ func runCommands(cmd *cobra.Command, args []string) error {
 		OASRepo: oasRepo,
 	}
 
-	for _, c := range rootCmd.Commands() {
+	for _, c := range RootCmd.Commands() {
 		if c.Hidden || c.Name() == "help" || c.Name() == "completion" {
 			continue
 		}

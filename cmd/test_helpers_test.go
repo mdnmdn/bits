@@ -50,8 +50,8 @@ func withTestClientPaid(t *testing.T, srv *httptest.Server) {
 	withTestClient(t, srv, "paid")
 }
 
-// executeCommand runs rootCmd with the given args and captures stdout/stderr.
-// It resets rootCmd args via t.Cleanup.
+// executeCommand runs RootCmd with the given args and captures stdout/stderr.
+// It resets RootCmd args via t.Cleanup.
 func executeCommand(t *testing.T, args ...string) (stdout, stderr string, err error) {
 	t.Helper()
 
@@ -66,15 +66,15 @@ func executeCommand(t *testing.T, args ...string) (stdout, stderr string, err er
 	os.Stderr = wErr
 
 	// Reset all flags to defaults before each run to prevent state leakage.
-	resetAllFlags(rootCmd)
+	resetAllFlags(RootCmd)
 
-	rootCmd.SetArgs(args)
-	rootCmd.SilenceUsage = true
-	rootCmd.SilenceErrors = true
+	RootCmd.SetArgs(args)
+	RootCmd.SilenceUsage = true
+	RootCmd.SilenceErrors = true
 	t.Cleanup(func() {
-		rootCmd.SetArgs(nil)
-		rootCmd.SilenceUsage = false
-		rootCmd.SilenceErrors = false
+		RootCmd.SetArgs(nil)
+		RootCmd.SilenceUsage = false
+		RootCmd.SilenceErrors = false
 	})
 
 	// Drain pipes concurrently to avoid deadlock if output exceeds pipe buffer.
@@ -85,7 +85,7 @@ func executeCommand(t *testing.T, args ...string) (stdout, stderr string, err er
 	go func() { defer wg.Done(); _, _ = io.Copy(&bufErr, rErr) }()
 
 	// Run the command — Cobra writes to os.Stdout/os.Stderr.
-	cmdErr := rootCmd.Execute()
+	cmdErr := RootCmd.Execute()
 
 	// Close write ends so readers finish, then wait.
 	_ = wOut.Close()
