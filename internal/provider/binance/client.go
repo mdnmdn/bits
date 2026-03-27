@@ -76,7 +76,13 @@ func (c *Client) Capabilities() capability.CapabilityMatrix {
 		spotEnabled = true
 	}
 
-	keys := make([]capability.CapabilityKey, 0, 16)
+	keys := make([]capability.CapabilityKey, 0, 20)
+
+	// ServerTime and ExchangeInfo are market-agnostic exchange features; register under spot.
+	keys = append(keys,
+		capability.CapabilityKey{Market: s, Feature: capability.FeatureServerTime},
+		capability.CapabilityKey{Market: s, Feature: capability.FeatureExchangeInfo},
+	)
 
 	if spotEnabled {
 		keys = append(keys,

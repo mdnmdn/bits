@@ -16,6 +16,8 @@ const (
 type Feature string
 
 const (
+	FeatureServerTime      Feature = "server_time"
+	FeatureExchangeInfo    Feature = "exchange_info"
 	FeaturePrice           Feature = "price"
 	FeatureCandles         Feature = "candles"
 	FeatureTicker24h       Feature = "ticker_24h"
@@ -56,6 +58,8 @@ func NewCapabilityMatrix(entries ...CapabilityKey) CapabilityMatrix {
 // AllFeatures returns features in a stable display order.
 func AllFeatures() []Feature {
 	return []Feature{
+		FeatureServerTime,
+		FeatureExchangeInfo,
 		FeaturePrice,
 		FeatureCandles,
 		FeatureTicker24h,

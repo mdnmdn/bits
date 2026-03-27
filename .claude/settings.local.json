@@ -14,7 +14,8 @@
       "Bash(git mv:*)",
       "Bash(./bits legacy:*)",
       "Bash(./bits --help)",
-      "Bash(go doc:*)"
+      "Bash(go doc:*)",
+      "Bash(./bits stream:*)"
     ]
   }
 }

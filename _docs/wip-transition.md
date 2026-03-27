@@ -466,7 +466,7 @@ All builds and tests pass.
 
 ---
 
-## Phase 6 — New commands
+## Phase 6 — New commands ✅ COMPLETED
 
 **Partially parallel. Build order is dependency-driven; see table.**
 
@@ -512,6 +512,28 @@ Each command follows the same pattern:
 5. `render.Render(os.Stdout, format, response)`
 
 **Gate per wave:** `go build ./cmd/...` + smoke-test the new commands.
+
+### Completion notes
+
+All 13 command files created in `cmd/`:
+
+- `factory.go` — `loadConfig()`, `newResolver()`, `resolveOpts()`, `resolveFormat()` helpers
+- `providers.go` — `bits providers` lists registered providers with active marker
+- `capabilities.go` — `bits capabilities [--provider id]` shows capability matrix
+- `time.go` — `bits time` via `ExchangeProvider.ServerTime()` + `TimeEnricher` processor
+- `price.go` — `bits price <id>...` via `PriceProvider.Price()` with `--currency` flag
+- `ticker.go` — `bits ticker <symbol>...` via `TickerProvider.Ticker24h()` with `FanOut` for multi-symbol
+- `book.go` — `bits book <symbol>` via `OrderBookProvider.OrderBook()` with `--depth` flag
+- `candles.go` — `bits candles <symbol>` via `CandleProvider.Candles()` with `--interval/--from/--to/--limit`
+- `info.go` — `bits info [--symbol S]` via `ExchangeProvider.ExchangeInfo()` with optional symbol filter
+- `markets.go` — `bits markets` via `AggregatorProvider.CoinMarkets()` with `--currency/--page/--per-page`
+- `stream.go` — subcommand group
+- `stream_price.go` — `bits stream price` via `PriceStreamProvider.WatchPrices()`
+- `stream_book.go` — `bits stream book` via `OrderBookStreamProvider.WatchOrderBook()`
+
+Also added `FeatureServerTime` and `FeatureExchangeInfo` to `internal/capability/capability.go` (required by `bits time` and `bits info`), and registered these features in `internal/provider/binance/client.go` and `internal/provider/bitget/client.go` capabilities.
+
+Build, vet, and all tests pass. All commands visible in `bits --help`.
 
 ---
 

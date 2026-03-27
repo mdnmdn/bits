@@ -1,0 +1,70 @@
+package cmd
+
+import (
+	"os"
+
+	"github.com/mdnmdn/bits/internal/capability"
+	"github.com/mdnmdn/bits/internal/process"
+	renderjson "github.com/mdnmdn/bits/internal/render/json"
+	rendertable "github.com/mdnmdn/bits/internal/render/table"
+	"github.com/mdnmdn/bits/internal/resolve"
+	"github.com/spf13/cobra"
+
+	"github.com/mdnmdn/bits/internal/provider"
+)
+
+var timeCmd = &cobra.Command{
+	Use:   "time",
+	Short: "Show exchange server time",
+	RunE:  runTime,
+}
+
+func init() {
+	RootCmd.AddCommand(timeCmd)
+}
+
+func runTime(cmd *cobra.Command, args []string) error {
+	cfg, err := loadConfig()
+	if err != nil {
+		return err
+	}
+
+	opts := resolveOpts(cmd)
+	format := resolveFormat(cmd)
+	resolver := newResolver(cfg)
+
+	p, market, fallback, rerr := resolver.Resolve(cmd.Context(), capability.FeatureServerTime, resolve.ResolutionOpts{
+		Provider: opts.Provider,
+		Market:   opts.Market,
+		Lock:     opts.Lock,
+	})
+	if rerr != nil {
+		return rerr
+	}
+
+	ep, rerr := resolve.Require[provider.ExchangeProvider](p, "server-time")
+	if rerr != nil {
+		return rerr
+	}
+
+	res, err := ep.ServerTime(cmd.Context())
+	if err != nil {
+		return err
+	}
+
+	if fallback {
+		res.Fallback = true
+		res.RequestedProvider = opts.Provider
+		res.RequestedMarket = opts.Market
+	}
+	res.Market = market
+
+	res = process.Apply(res, process.TimeEnricher)
+
+	switch format {
+	case "json":
+		return renderjson.Render(os.Stdout, res)
+	default:
+		return rendertable.RenderServerTime(os.Stdout, res)
+	}
+}
