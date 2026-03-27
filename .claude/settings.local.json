@@ -12,13 +12,6 @@
       "Bash(git rm:*)",
       "Bash(grep:*)",
       "Bash(git mv:*)",
-      "Bash(for f:*)",
-      "Bash(do echo:*)",
-      "Read(//Users/mdn/works/projects/bits/workspace/bits/**)",
-      "Bash(done)",
-      "Bash(xargs perl -i -pe ':*)",
-      "Bash(xargs perl:*)",
-      "Bash(head -3 /Users/mdn/works/projects/bits/workspace/bits/internal/legacy/cmd/root.go echo \"---\" grep -c \"^package legacycmd\" /Users/mdn/works/projects/bits/workspace/bits/internal/legacy/cmd/*.go echo \"---\" grep -rn \"RootCmd\\\\|\"\"github.com/mdnmdn/bits/internal/[^l]\" /Users/mdn/works/projects/bits/workspace/bits/internal/legacy/)",
       "Bash(./bits legacy:*)",
       "Bash(./bits --help)"
     ]

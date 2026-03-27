@@ -248,7 +248,7 @@ func Execute() {
 
 ---
 
-## Phase 2 — New model types
+## Phase 2 — New model types ✅ COMPLETED
 
 **Parallel (tasks 2.3–2.9). Preceded by sequential task 2.1.**
 
@@ -267,6 +267,10 @@ Each file is a bounded, independent agent task after `market.go` exists.
 | 2.9 | `errors.go` — `ErrUnsupportedMarket`, `ErrUnsupportedFeature` | ‖ after 2.1 | `internal/model/errors.go` |
 
 **Gate:** `go build ./internal/model/...`
+
+### Completion notes
+
+All 9 files created in `internal/model/`: `market.go`, `response.go`, `exchange.go`, `candle.go`, `ticker.go`, `orderbook.go`, `price.go`, `coin.go`, `errors.go`. Types match `data-model.md` exactly. `go build` and `go vet` pass.
 
 Key types for agent reference:
 
