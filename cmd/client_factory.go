@@ -65,9 +65,13 @@ var newAPIClient = func(cfg *config.Config) provider.Provider {
 	return c
 }
 
-// loadConfig is the function used by command handlers to load configuration.
-// Tests override this to inject test configs without touching the real config file.
-var loadConfig = config.Load
+var loadedConfigPath string
+
+var loadConfig = func() (*config.Config, error) {
+	cfg, path, err := config.Load()
+	loadedConfigPath = path
+	return cfg, err
+}
 
 // Streamer abstracts the WebSocket streaming client for testability.
 type Streamer interface {

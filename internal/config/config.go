@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/spf13/viper"
@@ -99,38 +100,106 @@ type Config struct {
 	Bitget    BitgetConfig    `mapstructure:"bitget"`
 }
 
-func configDir() (string, error) {
-	dir, err := os.UserConfigDir()
-	if err != nil {
-		return "", fmt.Errorf("failed to get config directory: %w", err)
+func ConfigDirs() []string {
+	var dirs []string
+
+	// 1. Local directory (current working directory)
+	if cwd, err := os.Getwd(); err == nil {
+		dirs = append(dirs, cwd)
 	}
-	return filepath.Join(dir, "coingecko-cli"), nil
+
+	// 2. Platform-specific config directories
+	switch runtime.GOOS {
+	case "windows":
+		// Windows: %APPDATA%\bits (roaming) and %LOCALAPPDATA%\bits (local)
+		if appData := os.Getenv("APPDATA"); appData != "" {
+			dirs = append(dirs, filepath.Join(appData, "bits"))
+		}
+		if localAppData := os.Getenv("LOCALAPPDATA"); localAppData != "" {
+			dirs = append(dirs, filepath.Join(localAppData, "bits"))
+		}
+	case "darwin":
+		// macOS: ~/Library/Application Support/bits-cli
+		if appSupport, err := os.UserConfigDir(); err == nil {
+			dirs = append(dirs, filepath.Join(appSupport, "bits-cli"))
+		}
+		fallthrough
+	default:
+		// Linux/Unix: XDG_CONFIG_HOME/bits or ~/.config/bits
+		if configHome := os.Getenv("XDG_CONFIG_HOME"); configHome != "" {
+			dirs = append(dirs, filepath.Join(configHome, "bits"))
+		} else if userConfig, err := os.UserConfigDir(); err == nil {
+			dirs = append(dirs, filepath.Join(userConfig, "bits"))
+		}
+	}
+
+	// Also add fallback for macOS in case fallthrough didn't work
+	if runtime.GOOS == "darwin" {
+		if configHome := os.Getenv("XDG_CONFIG_HOME"); configHome != "" {
+			dirs = append(dirs, filepath.Join(configHome, "bits"))
+		} else if userConfig, err := os.UserConfigDir(); err == nil {
+			dirs = append(dirs, filepath.Join(userConfig, "bits"))
+		}
+	}
+
+	return dirs
 }
 
-func Load() (*Config, error) {
-	dir, err := configDir()
-	if err != nil {
-		return nil, err
+func configDir() string {
+	dirs := ConfigDirs()
+	if len(dirs) > 1 {
+		return dirs[1]
 	}
+	if len(dirs) > 0 {
+		return dirs[0]
+	}
+	return ""
+}
+
+func Load() (*Config, string, error) {
+	dirs := ConfigDirs()
 
 	v := viper.New()
-	v.SetConfigFile(filepath.Join(dir, "config.yaml"))
+	v.SetConfigName("config")
+	for _, dir := range dirs {
+		v.AddConfigPath(dir)
+	}
 	v.SetDefault("coingecko.tier", TierDemo)
 	v.SetDefault("provider", "coingecko")
 	v.SetDefault("binance.spot.enabled", true)
 
 	if err := v.ReadInConfig(); err != nil {
-		if !os.IsNotExist(err) {
-			return nil, fmt.Errorf("failed to read config: %w", err)
+		// Ignore "config file not found" errors - use defaults
+		if !os.IsNotExist(err) && !strings.Contains(err.Error(), "Not Found") {
+			return nil, "", fmt.Errorf("failed to read config: %w", err)
+		}
+	}
+
+	configFile := v.ConfigFileUsed()
+
+	// Check for .env files in config directories
+	var envVars map[string]string
+	for _, dir := range dirs {
+		envPath := filepath.Join(dir, ".env")
+		if data, err := os.ReadFile(envPath); err == nil {
+			envVars = parseEnvFileToMap(string(data))
+			if configFile == "" {
+				configFile = envPath
+			}
+			// Found .env, no need to check other directories
+			break
 		}
 	}
 
 	var cfg Config
 	if err := v.Unmarshal(&cfg); err != nil {
-		return nil, fmt.Errorf("failed to parse config: %w", err)
+		return nil, "", fmt.Errorf("failed to parse config: %w", err)
 	}
 
-	// Apply env var overrides (BITS_ prefix, env vars take priority)
+	// Apply .env file overrides
+	applyEnvMap(envVars, &cfg)
+
+	// Apply env var overrides (BITS_* prefix, env vars take priority)
 	applyEnvOverrides(&cfg)
 
 	// Default CoinGecko tier if not set
@@ -138,7 +207,204 @@ func Load() (*Config, error) {
 		cfg.CoinGecko.Tier = TierDemo
 	}
 
-	return &cfg, nil
+	return &cfg, configFile, nil
+}
+
+var ConfigTemplate = `# bits Configuration
+# Supported formats: .yaml, .yml, .toml, .json
+
+# Active provider (coingecko, binance, bitget)
+provider = "coingecko"
+
+# CoinGecko configuration
+[coingecko]
+api_key = ""           # Your CoinGecko API key
+tier = "demo"          # demo or paid
+# base_url = ""        # optional custom endpoint
+
+# Binance configuration (shared API key for all markets)
+[binance]
+api_key = ""
+api_secret = ""
+# base_url = "https://api.binance.com"
+
+[binance.spot]
+enabled = true
+
+[binance.margin]
+enabled = false
+
+[binance.futures]
+enabled = false
+use_testnet = false
+
+# Bitget configuration (shared API key for all markets)
+[bitget]
+api_key = ""
+api_secret = ""
+# passphrase = ""      # required for authenticated endpoints
+# base_url = "https://api.bitget.com"
+
+[bitget.spot]
+enabled = false
+
+[bitget.futures]
+enabled = false
+`
+
+func defaultSaveDir() string {
+	switch runtime.GOOS {
+	case "windows":
+		if appData := os.Getenv("APPDATA"); appData != "" {
+			return filepath.Join(appData, "bits")
+		}
+	case "darwin":
+		if appSupport, err := os.UserConfigDir(); err == nil {
+			return filepath.Join(appSupport, "bits")
+		}
+	default:
+		if configHome := os.Getenv("XDG_CONFIG_HOME"); configHome != "" {
+			return filepath.Join(configHome, "bits")
+		} else if userConfig, err := os.UserConfigDir(); err == nil {
+			return filepath.Join(userConfig, "bits")
+		}
+	}
+	return ""
+}
+
+func Init(local bool) (string, error) {
+	dirs := ConfigDirs()
+	var dir string
+
+	if local {
+		dir = dirs[0] // Local directory
+	} else {
+		// Use platform-specific default save directory
+		dir = defaultSaveDir()
+		if dir == "" {
+			// Fallback to second directory in ConfigDirs
+			if len(dirs) > 1 {
+				dir = dirs[1]
+			} else if len(dirs) > 0 {
+				dir = dirs[0]
+			}
+		}
+	}
+
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return "", fmt.Errorf("failed to create config directory: %w", err)
+	}
+
+	// Check for existing config file with any supported extension
+	for _, ext := range []string{".yaml", ".yml", ".toml", ".json"} {
+		configFile := filepath.Join(dir, "config"+ext)
+		if _, err := os.Stat(configFile); err == nil {
+			return configFile, nil // File already exists
+		}
+	}
+
+	configFile := filepath.Join(dir, "config.yaml")
+	if err := os.WriteFile(configFile, []byte(ConfigTemplate), 0o644); err != nil {
+		return "", fmt.Errorf("failed to write config file: %w", err)
+	}
+
+	return configFile, nil
+}
+
+func parseEnvFileToMap(data string) map[string]string {
+	result := make(map[string]string)
+	lines := strings.Split(data, "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		parts := strings.SplitN(line, "=", 2)
+		if len(parts) != 2 {
+			continue
+		}
+		key := strings.TrimSpace(parts[0])
+		value := strings.TrimSpace(parts[1])
+
+		if len(value) >= 2 {
+			if (value[0] == '"' && value[len(value)-1] == '"') ||
+				(value[0] == '\'' && value[len(value)-1] == '\'') {
+				value = value[1 : len(value)-1]
+			}
+		}
+
+		key = strings.ToLower(key)
+		key = strings.TrimPrefix(key, "bits_")
+		// Replace __ with . for nested keys
+		key = strings.ReplaceAll(key, "__", ".")
+		// For keys without dots, split on first underscore only:
+		// COINGECKO_API_KEY -> coingecko.api_key
+		// BITGET_API_KEY -> bitget.api_key
+		if !strings.Contains(key, ".") {
+			if idx := strings.Index(key, "_"); idx > 0 {
+				key = key[:idx] + "." + key[idx+1:]
+			}
+		}
+		result[key] = value
+	}
+	return result
+}
+
+func applyEnvMap(envVars map[string]string, cfg *Config) {
+	if envVars == nil {
+		return
+	}
+	if v, ok := envVars["provider"]; ok {
+		cfg.Provider = v
+	}
+	if v, ok := envVars["coingecko.api_key"]; ok {
+		cfg.CoinGecko.APIKey = v
+	}
+	if v, ok := envVars["coingecko.tier"]; ok {
+		cfg.CoinGecko.Tier = v
+	}
+	if v, ok := envVars["coingecko.base_url"]; ok {
+		cfg.CoinGecko.BaseURL = v
+	}
+	if v, ok := envVars["binance.api_key"]; ok {
+		cfg.Binance.APIKey = v
+	}
+	if v, ok := envVars["binance.api_secret"]; ok {
+		cfg.Binance.APISecret = v
+	}
+	if v, ok := envVars["binance.base_url"]; ok {
+		cfg.Binance.BaseURL = v
+	}
+	if v, ok := envVars["binance.spot.enabled"]; ok {
+		cfg.Binance.Spot.Enabled = v == "true" || v == "1"
+	}
+	if v, ok := envVars["binance.margin.enabled"]; ok {
+		cfg.Binance.Margin.Enabled = v == "true" || v == "1"
+	}
+	if v, ok := envVars["binance.futures.enabled"]; ok {
+		cfg.Binance.Futures.Enabled = v == "true" || v == "1"
+	}
+	if v, ok := envVars["binance.futures.use_testnet"]; ok {
+		cfg.Binance.Futures.UseTestnet = v == "true" || v == "1"
+	}
+	if v, ok := envVars["bitget.api_key"]; ok {
+		cfg.Bitget.APIKey = v
+	}
+	if v, ok := envVars["bitget.api_secret"]; ok {
+		cfg.Bitget.APISecret = v
+	}
+	if v, ok := envVars["bitget.passphrase"]; ok {
+		cfg.Bitget.Passphrase = v
+	}
+	if v, ok := envVars["bitget.base_url"]; ok {
+		cfg.Bitget.BaseURL = v
+	}
+	if v, ok := envVars["bitget.spot.enabled"]; ok {
+		cfg.Bitget.Spot.Enabled = v == "true" || v == "1"
+	}
+	if v, ok := envVars["bitget.futures.enabled"]; ok {
+		cfg.Bitget.Futures.Enabled = v == "true" || v == "1"
+	}
 }
 
 // applyEnvOverrides applies BITS_* environment variable overrides to the config.
@@ -214,9 +480,13 @@ func (c *Config) ActiveProvider() string {
 }
 
 func Save(cfg *Config) error {
-	dir, err := configDir()
-	if err != nil {
-		return err
+	dir := defaultSaveDir()
+	if dir == "" {
+		// Fallback to ConfigDirs
+		dirs := ConfigDirs()
+		if len(dirs) > 0 {
+			dir = dirs[0]
+		}
 	}
 
 	if err := os.MkdirAll(dir, 0o700); err != nil {

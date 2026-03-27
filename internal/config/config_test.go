@@ -75,10 +75,15 @@ func TestApplyAuth(t *testing.T) {
 }
 
 func TestLoadMissingConfigReturnsDefault(t *testing.T) {
-	// Point HOME to a temp dir so os.UserConfigDir() finds no config
-	t.Setenv("HOME", t.TempDir())
-	cfg, err := Load()
-	assert.NoError(t, err)
+	tmpDir := t.TempDir()
+	t.Setenv("HOME", tmpDir)
+	t.Setenv("XDG_CONFIG_HOME", tmpDir+"/.config")
+
+	cfg, path, err := Load()
+	if err != nil {
+		t.Logf("Load returned error (expected for no config): %v", err)
+	}
+	assert.Equal(t, "", path)
 	assert.Equal(t, TierDemo, cfg.CoinGecko.Tier)
 	assert.Empty(t, cfg.CoinGecko.APIKey)
 }

@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/mdnmdn/bits/internal/config"
 	"github.com/spf13/cobra"
 )
 
@@ -17,8 +18,18 @@ var configShowCmd = &cobra.Command{
 	RunE:  runConfigShow,
 }
 
+var configInitCmd = &cobra.Command{
+	Use:   "init",
+	Short: "Create a new configuration file",
+	RunE:  runConfigInit,
+}
+
+var initLocal bool
+
 func init() {
 	configCmd.AddCommand(configShowCmd)
+	configCmd.AddCommand(configInitCmd)
+	configInitCmd.Flags().BoolVarP(&initLocal, "local", "l", false, "Create config in current directory")
 	rootCmd.AddCommand(configCmd)
 }
 
@@ -34,6 +45,7 @@ func runConfigShow(cmd *cobra.Command, args []string) error {
 		return printJSONRaw(redacted)
 	}
 
+	fmt.Printf("Config: %s\n\n", loadedConfigPath)
 	fmt.Printf("Provider: %s\n\n", redacted.Provider)
 
 	fmt.Println("CoinGecko:")
@@ -57,5 +69,14 @@ func runConfigShow(cmd *cobra.Command, args []string) error {
 	fmt.Printf("  Spot:    Enabled=%v\n", redacted.Bitget.Spot.Enabled)
 	fmt.Printf("  Futures: Enabled=%v\n", redacted.Bitget.Futures.Enabled)
 
+	return nil
+}
+
+func runConfigInit(cmd *cobra.Command, args []string) error {
+	path, err := config.Init(initLocal)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("Config file created: %s\n", path)
 	return nil
 }
