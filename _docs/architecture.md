@@ -21,24 +21,38 @@ internal/provider/types.go
 ├── GainersLosersProvider     → TopGainersLosers
 ├── DetailProvider            → CoinDetail
 ├── TickerProvider            → Ticker24h
-└── OrderBookProvider         → OrderBook
+├── OrderBookProvider         → OrderBook
+└── CapabilityProvider        → Capabilities() CapabilityMatrix
+
+internal/capability/capability.go
+├── MarketType                → spot | futures | margin
+├── Feature                   → price | candles | ticker_24h | order_book | ...
+├── CapabilityKey             → { Market, Feature }
+├── CapabilityMatrix          → map[CapabilityKey]bool
+├── CapabilityProvider        → Capabilities() CapabilityMatrix
+├── NewCapabilityMatrix(...)  → helper constructor
+├── AllFeatures()             → ordered feature list
+└── AllMarkets()              → ordered market type list
 ```
 
 ### Provider Capabilities
 
-| Capability | CoinGecko | Binance | Bitget |
-|-----------|-----------|---------|--------|
-| Price (SimplePrice) | Yes | Yes | Yes |
-| OHLC/Candles | Yes | Yes | Yes |
-| Symbol Price Lookup | Yes | — | — |
-| Market Listings | Yes | — | — |
-| Search | Yes | — | — |
-| Trending | Yes | — | — |
-| Historical Charts | Yes | — | — |
-| Gainers/Losers | Yes | — | — |
-| Coin Detail | Yes | — | — |
-| 24h Ticker | — | Yes | Yes |
-| Order Book | — | Yes | — |
+| Capability           | CoinGecko (spot) | Binance (spot) | Binance (futures) | Bitget (spot) | Bitget (futures) |
+|----------------------|:----------------:|:--------------:|:-----------------:|:-------------:|:----------------:|
+| Price                | Yes              | Yes            | Yes               | Yes           | Yes              |
+| Candles / OHLC       | Yes              | Yes            | Yes               | Yes           | Yes              |
+| 24h Ticker           | —                | Yes            | Yes               | Yes           | Yes              |
+| Order Book           | —                | Yes            | Yes               | —             | —                |
+| Coin Info            | Yes              | —              | —                 | —             | —                |
+| Markets List         | Yes              | —              | —                 | —             | —                |
+| Search               | Yes              | —              | —                 | —             | —                |
+| Trending             | Yes              | —              | —                 | —             | —                |
+| Historical Charts    | Yes              | —              | —                 | —             | —                |
+| Gainers / Losers     | Yes              | —              | —                 | —             | —                |
+| Stream: Price        | Yes              | —              | —                 | —             | —                |
+| Stream: Order Book   | —                | Yes            | —                 | —             | —                |
+
+Use `bits capabilities` to view this matrix in the terminal at any time.
 
 ### Generic Data Model
 
@@ -128,9 +142,10 @@ Resolution order: `--provider` flag → `BITS_PROVIDER` env → config file → 
 1. Create `internal/provider/<name>/` with `client.go`, `types.go`, `market.go`
 2. Implement at minimum the `Provider` interface (ID, SetUserAgent, SimplePrice, CoinOHLC)
 3. Implement additional capability interfaces as supported
-4. Add a config struct in `internal/config/config.go`
-5. Register in `internal/provider/registry.go`
-6. Add env var overrides in `config.applyEnvOverrides()`
+4. Add `capabilities.go` implementing `CapabilityProvider` (import `internal/capability`)
+5. Add a config struct in `internal/config/config.go`
+6. Register in `internal/provider/registry.go`
+7. Add env var overrides in `config.applyEnvOverrides()`
 
 ## Project Structure
 
@@ -142,14 +157,18 @@ bits/
 │   ├── client_factory.go             # Provider instantiation with flag resolution
 │   ├── price.go, markets.go, ...     # Commands with capability checks
 │   ├── ticker.go                     # 24h ticker (Binance/Bitget)
-│   └── orderbook.go                  # Order book (Binance)
+│   ├── orderbook.go                  # Order book (Binance)
+│   └── capabilities.go               # Provider capability matrix command
 ├── internal/
+│   ├── capability/                   # Capability matrix types (standalone, no project imports)
+│   │   └── capability.go             # MarketType, Feature, CapabilityKey, CapabilityMatrix
 │   ├── model/                        # Provider-agnostic data types and errors
 │   │   ├── types.go
 │   │   └── errors.go
 │   ├── provider/
-│   │   ├── types.go                  # Capability interfaces
-│   │   ├── registry.go               # Provider factory
+│   │   ├── types.go                  # Provider interfaces
+│   │   ├── capabilities.go           # Re-exports from internal/capability
+│   │   ├── registry.go               # Provider factory + AllCapabilities()
 │   │   ├── coingecko/                # CoinGecko implementation
 │   │   ├── binance/                  # Binance implementation
 │   │   └── bitget/                   # Bitget implementation

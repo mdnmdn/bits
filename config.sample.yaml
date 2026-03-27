@@ -1,0 +1,25 @@
+# bits Configuration
+# Copy to ~/.config/coingecko-cli/config.yaml
+
+# Active provider (coingecko, binance, bitget)
+provider: coingecko
+
+# CoinGecko credentials
+api_key: ""
+tier: demo  # demo or paid
+
+# Binance configuration
+binance:
+  api_key: ""
+  api_secret: ""
+  use_testnet: false
+  market_type: spot  # spot, margin, or future
+  base_url: ""  # optional custom endpoint
+
+# Bitget configuration
+bitget:
+  key: ""
+  secret: ""
+  passphrase: ""
+  market_type: spot  # spot or future
+  base_url: ""  # optional custom endpoint

@@ -67,6 +67,19 @@ bits orderbook BTCUSDT -p binance           # Binance order book
 - List coins with the highest gains and losses over a 24h period.
 - Supported by: CoinGecko.
 
+### `bits capabilities` (alias: `bits caps`)
+- Display a matrix of which features are supported by each provider and market type.
+- Rows show features × market types (spot, futures, margin); columns show providers.
+- Filter to a single provider with `--provider` / `-p`.
+- Machine-readable JSON output via `-o json`.
+- Requires no API key — reads static provider declarations.
+- Example:
+  ```
+  bits capabilities
+  bits caps -p binance
+  bits capabilities -o json
+  ```
+
 ### `bits status`
 - Display current CLI configuration, including active provider, API tiers, and masked keys.
 
