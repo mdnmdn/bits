@@ -48,9 +48,8 @@ func init() {
 	historyCmd.Flags().String("to", "", "Range end date (YYYY-MM-DD)")
 	historyCmd.Flags().String("vs", "usd", "Target currency")
 	historyCmd.Flags().String("interval", "", "Data interval: daily, hourly (auto-batched for large ranges)")
-	historyCmd.Flags().Bool("ohlc", false, "Output OHLC data instead of price (for --days and --from/--to); --days only accepts 1,7,14,30,90,180,365,max in OHLC mode")
+	historyCmd.Flags().Bool("ohlc", false, "Output OHLC data instead of price (for --days and --from/--to); --days only accepts 1,7,14,30,90,180,365,max in OHLC mode)")
 	historyCmd.Flags().String("export", "", "Export to CSV file path")
-	RootCmd.AddCommand(historyCmd)
 }
 
 func runHistory(cmd *cobra.Command, args []string) error {

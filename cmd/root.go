@@ -3,8 +3,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-
-	"github.com/mdnmdn/bits/internal/display"
 	"github.com/spf13/cobra"
 )
 
@@ -19,10 +17,9 @@ var RootCmd = &cobra.Command{
 	Short:   "bits CLI — cryptocurrency data at your fingertips",
 	Long:    "A command-line tool for accessing multi-provider cryptocurrency market data.",
 	Version: version,
-	Run: func(cmd *cobra.Command, args []string) {
-		display.PrintLogo()
-		display.PrintWelcomeBox()
-	},
+	// Run: func(cmd *cobra.Command, args []string) {
+	// 	display.PrintLogo()
+	// },
 }
 
 func init() {

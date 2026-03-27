@@ -24,7 +24,6 @@ func init() {
 	marketsCmd.Flags().String("order", "market_cap_desc", "Sort order")
 	marketsCmd.Flags().String("category", "", "Filter by category")
 	marketsCmd.Flags().String("export", "", "Export to CSV file path")
-	RootCmd.AddCommand(marketsCmd)
 }
 
 func runMarkets(cmd *cobra.Command, args []string) error {

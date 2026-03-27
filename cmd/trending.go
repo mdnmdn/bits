@@ -21,7 +21,6 @@ var trendingCmd = &cobra.Command{
 
 func init() {
 	trendingCmd.Flags().String("show-max", "", "Show max results for types: coins, nfts, categories (comma-separated, paid plans only)")
-	RootCmd.AddCommand(trendingCmd)
 }
 
 func runTrending(cmd *cobra.Command, args []string) error {
