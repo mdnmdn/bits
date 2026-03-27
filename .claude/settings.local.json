@@ -16,7 +16,17 @@
       "Bash(./bits --help)",
       "Bash(go doc:*)",
       "Bash(./bits stream:*)",
-      "Bash(./bits capabilities:*)"
+      "Bash(./bits capabilities:*)",
+      "Bash(./bits providers:*)",
+      "Bash(./bits price:*)",
+      "Bash(./bits caps:*)",
+      "Bash(./bits candles:*)",
+      "Bash(./bits time:*)",
+      "Bash(./bits ticker:*)",
+      "Bash(echo \"Exit code: $?\")",
+      "Bash(./bits info:*)",
+      "Bash(./bits markets:*)",
+      "Bash(./bits book:*)"
     ]
   }
 }
