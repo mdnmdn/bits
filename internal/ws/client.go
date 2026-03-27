@@ -10,9 +10,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/mdnmdn/bits/internal/model"
-	"github.com/mdnmdn/bits/internal/config"
 	"github.com/gorilla/websocket"
+	"github.com/mdnmdn/bits/internal/config"
+	"github.com/mdnmdn/bits/internal/model"
 )
 
 const (
@@ -40,9 +40,9 @@ type Client struct {
 	conn    *websocket.Conn
 	updates chan *model.CoinUpdate
 	done    chan struct{} // closed when readLoop exits for good
-	started atomic.Bool  // true once readLoop goroutine is launched
-	closing atomic.Bool  // set by Close(), suppresses reconnect
-	mu      sync.Mutex   // protects conn
+	started atomic.Bool   // true once readLoop goroutine is launched
+	closing atomic.Bool   // set by Close(), suppresses reconnect
+	mu      sync.Mutex    // protects conn
 }
 
 // NewClient creates a new WebSocket streaming client.
@@ -124,7 +124,7 @@ func (c *Client) Close() error {
 
 // connect dials the WebSocket endpoint and waits for the welcome message.
 func (c *Client) connect(ctx context.Context) error {
-	url := c.wsURL + "?x_cg_pro_api_key=" + c.cfg.APIKey
+	url := c.wsURL + "?x_cg_pro_api_key=" + c.cfg.CoinGecko.APIKey
 
 	header := http.Header{}
 	header.Set("User-Agent", c.UserAgent)

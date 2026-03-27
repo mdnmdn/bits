@@ -27,35 +27,76 @@ const (
 
 var ValidTiers = []string{TierDemo, TierPaid}
 
-// BinanceConfig holds Binance API credentials.
+// MarketConfig holds settings for a specific market type.
+type MarketConfig struct {
+	Enabled    bool `mapstructure:"enabled"`
+	UseTestnet bool `mapstructure:"use_testnet"`
+}
+
+// CoinGeckoConfig holds CoinGecko API credentials.
+type CoinGeckoConfig struct {
+	APIKey  string `mapstructure:"api_key"`
+	Tier    string `mapstructure:"tier"`
+	BaseURL string `mapstructure:"base_url"`
+}
+
+func (c CoinGeckoConfig) IsPaid() bool {
+	return strings.ToLower(c.Tier) == TierPaid
+}
+
+func (c CoinGeckoConfig) GetBaseURL() string {
+	if c.IsPaid() {
+		return proBaseURL
+	}
+	if c.BaseURL != "" {
+		return c.BaseURL
+	}
+	return demoBaseURL
+}
+
+func (c CoinGeckoConfig) GetAuthHeader() (string, string) {
+	if c.IsPaid() {
+		return proHeaderKey, c.APIKey
+	}
+	return demoHeaderKey, c.APIKey
+}
+
+// BinanceConfig holds Binance API credentials for all market types.
 type BinanceConfig struct {
-	APIKey     string `mapstructure:"api_key"`
-	APISecret  string `mapstructure:"api_secret"`
-	BaseURL    string `mapstructure:"base_url"`
-	UseTestnet bool   `mapstructure:"use_testnet"`
-	MarketType string `mapstructure:"market_type"`
+	APIKey    string       `mapstructure:"api_key"`
+	APISecret string       `mapstructure:"api_secret"`
+	BaseURL   string       `mapstructure:"base_url"`
+	Spot      MarketConfig `mapstructure:"spot"`
+	Margin    MarketConfig `mapstructure:"margin"`
+	Futures   MarketConfig `mapstructure:"futures"`
 }
 
-// BitgetConfig holds Bitget API credentials.
+// BitgetConfig holds Bitget API credentials for all market types.
 type BitgetConfig struct {
-	Key        string `mapstructure:"key"`
-	Secret     string `mapstructure:"secret"`
-	Passphrase string `mapstructure:"passphrase"`
-	BaseURL    string `mapstructure:"base_url"`
-	MarketType string `mapstructure:"market_type"`
+	APIKey     string       `mapstructure:"api_key"`
+	APISecret  string       `mapstructure:"api_secret"`
+	Passphrase string       `mapstructure:"passphrase"`
+	BaseURL    string       `mapstructure:"base_url"`
+	Spot       MarketConfig `mapstructure:"spot"`
+	Futures    MarketConfig `mapstructure:"futures"`
 }
 
+func (c BinanceConfig) IsSpotEnabled() bool    { return c.Spot.Enabled }
+func (c BinanceConfig) IsMarginEnabled() bool  { return c.Margin.Enabled }
+func (c BinanceConfig) IsFuturesEnabled() bool { return c.Futures.Enabled }
+
+func (c BitgetConfig) IsSpotEnabled() bool    { return c.Spot.Enabled }
+func (c BitgetConfig) IsFuturesEnabled() bool { return c.Futures.Enabled }
+
+// Config holds all provider configurations.
 type Config struct {
 	// Active provider (coingecko, binance, bitget)
 	Provider string `mapstructure:"provider"`
 
-	// CoinGecko credentials (backward compatible)
-	APIKey string `mapstructure:"api_key"`
-	Tier   string `mapstructure:"tier"`
-
-	// Exchange provider configs
-	Binance BinanceConfig `mapstructure:"binance"`
-	Bitget  BitgetConfig  `mapstructure:"bitget"`
+	// Provider configs
+	CoinGecko CoinGeckoConfig `mapstructure:"coingecko"`
+	Binance   BinanceConfig   `mapstructure:"binance"`
+	Bitget    BitgetConfig    `mapstructure:"bitget"`
 }
 
 func configDir() (string, error) {
@@ -74,8 +115,9 @@ func Load() (*Config, error) {
 
 	v := viper.New()
 	v.SetConfigFile(filepath.Join(dir, "config.yaml"))
-	v.SetDefault("tier", TierDemo)
+	v.SetDefault("coingecko.tier", TierDemo)
 	v.SetDefault("provider", "coingecko")
+	v.SetDefault("binance.spot.enabled", true)
 
 	if err := v.ReadInConfig(); err != nil {
 		if !os.IsNotExist(err) {
@@ -91,6 +133,11 @@ func Load() (*Config, error) {
 	// Apply env var overrides (BITS_ prefix, env vars take priority)
 	applyEnvOverrides(&cfg)
 
+	// Default CoinGecko tier if not set
+	if cfg.CoinGecko.Tier == "" {
+		cfg.CoinGecko.Tier = TierDemo
+	}
+
 	return &cfg, nil
 }
 
@@ -101,33 +148,60 @@ func applyEnvOverrides(cfg *Config) {
 	}
 	// CoinGecko
 	if v := os.Getenv("BITS_COINGECKO_API_KEY"); v != "" {
-		cfg.APIKey = v
+		cfg.CoinGecko.APIKey = v
 	}
 	if v := os.Getenv("BITS_COINGECKO_TIER"); v != "" {
-		cfg.Tier = v
+		cfg.CoinGecko.Tier = v
 	}
-	// Binance
+	if v := os.Getenv("BITS_COINGECKO_BASE_URL"); v != "" {
+		cfg.CoinGecko.BaseURL = v
+	}
+	// Binance (shared key for all markets)
 	if v := os.Getenv("BITS_BINANCE_API_KEY"); v != "" {
 		cfg.Binance.APIKey = v
 	}
 	if v := os.Getenv("BITS_BINANCE_API_SECRET"); v != "" {
 		cfg.Binance.APISecret = v
 	}
-	if v := os.Getenv("BITS_BINANCE_MARKET_TYPE"); v != "" {
-		cfg.Binance.MarketType = v
+	if v := os.Getenv("BITS_BINANCE_BASE_URL"); v != "" {
+		cfg.Binance.BaseURL = v
 	}
-	// Bitget
-	if v := os.Getenv("BITS_BITGET_KEY"); v != "" {
-		cfg.Bitget.Key = v
+	// Binance market-specific settings
+	if v := os.Getenv("BITS_BINANCE_SPOT_ENABLED"); v != "" {
+		cfg.Binance.Spot.Enabled = v == "true" || v == "1"
 	}
-	if v := os.Getenv("BITS_BITGET_SECRET"); v != "" {
-		cfg.Bitget.Secret = v
+	if v := os.Getenv("BITS_BINANCE_MARGIN_ENABLED"); v != "" {
+		cfg.Binance.Margin.Enabled = v == "true" || v == "1"
+	}
+	if v := os.Getenv("BITS_BINANCE_FUTURES_ENABLED"); v != "" {
+		cfg.Binance.Futures.Enabled = v == "true" || v == "1"
+	}
+	if v := os.Getenv("BITS_BINANCE_FUTURES_USE_TESTNET"); v != "" {
+		cfg.Binance.Futures.UseTestnet = v == "true" || v == "1"
+	}
+	// Bitget (shared key for all markets)
+	if v := os.Getenv("BITS_BITGET_API_KEY"); v != "" {
+		cfg.Bitget.APIKey = v
+	}
+	if v := os.Getenv("BITS_BITGET_API_SECRET"); v != "" {
+		cfg.Bitget.APISecret = v
 	}
 	if v := os.Getenv("BITS_BITGET_PASSPHRASE"); v != "" {
 		cfg.Bitget.Passphrase = v
 	}
-	if v := os.Getenv("BITS_BITGET_MARKET_TYPE"); v != "" {
-		cfg.Bitget.MarketType = v
+	if v := os.Getenv("BITS_BITGET_BASE_URL"); v != "" {
+		cfg.Bitget.BaseURL = v
+	}
+	// Bitget market-specific settings
+	if v := os.Getenv("BITS_BITGET_SPOT_ENABLED"); v != "" {
+		cfg.Bitget.Spot.Enabled = v == "true" || v == "1"
+	}
+	if v := os.Getenv("BITS_BITGET_FUTURES_ENABLED"); v != "" {
+		cfg.Bitget.Futures.Enabled = v == "true" || v == "1"
+	}
+	// Legacy env var support for Bitget passphrase
+	if v := os.Getenv("BITS_BITGET_PASSPHRASE"); v != "" {
+		cfg.Bitget.Passphrase = v
 	}
 }
 
@@ -150,8 +224,16 @@ func Save(cfg *Config) error {
 	}
 
 	v := viper.New()
-	v.Set("api_key", cfg.APIKey)
-	v.Set("tier", cfg.Tier)
+	v.Set("coingecko.api_key", cfg.CoinGecko.APIKey)
+	v.Set("coingecko.tier", cfg.CoinGecko.Tier)
+	v.Set("coingecko.base_url", cfg.CoinGecko.BaseURL)
+	v.Set("binance.api_key", cfg.Binance.APIKey)
+	v.Set("binance.api_secret", cfg.Binance.APISecret)
+	v.Set("binance.base_url", cfg.Binance.BaseURL)
+	v.Set("bitget.api_key", cfg.Bitget.APIKey)
+	v.Set("bitget.api_secret", cfg.Bitget.APISecret)
+	v.Set("bitget.passphrase", cfg.Bitget.Passphrase)
+	v.Set("bitget.base_url", cfg.Bitget.BaseURL)
 
 	path := filepath.Join(dir, "config.yaml")
 	if err := v.WriteConfigAs(path); err != nil {
@@ -161,28 +243,22 @@ func Save(cfg *Config) error {
 }
 
 func (c *Config) BaseURL() string {
-	if c.IsPaid() {
-		return proBaseURL
-	}
-	return demoBaseURL
+	return c.CoinGecko.GetBaseURL()
 }
 
 func (c *Config) AuthHeader() (string, string) {
-	if c.IsPaid() {
-		return proHeaderKey, c.APIKey
-	}
-	return demoHeaderKey, c.APIKey
+	return c.CoinGecko.GetAuthHeader()
 }
 
 func (c *Config) ApplyAuth(req *http.Request) {
-	if c.APIKey != "" {
+	if c.CoinGecko.APIKey != "" {
 		key, val := c.AuthHeader()
 		req.Header.Set(key, val)
 	}
 }
 
 func (c *Config) IsPaid() bool {
-	return strings.ToLower(c.Tier) == TierPaid
+	return c.CoinGecko.IsPaid()
 }
 
 func IsValidTier(tier string) bool {
@@ -196,8 +272,46 @@ func IsValidTier(tier string) bool {
 }
 
 func (c *Config) MaskedKey() string {
-	if len(c.APIKey) <= 8 {
-		return strings.Repeat("*", len(c.APIKey))
+	apiKey := c.CoinGecko.APIKey
+	if len(apiKey) <= 8 {
+		return strings.Repeat("*", len(apiKey))
 	}
-	return c.APIKey[:4] + strings.Repeat("*", len(c.APIKey)-8) + c.APIKey[len(c.APIKey)-4:]
+	return apiKey[:4] + strings.Repeat("*", len(apiKey)-8) + apiKey[len(apiKey)-4:]
+}
+
+func (c *Config) Redacted() *Config {
+	maskedLong := func(s string) string {
+		if s == "" {
+			return ""
+		}
+		if len(s) <= 8 {
+			return strings.Repeat("*", len(s))
+		}
+		return s[:4] + strings.Repeat("*", len(s)-8) + s[len(s)-4:]
+	}
+
+	return &Config{
+		Provider: c.Provider,
+		CoinGecko: CoinGeckoConfig{
+			APIKey:  maskedLong(c.CoinGecko.APIKey),
+			Tier:    c.CoinGecko.Tier,
+			BaseURL: c.CoinGecko.BaseURL,
+		},
+		Binance: BinanceConfig{
+			APIKey:    maskedLong(c.Binance.APIKey),
+			APISecret: maskedLong(c.Binance.APISecret),
+			BaseURL:   c.Binance.BaseURL,
+			Spot:      c.Binance.Spot,
+			Margin:    c.Binance.Margin,
+			Futures:   c.Binance.Futures,
+		},
+		Bitget: BitgetConfig{
+			APIKey:     maskedLong(c.Bitget.APIKey),
+			APISecret:  maskedLong(c.Bitget.APISecret),
+			Passphrase: maskedLong(c.Bitget.Passphrase),
+			BaseURL:    c.Bitget.BaseURL,
+			Spot:       c.Bitget.Spot,
+			Futures:    c.Bitget.Futures,
+		},
+	}
 }

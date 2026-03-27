@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mdnmdn/bits/internal/model"
 	"github.com/mdnmdn/bits/internal/config"
+	"github.com/mdnmdn/bits/internal/model"
 	"github.com/mdnmdn/bits/internal/ws"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -139,7 +139,7 @@ func TestWatch_DemoPlanRejected(t *testing.T) {
 func TestWatch_DryRun(t *testing.T) {
 	origLoad := loadConfig
 	loadConfig = func() (*config.Config, error) {
-		return &config.Config{APIKey: "CG-abcdef1234567890", Tier: "paid"}, nil
+		return &config.Config{CoinGecko: config.CoinGeckoConfig{APIKey: "CG-abcdef1234567890", Tier: "paid"}}, nil
 	}
 	t.Cleanup(func() { loadConfig = origLoad })
 
@@ -221,7 +221,7 @@ func TestWatch_PartialIDsInvalid(t *testing.T) {
 func TestWatch_DryRunShowsPreflights(t *testing.T) {
 	origLoad := loadConfig
 	loadConfig = func() (*config.Config, error) {
-		return &config.Config{APIKey: "test-key", Tier: "paid"}, nil
+		return &config.Config{CoinGecko: config.CoinGeckoConfig{APIKey: "test-key", Tier: "paid"}}, nil
 	}
 	t.Cleanup(func() { loadConfig = origLoad })
 

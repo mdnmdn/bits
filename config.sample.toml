@@ -1,25 +1,42 @@
-# bits Configuration
-# TOML format example (requires config code modification to use .toml extension)
+# bits Configuration (TOML format)
+# Copy to ~/.config/coingecko-cli/config.toml
 
 # Active provider (coingecko, binance, bitget)
 provider = "coingecko"
 
-# CoinGecko credentials
+# CoinGecko configuration
+[coingecko]
 api_key = ""
 tier = "demo"  # demo or paid
+base_url = ""  # optional custom endpoint
 
-# Binance configuration
+# Binance configuration (shared API key for all markets)
 [binance]
 api_key = ""
 api_secret = ""
-use_testnet = false
-market_type = "spot"  # spot, margin, or future
 base_url = ""  # optional custom endpoint
 
-# Bitget configuration
+# Binance market-specific settings
+[binance.spot]
+enabled = true  # default if nothing specified
+
+[binance.margin]
+enabled = false
+
+[binance.futures]
+enabled = false
+use_testnet = false
+
+# Bitget configuration (shared API key for all markets)
 [bitget]
-key = ""
-secret = ""
+api_key = ""
+api_secret = ""
 passphrase = ""
-market_type = "spot"  # spot or future
 base_url = ""  # optional custom endpoint
+
+# Bitget market-specific settings
+[bitget.spot]
+enabled = true  # default if nothing specified
+
+[bitget.futures]
+enabled = false

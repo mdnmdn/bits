@@ -21,10 +21,12 @@ const (
 
 // Client represents a Bitget API client that implements the Provider interface.
 type Client struct {
-	config     config.BitgetConfig
-	marketType string
-	httpClient *http.Client
-	userAgent  string
+	config           config.BitgetConfig
+	activeMarketType string
+	spotEnabled      bool
+	futuresEnabled   bool
+	httpClient       *http.Client
+	userAgent        string
 
 	// Trading pairs cache
 	tradingPairsCache     map[string]struct{}
@@ -37,15 +39,52 @@ func NewClient(cfg config.BitgetConfig) *Client {
 	if cfg.BaseURL == "" {
 		cfg.BaseURL = DefaultBaseURL
 	}
-	marketType := cfg.MarketType
-	if marketType == "" {
-		marketType = config.MarketTypeSpot
+
+	spotEnabled := cfg.IsSpotEnabled()
+	futuresEnabled := cfg.IsFuturesEnabled()
+
+	// Default to spot if nothing explicitly enabled
+	if !spotEnabled && !futuresEnabled {
+		spotEnabled = true
 	}
+
+	// Determine active market (priority: futures > spot)
+	activeMarket := config.MarketTypeSpot
+	if futuresEnabled {
+		activeMarket = config.MarketTypeFuture
+	}
+
 	return &Client{
-		config:     cfg,
-		marketType: marketType,
-		httpClient: &http.Client{Timeout: 30 * time.Second},
+		config:           cfg,
+		activeMarketType: activeMarket,
+		spotEnabled:      spotEnabled,
+		futuresEnabled:   futuresEnabled,
+		httpClient:       &http.Client{Timeout: 30 * time.Second},
 	}
+}
+
+// SetMarketType sets the active market type for subsequent API calls.
+func (c *Client) SetMarketType(marketType string) {
+	if marketType == config.MarketTypeFuture && c.config.IsFuturesEnabled() {
+		c.activeMarketType = config.MarketTypeFuture
+	} else if c.config.IsSpotEnabled() {
+		c.activeMarketType = config.MarketTypeSpot
+	}
+}
+
+// MarketType returns the currently active market type.
+func (c *Client) MarketType() string {
+	return c.activeMarketType
+}
+
+// IsSpotEnabled returns true if spot market is configured.
+func (c *Client) IsSpotEnabled() bool {
+	return c.spotEnabled
+}
+
+// IsFuturesEnabled returns true if futures market is configured.
+func (c *Client) IsFuturesEnabled() bool {
+	return c.futuresEnabled
 }
 
 // ID returns the provider identifier.

@@ -28,10 +28,22 @@ func TestBinanceClientConfiguration(t *testing.T) {
 		assert.Equal(t, "https://api.binance.com", client.GetClient().BaseURL)
 	})
 
-	t.Run("Testnet BaseURL", func(t *testing.T) {
-		cfg := config.BinanceConfig{UseTestnet: true}
+	t.Run("Spot Enabled by Default", func(t *testing.T) {
+		cfg := config.BinanceConfig{}
 		client := NewClient(cfg)
-		assert.Equal(t, "https://testnet.binance.vision", client.GetClient().BaseURL)
+		assert.True(t, client.IsSpotEnabled())
+		assert.False(t, client.IsFuturesEnabled())
+	})
+
+	t.Run("Futures with Testnet", func(t *testing.T) {
+		cfg := config.BinanceConfig{
+			Futures: config.MarketConfig{
+				Enabled:    true,
+				UseTestnet: true,
+			},
+		}
+		client := NewClient(cfg)
+		assert.True(t, client.IsFuturesEnabled())
 	})
 
 	t.Run("Custom BaseURL", func(t *testing.T) {

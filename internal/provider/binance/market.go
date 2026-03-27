@@ -25,7 +25,7 @@ func (c *Client) SimplePrice(ctx context.Context, ids []string, vsCurrency strin
 		var changePct float64
 		var err error
 
-		if c.marketType == config.MarketTypeFuture {
+		if c.activeMarketType == config.MarketTypeFuture {
 			prices, errLocal := c.futuresClient.NewListPricesService().Symbol(sym).Do(ctx)
 			if errLocal != nil {
 				return nil, fmt.Errorf("fetching futures price for %s: %w", sym, errLocal)
@@ -112,7 +112,7 @@ func (c *Client) CoinOHLC(ctx context.Context, id, vsCurrency, days, interval st
 
 	var data model.OHLCData
 
-	if c.marketType == config.MarketTypeFuture {
+	if c.activeMarketType == config.MarketTypeFuture {
 		klines, err := c.futuresClient.NewKlinesService().
 			Symbol(sym).
 			Interval(binanceInterval).
@@ -173,7 +173,7 @@ func (c *Client) CoinOHLC(ctx context.Context, id, vsCurrency, days, interval st
 func (c *Client) Ticker24h(ctx context.Context, symbol string) (*model.Ticker24h, error) {
 	sym := strings.ToUpper(symbol)
 
-	if c.marketType == config.MarketTypeFuture {
+	if c.activeMarketType == config.MarketTypeFuture {
 		stats, err := c.futuresClient.NewListPriceChangeStatsService().Symbol(sym).Do(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("fetching futures 24h ticker for %s: %w", sym, err)
@@ -252,7 +252,7 @@ func (c *Client) OrderBook(ctx context.Context, symbol string, limit int) (*mode
 		limit = 100
 	}
 
-	if c.marketType == config.MarketTypeFuture {
+	if c.activeMarketType == config.MarketTypeFuture {
 		depth, err := c.futuresClient.NewDepthService().
 			Symbol(sym).
 			Limit(limit).

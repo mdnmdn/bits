@@ -73,11 +73,11 @@ func runAuth(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("invalid tier %q — must be one of: %s", tier, strings.Join(config.ValidTiers, ", "))
 	}
 
-	cfg := &config.Config{APIKey: key, Tier: tier}
+	cfg := &config.Config{CoinGecko: config.CoinGeckoConfig{APIKey: key, Tier: tier}}
 	if err := config.Save(cfg); err != nil {
 		return fmt.Errorf("saving config: %w", err)
 	}
 
-	warnf("Saved! Tier: %s, Key: %s\n", cfg.Tier, cfg.MaskedKey())
+	warnf("Saved! Tier: %s, Key: %s\n", cfg.CoinGecko.Tier, cfg.MaskedKey())
 	return nil
 }

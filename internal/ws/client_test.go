@@ -12,9 +12,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mdnmdn/bits/internal/model"
-	"github.com/mdnmdn/bits/internal/config"
 	"github.com/gorilla/websocket"
+	"github.com/mdnmdn/bits/internal/config"
+	"github.com/mdnmdn/bits/internal/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -42,11 +42,11 @@ func wsURL(srv *httptest.Server) string {
 }
 
 func paidCfg() *config.Config {
-	return &config.Config{APIKey: "test-key", Tier: "paid"}
+	return &config.Config{CoinGecko: config.CoinGeckoConfig{APIKey: "test-key", Tier: "paid"}}
 }
 
 func demoCfg() *config.Config {
-	return &config.Config{APIKey: "test-key", Tier: "demo"}
+	return &config.Config{CoinGecko: config.CoinGeckoConfig{APIKey: "test-key", Tier: "demo"}}
 }
 
 func sendJSON(conn *websocket.Conn, v any) {
@@ -362,7 +362,7 @@ func TestConnect_APIKeyInQueryParam(t *testing.T) {
 		origHandler.ServeHTTP(w, r)
 	})
 
-	cfg := &config.Config{APIKey: "my-secret-key", Tier: "paid"}
+	cfg := &config.Config{CoinGecko: config.CoinGeckoConfig{APIKey: "my-secret-key", Tier: "paid"}}
 	client := NewClient(cfg, []string{"bitcoin"})
 	client.SetURL(wsURL(srv))
 

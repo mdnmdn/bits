@@ -23,7 +23,7 @@ func (c *Client) SimplePrice(_ context.Context, ids []string, vsCurrency string)
 		var changePct float64
 		var err error
 
-		if c.marketType == config.MarketTypeFuture {
+		if c.activeMarketType == config.MarketTypeFuture {
 			ticker, errLocal := c.GetFuturesTickerData(symbol)
 			if errLocal != nil {
 				return nil, fmt.Errorf("failed to get futures ticker for %s: %w", symbol, errLocal)
@@ -50,8 +50,8 @@ func (c *Client) SimplePrice(_ context.Context, ids []string, vsCurrency string)
 		}
 
 		result[symbol] = map[string]float64{
-			vsCurrency:                          price,
-			vsCurrency + "_24h_change":          changePct,
+			vsCurrency:                 price,
+			vsCurrency + "_24h_change": changePct,
 		}
 	}
 
@@ -102,7 +102,7 @@ func (c *Client) CoinOHLC(_ context.Context, id, _ string, days, interval string
 // Ticker24h implements the TickerProvider interface.
 // It returns 24-hour ticker statistics for the given symbol.
 func (c *Client) Ticker24h(_ context.Context, symbol string) (*model.Ticker24h, error) {
-	if c.marketType == config.MarketTypeFuture {
+	if c.activeMarketType == config.MarketTypeFuture {
 		ticker, err := c.GetFuturesTickerData(symbol)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get futures ticker for %s: %w", symbol, err)
@@ -117,7 +117,7 @@ func (c *Client) Ticker24h(_ context.Context, symbol string) (*model.Ticker24h, 
 
 		openPrice, _ := strconv.ParseFloat(ticker.OpenUtc, 64) // Might be empty or named differently
 		// Bitget futures often has OpenUtc
-		
+
 		priceChange := lastPrice - openPrice
 
 		ts, _ := strconv.ParseInt(ticker.Ts, 10, 64)
@@ -223,15 +223,15 @@ func (c *Client) GetHistoricalCandles(symbol, granularity string, startTime, end
 	var endpoint string
 	var apiGranularity string
 
-	if c.marketType == config.MarketTypeFuture {
+	if c.activeMarketType == config.MarketTypeFuture {
 		endpoint = "/api/mix/v1/market/candles"
-		apiGranularity = convertGranularityFormat(granularity, c.marketType)
+		apiGranularity = convertGranularityFormat(granularity, c.activeMarketType)
 		// Futures assumes productType=umcbl for USDT-M usually, but here endpoint is generic?
 		// Mix V1 candles params: symbol, granularity, startTime, endTime, limit.
 		// NOTE: symbol must include suffix like BTCUSDT_UMCBL
 	} else {
 		endpoint = "/api/v2/spot/market/history-candles"
-		apiGranularity = convertGranularityFormat(granularity, c.marketType)
+		apiGranularity = convertGranularityFormat(granularity, c.activeMarketType)
 	}
 
 	params := []string{
@@ -251,7 +251,7 @@ func (c *Client) GetHistoricalCandles(symbol, granularity string, startTime, end
 
 	// For Futures, we might need productType if symbol is generic, but usually symbol is unique.
 	// If needed we could add productType=umcbl
-	if c.marketType == config.MarketTypeFuture {
+	if c.activeMarketType == config.MarketTypeFuture {
 		params = append(params, "productType=umcbl")
 	}
 

@@ -25,7 +25,7 @@ func (c *Client) WatchOrderBook(ctx context.Context, symbols []string, limit int
 	}
 
 	url := fmt.Sprintf("wss://stream.binance.com:9443/stream?streams=%s", strings.Join(streams, "/"))
-	if c.config.UseTestnet {
+	if c.config.Futures.UseTestnet {
 		url = fmt.Sprintf("wss://testnet.binance.vision/stream?streams=%s", strings.Join(streams, "/"))
 	}
 

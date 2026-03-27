@@ -33,7 +33,7 @@ func withInstantRetrySleep(t *testing.T) {
 
 func testAPIClient(handler http.HandlerFunc) (*coingecko.Client, *httptest.Server) {
 	srv := httptest.NewServer(handler)
-	cfg := &config.Config{APIKey: "test-key", Tier: config.TierDemo}
+	cfg := &config.Config{CoinGecko: config.CoinGeckoConfig{APIKey: "test-key", Tier: config.TierDemo}}
 	c := coingecko.NewClient(cfg)
 	c.SetBaseURL(srv.URL)
 	return c, srv
@@ -41,7 +41,7 @@ func testAPIClient(handler http.HandlerFunc) (*coingecko.Client, *httptest.Serve
 
 func testPaidAPIClient(handler http.HandlerFunc) (*coingecko.Client, *httptest.Server) {
 	srv := httptest.NewServer(handler)
-	cfg := &config.Config{APIKey: "test-key", Tier: config.TierPaid}
+	cfg := &config.Config{CoinGecko: config.CoinGeckoConfig{APIKey: "test-key", Tier: config.TierPaid}}
 	c := coingecko.NewClient(cfg)
 	c.SetBaseURL(srv.URL)
 	return c, srv

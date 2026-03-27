@@ -77,7 +77,7 @@ func printDryRunFull(cfg *config.Config, cmdName, opKey, endpoint string, params
 	masked := cfg.MaskedKey()
 
 	headers := map[string]string{}
-	if cfg.APIKey != "" {
+	if cfg.CoinGecko.APIKey != "" {
 		headers[headerKey] = masked
 	}
 	headers["Accept"] = "application/json"

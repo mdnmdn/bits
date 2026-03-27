@@ -18,7 +18,7 @@ import (
 // testPaidClient creates a Client with paid tier for testing paid-only endpoints.
 func testPaidClient(handler http.HandlerFunc) (*Client, *httptest.Server) {
 	srv := httptest.NewServer(handler)
-	cfg := &config.Config{APIKey: "test-key", Tier: config.TierPaid}
+	cfg := &config.Config{CoinGecko: config.CoinGeckoConfig{APIKey: "test-key", Tier: config.TierPaid}}
 	c := NewClient(cfg)
 	c.SetBaseURL(srv.URL)
 	return c, srv
@@ -669,7 +669,7 @@ func TestFetchAllMarkets_ContextCancellation(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	cfg := &config.Config{APIKey: "test-key", Tier: config.TierDemo}
+	cfg := &config.Config{CoinGecko: config.CoinGeckoConfig{APIKey: "test-key", Tier: config.TierDemo}}
 	c := NewClient(cfg)
 	c.SetBaseURL(srv.URL)
 

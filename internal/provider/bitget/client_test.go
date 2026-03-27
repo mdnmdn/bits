@@ -9,8 +9,8 @@ import (
 
 func TestBitgetClientIdentity(t *testing.T) {
 	cfg := config.BitgetConfig{
-		Key:    "test-key",
-		Secret: "test-secret",
+		APIKey:    "test-key",
+		APISecret: "test-secret",
 	}
 	client := NewClient(cfg)
 

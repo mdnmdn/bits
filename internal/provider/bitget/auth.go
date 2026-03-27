@@ -16,7 +16,7 @@ import (
 // The message format is: timestamp + method + path + body.
 func (c *Client) generateSignature(method, path, body, timestamp string) string {
 	message := timestamp + method + path + body
-	return auth.GenerateHMACSHA256Base64(message, c.config.Secret)
+	return auth.GenerateHMACSHA256Base64(message, c.config.APISecret)
 }
 
 // signedRequest creates and executes a signed HTTP request to the Bitget API.
@@ -49,7 +49,7 @@ func (c *Client) signedRequest(method, endpoint string, queryString string, json
 	timestamp := strconv.FormatInt(time.Now().UnixMilli(), 10)
 	sign := c.generateSignature(method, path, bodyStr, timestamp)
 
-	req.Header.Set("ACCESS-KEY", c.config.Key)
+	req.Header.Set("ACCESS-KEY", c.config.APIKey)
 	req.Header.Set("ACCESS-SIGN", sign)
 	req.Header.Set("ACCESS-TIMESTAMP", timestamp)
 	req.Header.Set("ACCESS-PASSPHRASE", c.config.Passphrase)

@@ -6,6 +6,8 @@ import (
 	"github.com/mdnmdn/bits/internal/config"
 	"github.com/mdnmdn/bits/internal/model"
 	"github.com/mdnmdn/bits/internal/provider"
+	"github.com/mdnmdn/bits/internal/provider/binance"
+	"github.com/mdnmdn/bits/internal/provider/bitget"
 	"github.com/mdnmdn/bits/internal/ws"
 	"github.com/spf13/cobra"
 )
@@ -44,17 +46,21 @@ var newAPIClient = func(cfg *config.Config) provider.Provider {
 		name = providerOverride
 	}
 
-	// Apply market type override to the relevant config section
-	if marketTypeOverride != "" {
-		cfg.Binance.MarketType = marketTypeOverride
-		cfg.Bitget.MarketType = marketTypeOverride
-	}
-
 	c, err := provider.NewProvider(name, cfg)
 	if err != nil {
 		// Fall back to coingecko on unknown provider.
 		c, _ = provider.NewProvider("coingecko", cfg)
 	}
+
+	// Apply market type override if specified
+	if marketTypeOverride != "" {
+		if bc, ok := c.(*binance.Client); ok {
+			bc.SetMarketType(marketTypeOverride)
+		} else if bgc, ok := c.(*bitget.Client); ok {
+			bgc.SetMarketType(marketTypeOverride)
+		}
+	}
+
 	c.SetUserAgent(userAgent)
 	return c
 }

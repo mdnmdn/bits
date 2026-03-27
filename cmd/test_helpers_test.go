@@ -24,7 +24,7 @@ func withTestClient(t *testing.T, srv *httptest.Server, tier string) {
 	// Override loadConfig to return a test config without touching real config files.
 	origLoad := loadConfig
 	loadConfig = func() (*config.Config, error) {
-		return &config.Config{APIKey: "test-key", Tier: tier}, nil
+		return &config.Config{CoinGecko: config.CoinGeckoConfig{APIKey: "test-key", Tier: tier}}, nil
 	}
 	t.Cleanup(func() { loadConfig = origLoad })
 

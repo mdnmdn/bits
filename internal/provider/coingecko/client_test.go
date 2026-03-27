@@ -15,7 +15,7 @@ import (
 
 func testClient(handler http.HandlerFunc) (*Client, *httptest.Server) {
 	srv := httptest.NewServer(handler)
-	cfg := &config.Config{APIKey: "test-key", Tier: config.TierDemo}
+	cfg := &config.Config{CoinGecko: config.CoinGeckoConfig{APIKey: "test-key", Tier: config.TierDemo}}
 	c := NewClient(cfg)
 	c.SetBaseURL(srv.URL)
 	return c, srv
@@ -52,7 +52,7 @@ func TestAuthHeadersSent(t *testing.T) {
 
 func TestProAuthHeaders(t *testing.T) {
 	var gotHeader string
-	cfg := &config.Config{APIKey: "pro-key", Tier: config.TierPaid}
+	cfg := &config.Config{CoinGecko: config.CoinGeckoConfig{APIKey: "pro-key", Tier: config.TierPaid}}
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotHeader = r.Header.Get("x-cg-pro-api-key")
 		w.WriteHeader(200)
@@ -357,11 +357,11 @@ func TestRetryAfterInvalidFallback(t *testing.T) {
 }
 
 func TestRequirePaid(t *testing.T) {
-	cfg := &config.Config{Tier: config.TierDemo}
+	cfg := &config.Config{CoinGecko: config.CoinGeckoConfig{Tier: config.TierDemo}}
 	c := NewClient(cfg)
 	assert.ErrorIs(t, c.requirePaid(), ErrPlanRestricted)
 
-	cfg2 := &config.Config{Tier: config.TierPaid}
+	cfg2 := &config.Config{CoinGecko: config.CoinGeckoConfig{Tier: config.TierPaid}}
 	c2 := NewClient(cfg2)
 	assert.NoError(t, c2.requirePaid())
 }

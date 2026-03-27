@@ -4,22 +4,36 @@
 # Active provider (coingecko, binance, bitget)
 provider: coingecko
 
-# CoinGecko credentials
-api_key: ""
-tier: demo  # demo or paid
+# CoinGecko configuration
+coingecko:
+  api_key: ""
+  tier: demo  # demo or paid
+  base_url: ""  # optional custom endpoint
 
-# Binance configuration
+# Binance configuration (shared API key for all markets)
 binance:
   api_key: ""
   api_secret: ""
-  use_testnet: false
-  market_type: spot  # spot, margin, or future
   base_url: ""  # optional custom endpoint
 
-# Bitget configuration
+  # Market-specific settings
+  spot:
+    enabled: true  # default if nothing specified
+  margin:
+    enabled: false
+  futures:
+    enabled: false
+    use_testnet: false
+
+# Bitget configuration (shared API key for all markets)
 bitget:
-  key: ""
-  secret: ""
+  api_key: ""
+  api_secret: ""
   passphrase: ""
-  market_type: spot  # spot or future
   base_url: ""  # optional custom endpoint
+
+  # Market-specific settings
+  spot:
+    enabled: true  # default if nothing specified
+  futures:
+    enabled: false
