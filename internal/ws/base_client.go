@@ -135,9 +135,7 @@ func (c *BaseClient) readLoop(ctx context.Context) {
 
 		backoff = c.BackoffMin
 		if c.OnMessage != nil {
-			if err := c.OnMessage(ctx, raw); err != nil {
-				// Log error or handle it? For now, we continue reading.
-			}
+			_ = c.OnMessage(ctx, raw)
 		}
 	}
 }

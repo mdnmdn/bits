@@ -9,7 +9,7 @@ import (
 
 	"github.com/mdnmdn/bits/internal/capability"
 	"github.com/mdnmdn/bits/internal/config"
-	"github.com/mdnmdn/bits/internal/legacy/auth"
+	"github.com/mdnmdn/bits/internal/auth"
 )
 
 const (

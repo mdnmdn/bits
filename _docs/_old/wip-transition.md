@@ -537,7 +537,7 @@ Build, vet, and all tests pass. All commands visible in `bits --help`.
 
 ---
 
-## Phase 7 — Cleanup
+## Phase 7 — Cleanup ✅ COMPLETED
 
 **Sequential. Single agent. Gate: full parity checklist below passes first.**
 
@@ -549,6 +549,22 @@ Build, vet, and all tests pass. All commands visible in `bits --help`.
 | 7.4 | Remove `config.MarketTypeSpot/Margin/Future` constants; new code uses `model.MarketType` aliases |
 | 7.5 | `make test && make build` — clean |
 | 7.6 | `git tag v2-baseline` |
+
+### Completion notes
+
+Pre-removal dependency fixes:
+- `internal/legacy/ws/` → `internal/ws/`: updated to use a local `Update` type (no legacy/model dependency); `cfg.IsPaid()` → `cfg.CoinGecko.IsPaid()`.
+- `internal/legacy/auth/` → `internal/auth/`: moved `GenerateHMACSHA256Base64/Hex`; updated `internal/provider/bitget/client.go` import.
+- `internal/provider/coingecko/stream.go`: updated import from `legacy/ws` to `internal/ws`.
+- `cmd/root.go`: removed `legacycmd` import and `AddCommand(legacycmd.LegacyCmd)`.
+
+Config cleanup:
+- `MaskedKey()` and `ApplyAuth()` moved from `*Config` to `CoinGeckoConfig`.
+- `Config.BaseURL()`, `Config.AuthHeader()`, `Config.IsPaid()`, `Config.Redacted()` removed.
+- `config.MarketTypeSpot/Margin/Future` constants removed.
+- `internal/config/config_test.go` updated to use `CoinGeckoConfig` methods directly.
+
+`git rm -r internal/legacy/` removed 67 files. Build, vet, and all tests pass. `git tag v2-baseline` applied.
 
 ---
 

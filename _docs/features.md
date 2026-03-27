@@ -6,150 +6,217 @@ This document provides a comprehensive map of the features available in the Mult
 
 `bits` supports multiple data providers, allowing you to fetch market data from different sources:
 
-- **CoinGecko** (Default): Comprehensive market data, historical charts, and trending coins.
-- **Binance**: Real-time prices, 24h ticker stats, and order book depth from the world's largest exchange.
-- **Bitget**: Real-time prices and 24h ticker stats from Bitget.
+- **CoinGecko** (Default): Market listings, prices, OHLCV candles, and live price streaming.
+- **Binance**: Server time, exchange info, prices, candles, 24h ticker, order book, live order book streaming.
+- **Bitget**: Server time, exchange info, prices, candles, 24h ticker.
 
-Use the `--provider` or `-p` flag to select a provider:
+Use the `--provider` / `-p` flag to select a provider, `--market` / `-m` for market type, and `--lock` / `-l` to prevent automatic fallback:
+
 ```bash
-bits price --ids bitcoin                    # CoinGecko (default)
-bits price --ids BTCUSDT -p binance         # Binance
-bits ticker BTCUSDT -p binance              # Binance 24h stats
-bits orderbook BTCUSDT -p binance           # Binance order book
+bits price BTC ETH                             # CoinGecko (default), USD
+bits price BTCUSDT -p binance                  # Binance spot
+bits price BTCUSDT -p binance -m futures       # Binance futures
+bits ticker BTCUSDT -p coingecko               # no ticker on coingecko → fallback to binance
+bits ticker BTCUSDT -p coingecko --lock        # error: coingecko does not support ticker
 ```
 
-## 2. Core CLI Commands
+### Automatic Provider Fallback
+
+When a provider doesn't support the requested feature or market, `bits` transparently falls back to the first capable provider. The output always indicates when a fallback occurred:
+
+- **Table**: footnote `† served by binance (requested: coingecko)`
+- **JSON**: top-level `"fallback": true`, `"provider"`, `"requested_provider"` keys
+
+Use `--lock` / `-l` to disable fallback and fail with an explicit error instead.
+
+---
+
+## 2. CLI Commands
+
+### Global Flags
+
+Applied to every command:
+
+```
+-p, --provider  string    provider id: coingecko | binance | bitget  (default: from config)
+-m, --market    string    market type: spot | futures | margin        (default: spot)
+-o, --output    string    output format: table | json                 (default: table)
+-l, --lock                disable provider fallback
+```
+
+---
+
+### `bits time`
+- Show exchange server timestamp.
+- Automatically computes latency and estimated clock skew (via `TimeEnricher` processor).
+- Requires an exchange provider (Binance, Bitget).
+
+```bash
+bits time -p binance
+bits time -p bitget
+```
+
+---
+
+### `bits info`
+- Display exchange symbol catalogue.
+- Filter to a single symbol with `--symbol`.
+- Supports spot and futures markets.
+
+```bash
+bits info -p binance
+bits info -p binance -m futures
+bits info -p binance --symbol BTCUSDT
+```
+
+---
 
 ### `bits price`
-- Fetch current prices for one or more coins.
-- Supports both CoinGecko IDs (`--ids bitcoin`) and ticker symbols (`--symbols btc`).
-- Multi-currency support via `--vs` (default: `usd`).
-- Displays 24h price change.
-- Works across all providers (CoinGecko, Binance, Bitget).
+- Fetch current price(s) for one or more coin IDs or trading symbols.
+- CoinGecko uses coin IDs (`BTC`, `ETH`); exchanges use trading symbols (`BTCUSDT`).
+- Batch-native: all IDs are sent to the provider in a single call.
 
-### `bits ticker` [New]
-- Fetch 24-hour ticker statistics for a trading pair.
-- Displays last price, 24h change, high/low, and volume.
-- Supported by: Binance, Bitget.
+```bash
+bits price BTC ETH                   # CoinGecko, USD
+bits price BTC --currency eur        # CoinGecko, EUR
+bits price BTCUSDT -p binance        # Binance spot
+bits price BTCUSDT -p binance -m futures
+bits price BTC -o json               # JSON output with provenance
+```
 
-### `bits orderbook` [New]
-- Fetch real-time order book depth (bids and asks).
-- Customizable depth via `--limit`.
-- Supported by: Binance.
+---
+
+### `bits ticker`
+- 24h rolling statistics for one or more trading symbols.
+- Multi-symbol: calls are fanned out in parallel; results collected into one response.
+- Partial failures reported in `errors` field without aborting the whole request.
+
+```bash
+bits ticker BTCUSDT -p binance
+bits ticker BTCUSDT ETHUSDT -p binance     # multi-symbol fan-out
+bits ticker BTCUSDT -p binance -m futures
+```
+
+---
+
+### `bits book`
+- Order book snapshot (bids and asks).
+- Customisable depth via `--depth` (default: 20).
+
+```bash
+bits book BTCUSDT -p binance
+bits book BTCUSDT -p binance --depth 50
+bits book BTCUSDT -p binance -m futures
+```
+
+---
+
+### `bits candles`
+- OHLCV candle history.
+- `--interval` selects granularity (e.g. `1m`, `5m`, `1h`, `1d`).
+- `--from` / `--to` accept RFC3339 or `YYYY-MM-DD`.
+- `--limit` caps the number of candles returned.
+
+```bash
+bits candles BTCUSDT -p binance --interval 1h
+bits candles BTCUSDT -p binance -m futures --from 2024-01-01 --to 2024-02-01
+bits candles BTCUSDT -p bitget --limit 50
+```
+
+---
 
 ### `bits markets`
-- List top coins by market cap.
-- Supports filtering by category (`--category`).
-- Pagination and custom result counts (`--total`).
-- Sorting options (market cap, volume, etc.).
-- Supported by: CoinGecko.
+- Ranked coin listing by market cap.
+- Aggregator-only (CoinGecko); automatically routes there if another provider is selected.
+- Pagination via `--page` / `--per-page`.
 
-### `bits history`
-- Comprehensive historical data retrieval with three modes:
-  - **Snapshot**: Get coin data for a specific date (`--date YYYY-MM-DD`).
-  - **Recent**: Get data for the last N days (`--days N`).
-  - **Range**: Get data for a specific date range (`--from` and `--to`).
-- Support for **OHLC** (Open, High, Low, Close) data via `--ohlc`.
-- Adjustable granularity via `--interval` (daily, hourly).
-- **Auto-batching**: Large date ranges are automatically split into multiple API requests to overcome API limits.
-- Supported by: CoinGecko.
+```bash
+bits markets
+bits markets --currency eur
+bits markets --page 2 --per-page 50
+```
 
-### `bits search`
-- Search for coins, exchanges, or NFTs by query string.
-- Returns name, symbol, CoinGecko ID, and market cap rank.
-- Supported by: CoinGecko.
+---
 
-### `bits trending`
-- Fetch the top-7 (Demo) or top-15/30 (Paid) trending coins on CoinGecko.
-- Supported by: CoinGecko.
+### `bits stream price`
+- Live price feed via WebSocket.
+- CoinGecko only; requires a paid API plan.
 
-### `bits top-gainers-losers`
-- List coins with the highest gains and losses over a 24h period.
-- Supported by: CoinGecko.
+```bash
+bits stream price BTC ETH
+bits stream price BTC ETH -o json
+```
+
+---
+
+### `bits stream book`
+- Live order book feed via WebSocket.
+- Binance only; `--depth` controls subscription depth.
+
+```bash
+bits stream book BTCUSDT -p binance
+bits stream book BTCUSDT -p binance --depth 10
+```
+
+---
+
+### `bits providers`
+- List all registered providers with active marker.
+
+```bash
+bits providers
+```
+
+---
 
 ### `bits capabilities` (alias: `bits caps`)
-- Display a matrix of which features are supported by each provider and market type.
-- Rows show features × market types (spot, futures, margin); columns show providers.
+- Display the capability matrix: which features each provider supports per market type.
 - Filter to a single provider with `--provider` / `-p`.
-- Machine-readable JSON output via `-o json`.
 - Requires no API key — reads static provider declarations.
-- Example:
-  ```
-  bits capabilities
-  bits caps -p binance
-  bits capabilities -o json
-  ```
 
-### `bits status`
-- Display current CLI configuration, including active provider, API tiers, and masked keys.
+```bash
+bits capabilities
+bits caps -p binance
+bits capabilities -p coingecko
+```
 
 ---
 
-## 3. Interactive TUI (Terminal User Interface)
+## 3. Output Formats
 
-Launch a rich, interactive experience using `bits tui`.
+All commands support the `-o` / `--output` flag:
 
-### `bits tui markets`
-- Scrollable list of top coins.
-- **Detail View**: Select a coin to see detailed stats, description, and a price chart.
-- **Braille Chart**: Real-time rendered price chart using `ntcharts`.
+| Format     | Description |
+|------------|-------------|
+| `table`    | Human-readable tabwriter layout (default) |
+| `json`     | JSON envelope with data + provenance fields |
 
-### `bits tui trending`
-- Interactive view of currently trending coins.
-
----
-
-## 4. Real-time Monitoring
-
-### `bits watch`
-- Live price updates via WebSocket.
-- Tracks multiple coins simultaneously.
-- Automatic reconnection with exponential backoff.
-- Supported by: CoinGecko (Requires a paid API plan).
+JSON output always includes `provider`, `market`, and (when applicable) `fallback`, `requested_provider`, `requested_market`, and `errors` fields.
 
 ---
 
-## 5. Advanced Features
+## 4. Technical Architecture Features
 
-### Smart Rate Limiting
-- Automatic retries on HTTP 429 (Rate Limit) errors.
-- Respects `Retry-After` and `x-ratelimit-reset` headers.
-- Uses exponential backoff with jitter when no headers are provided.
+### Typed Response Envelope
+Every provider call returns `model.Response[T]`, carrying provenance (provider, market, fallback info) and partial-failure errors alongside the data. No out-of-band signalling needed.
 
-### Dry Run Mode
-- Use `--dry-run` on any data command to see exactly what API request would be made without executing it.
+### Capability-Based Routing
+The resolver (`internal/resolve/`) selects providers by declared capabilities, not by hard-coded conditionals. Fallback is transparent and always annotated.
 
-### Batching & Granularity
-- **Hourly Data**: Automatically routes through range endpoints to provide hourly granularity even for recent periods.
-- **Data Guardrails**: Prevents requesting hourly data before it was available (Jan 2018).
+### Processing Pipeline
+An optional processor layer (`internal/process/`) enriches responses before rendering without coupling provider or renderer code:
+- `TimeEnricher` — computes latency and clock skew from server time
+- `SpreadCalculator` — computes bid-ask spread and mid price for order books
+- `CandleStats` — computes VWAP, typical price, body/wick ratios for candles
 
-### Environment & Security
-- API Key priority: `CG_API_KEY` environment variable > `--key` flag > Interactive prompt.
-- Configuration stored securely in `~/.config/coingecko-cli/config.yaml`.
-- Masked API key display in status.
+### Parallel Fan-Out
+Multi-symbol commands (e.g. `bits ticker BTCUSDT ETHUSDT`) fan out in parallel using `resolve.FanOut`. Partial failures are collected in `Response.Errors` and don't abort the whole request.
 
-### Command Catalog
-- `bits commands` (hidden): Outputs a machine-readable JSON catalog of all commands and their metadata.
+### WebSocket Streaming
+The CoinGecko WebSocket client (`internal/ws/`) implements the ActionCable protocol with automatic reconnection and exponential backoff with jitter. Binance order book streaming uses gorilla/websocket with the combined-stream API.
 
----
-
-## 6. Technical Architecture & Internal Features
-
-Beyond user-facing commands, the project implements several key technical features:
-
-### Intelligent Data Fetching
-- **Pagination Helper**: `FetchAllMarkets` handles multi-page fetching (250/page) with trim-to-total logic, used by both CLI and TUI.
-- **Concurrent TUI Fetching**: The coin detail view fetches coin data and OHLC history concurrently using Bubble Tea's `tea.Batch` for faster rendering.
-- **Symbol Resolution**: 
-  - `bits price` uses the API's native symbol lookup.
-  - `bits watch` (which requires coin IDs) uses a custom resolution strategy that picks the highest-ranked coin for a given symbol.
-
-### Security & Robustness
-- **Terminal Safety**: All API-returned text (names, symbols) is sanitized via `display.SanitizeCell` to strip potential terminal escape sequence injections.
-- **Pre-flight Checks**: `requirePaid()` helper ensures API calls to paid-only endpoints aren't wasted if the user is on a demo plan.
-- **Wait-and-Retry**: Robust handling of API rate limits ensures reliable data retrieval during high-volume operations (like batching).
-- **Graceful WebSocket Shutdown**: Uses atomic flags and state machines to ensure clean connection closure and suppress unnecessary reconnection attempts.
-
-### Platform Support
-- **Homebrew Distribution**: Automatic Homebrew formula generation via GoReleaser.
-- **Cross-Platform**: Designed for macOS, Linux, and Windows terminal environments.
+### Secure Configuration
+- API keys masked in display (`CoinGeckoConfig.MaskedKey()`)
+- Auth applied per-request (`CoinGeckoConfig.ApplyAuth()`)
+- Platform-specific config directories; `.env` file support alongside YAML
+- `BITS_*` env vars override all config file values

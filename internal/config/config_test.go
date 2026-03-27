@@ -36,39 +36,39 @@ func TestIsPaid(t *testing.T) {
 		{"Paid", true},
 	}
 	for _, tt := range tests {
-		cfg := &Config{CoinGecko: CoinGeckoConfig{Tier: tt.tier}}
+		cfg := CoinGeckoConfig{Tier: tt.tier}
 		assert.Equal(t, tt.paid, cfg.IsPaid(), "tier=%q", tt.tier)
 	}
 }
 
 func TestBaseURL(t *testing.T) {
-	demo := &Config{CoinGecko: CoinGeckoConfig{Tier: TierDemo}}
-	assert.Equal(t, demoBaseURL, demo.BaseURL())
+	demo := CoinGeckoConfig{Tier: TierDemo}
+	assert.Equal(t, demoBaseURL, demo.GetBaseURL())
 
-	paid := &Config{CoinGecko: CoinGeckoConfig{Tier: TierPaid}}
-	assert.Equal(t, proBaseURL, paid.BaseURL())
+	paid := CoinGeckoConfig{Tier: TierPaid}
+	assert.Equal(t, proBaseURL, paid.GetBaseURL())
 }
 
 func TestAuthHeader(t *testing.T) {
-	demo := &Config{CoinGecko: CoinGeckoConfig{APIKey: "demo-key-123", Tier: TierDemo}}
-	key, val := demo.AuthHeader()
+	demo := CoinGeckoConfig{APIKey: "demo-key-123", Tier: TierDemo}
+	key, val := demo.GetAuthHeader()
 	assert.Equal(t, demoHeaderKey, key)
 	assert.Equal(t, "demo-key-123", val)
 
-	paid := &Config{CoinGecko: CoinGeckoConfig{APIKey: "pro-key-456", Tier: TierPaid}}
-	key, val = paid.AuthHeader()
+	paid := CoinGeckoConfig{APIKey: "pro-key-456", Tier: TierPaid}
+	key, val = paid.GetAuthHeader()
 	assert.Equal(t, proHeaderKey, key)
 	assert.Equal(t, "pro-key-456", val)
 }
 
 func TestApplyAuth(t *testing.T) {
-	cfg := &Config{CoinGecko: CoinGeckoConfig{APIKey: "test-key", Tier: TierDemo}}
+	cfg := CoinGeckoConfig{APIKey: "test-key", Tier: TierDemo}
 	req, _ := http.NewRequest("GET", "https://example.com", nil)
 	cfg.ApplyAuth(req)
 	assert.Equal(t, "test-key", req.Header.Get(demoHeaderKey))
 
 	// No key set — should not add header
-	cfg2 := &Config{CoinGecko: CoinGeckoConfig{Tier: TierDemo}}
+	cfg2 := CoinGeckoConfig{Tier: TierDemo}
 	req2, _ := http.NewRequest("GET", "https://example.com", nil)
 	cfg2.ApplyAuth(req2)
 	assert.Empty(t, req2.Header.Get(demoHeaderKey))
@@ -100,7 +100,7 @@ func TestMaskedKey(t *testing.T) {
 		{"CG-abc123def456ghi", "CG-a**********6ghi"},
 	}
 	for _, tt := range tests {
-		cfg := &Config{CoinGecko: CoinGeckoConfig{APIKey: tt.key}}
+		cfg := CoinGeckoConfig{APIKey: tt.key}
 		assert.Equal(t, tt.expect, cfg.MaskedKey(), "key=%q", tt.key)
 	}
 }

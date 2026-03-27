@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-`bits` is a multi-provider crypto CLI tool written in Go. It provides both standard CLI commands and an interactive TUI for browsing cryptocurrency market data, starting with support for the CoinGecko API.
+`bits` is a multi-provider crypto CLI tool written in Go. It supports CoinGecko, Binance, and Bitget as data providers through a unified capability-based interface. All provider responses are wrapped in a typed `Response[T]` envelope with provenance tracking and automatic fallback.
 
 ## Build & Test
 
@@ -24,32 +24,67 @@ go test -race ./...
 
 ```
 bits/
-├── main.go                        # Entry point
-├── cmd/                           # Cobra commands (auth, status, price, markets, search, trending, history, top_gainers_losers, watch, tui, version)
+├── main.go
+├── cmd/
+│   ├── root.go              # RootCmd, Execute(), global flags (-p, -m, -o, -l)
+│   ├── factory.go           # loadConfig(), newResolver(), flag helpers
+│   ├── providers.go         # bits providers
+│   ├── capabilities.go      # bits capabilities [--provider id]
+│   ├── time.go              # bits time
+│   ├── price.go             # bits price <id>...
+│   ├── ticker.go            # bits ticker <symbol>...
+│   ├── book.go              # bits book <symbol>
+│   ├── candles.go           # bits candles <symbol>
+│   ├── info.go              # bits info [--symbol S]
+│   ├── markets.go           # bits markets
+│   ├── stream.go            # bits stream (group)
+│   ├── stream_price.go      # bits stream price <id>...
+│   └── stream_book.go       # bits stream book <symbol>
 ├── internal/
-│   ├── provider/                  # Provider interfaces and registry
-│   │   ├── types.go               # Provider interface definition (Capabilities)
-│   │   ├── registry.go            # Provider factory
-│   │   ├── coingecko/             # CoinGecko implementation (All capabilities)
-│   │   ├── binance/               # Binance implementation (Prices, Tickers, OrderBook)
-│   │   └── bitget/                # Bitget implementation (Prices, Tickers)
-│   ├── config/
-│   │   ├── config.go              # Multi-provider config (YAML + Env)
 │   ├── auth/
-│   │   └── signature.go           # Shared HMAC-SHA256 signature helpers
-│   ├── ws/
-│   │   ├── base_client.go         # Generic WebSocket client (reconnect, backoff)
-│   │   ├── client.go              # CoinGecko WebSocket client
-│   └── tui/
-│       ├── styles.go              # Shared lipgloss styles
-│       ├── markets.go             # Markets TUI model
-│       ├── trending.go            # Trending TUI model
-│       ├── detail.go              # Coin detail view
-│       └── chart.go               # Braille price chart
-├── Makefile
-├── .goreleaser.yml
-├── install.sh
-└── .github/workflows/             # CI and Release
+│   │   └── signature.go     # HMAC-SHA256 helpers
+│   ├── capability/
+│   │   └── capability.go    # MarketType, Feature, CapabilityKey, CapabilityMatrix
+│   ├── config/
+│   │   └── config.go        # Multi-provider config (YAML + Env + .env)
+│   ├── model/               # Provider-agnostic data types
+│   │   ├── market.go        # MarketType alias + constants
+│   │   ├── response.go      # Response[T], ItemError
+│   │   ├── exchange.go      # ServerTime, ExchangeInfo, Symbol
+│   │   ├── candle.go        # Candle, CandleOpts
+│   │   ├── ticker.go        # Ticker24h
+│   │   ├── orderbook.go     # OrderBook, OrderBookEntry
+│   │   ├── price.go         # CoinPrice
+│   │   ├── coin.go          # CoinMarket, MarketOpts
+│   │   └── errors.go        # ErrUnsupportedMarket, ErrUnsupportedFeature
+│   ├── provider/            # Provider interfaces
+│   │   ├── provider.go      # Provider base interface
+│   │   ├── exchange.go      # ExchangeProvider
+│   │   ├── aggregator.go    # AggregatorProvider
+│   │   ├── capability.go    # PriceProvider, CandleProvider, TickerProvider, OrderBookProvider
+│   │   ├── stream.go        # PriceStreamProvider, OrderBookStreamProvider
+│   │   ├── binance/         # Binance implementation
+│   │   ├── bitget/          # Bitget implementation
+│   │   └── coingecko/       # CoinGecko implementation
+│   ├── registry/
+│   │   └── registry.go      # NewProvider factory (separate pkg avoids import cycle)
+│   ├── resolve/
+│   │   ├── resolver.go      # Resolver, ResolutionOpts, Resolve() with fallback
+│   │   ├── require.go       # Require[T] type assertion helper
+│   │   └── fanout.go        # FanOut[T] parallel multi-symbol helper
+│   ├── render/
+│   │   ├── renderer.go      # Format type + ParseFormat
+│   │   ├── provenance.go    # FallbackFootnote, ProviderLabel
+│   │   ├── json/            # Generic JSON renderer
+│   │   └── table/           # Table renderers per data type
+│   ├── process/
+│   │   ├── process.go       # Processor[T] type + Apply combinator
+│   │   ├── time.go          # TimeEnricher (latency + clock skew)
+│   │   ├── orderbook.go     # SpreadCalculator
+│   │   └── candles.go       # CandleStats
+│   └── ws/
+│       ├── base_client.go   # Generic WebSocket client (reconnect, backoff)
+│       └── client.go        # CoinGecko WebSocket client (ActionCable)
 ```
 
 ## Conventions
@@ -58,44 +93,50 @@ bits/
 - **Binary name**: `bits`
 - **Module path**: `github.com/mdnmdn/bits`
 - **Test framework**: `testify/assert` + `net/http/httptest`
-- **Provider Pattern**: All commands use `provider.Provider` interface via `newAPIClient` factory.
-- **Config location**: `~/.config/coingecko-cli/config.yaml`
-- **Auth tiers**: demo, paid
-- **Error model**: `ErrInvalidAPIKey`, `ErrPlanRestricted`, `ErrRateLimited`
-- **Output modes**: global `-o json` / `--output json` flag
+- **Provider pattern**: implement `provider.Provider` + capability interfaces; return `model.Response[T]`
+- **Response pattern**: every provider call returns `model.Response[T]` with `Provider` and `Market` populated
+- **Config location**: platform-specific (`~/Library/Application Support/bits-cli/` on macOS, `~/.config/bits/` on Linux)
+- **Auth tiers**: `demo`, `paid` (CoinGecko only)
+- **Output modes**: global `-o table` / `-o json` flag
 - **Stream contract**: stdout = data only, stderr = diagnostics/warnings
-- **Color output**: respects `NO_COLOR` env var and TTY detection
 - **Formatting**: all code must be `gofmt`-clean
 - **Commits**: conventional commit style (`feat:`, `fix:`, `chore:`)
-- **TUI framework**: Bubble Tea (bubbletea) + Lip Gloss (lipgloss) + Bubbles + ntcharts
-- **Interactive prompts**: `huh` (Charm ecosystem)
 
-## API Reference (CoinGecko)
+## Command Pattern
 
-- **API docs**: https://docs.coingecko.com
-- **Command catalog**: `bits commands` (hidden) outputs machine-readable JSON
+Every command follows this pattern:
 
-### CLI → OAS Endpoint Mapping
+```go
+func runXxx(cmd *cobra.Command, args []string) error {
+    cfg, err := loadConfig()                        // load config
+    opts := resolveOpts(cmd)                        // read -p, -m, -l flags
+    format := resolveFormat(cmd)                    // read -o flag
+    resolver := newResolver(cfg)
 
-| CLI Command | API Endpoint | OAS Operation ID |
-|-------------|-------------|------------------|
-| `bits price` | `/simple/price` | `simple-price` |
-| `bits markets` | `/coins/markets` | `coins-markets` |
-| `bits search` | `/search` | `search-data` |
-| `bits trending` | `/search/trending` | `trending-search` |
-| `bits history --date` | `/coins/{id}/history` | `coins-id-history` |
-| `bits history --days` | `/coins/{id}/market_chart` | `coins-id-market-chart` |
-| `bits history --days --interval hourly` | `/coins/{id}/market_chart/range` | `coins-id-market-chart-range` |
-| `bits history --days --ohlc` | `/coins/{id}/ohlc` | `coins-id-ohlc` |
-| `bits history --from/--to` | `/coins/{id}/market_chart/range` | `coins-id-market-chart-range` |
-| `bits history --from/--to --interval hourly` | `/coins/{id}/market_chart/range` | `coins-id-market-chart-range` |
-| `bits history --from/--to --ohlc` | `/coins/{id}/ohlc/range` | `coins-id-ohlc-range` |
-| `bits top-gainers-losers` | `/coins/top_gainers_losers` | `coins-top-gainers-losers` |
-| `bits watch` | `wss://stream.coingecko.com/v1` | — |
+    p, market, fallback, err := resolver.Resolve(ctx, capability.FeatureXxx, opts)
+    tp, err := resolve.Require[provider.XxxProvider](p, "xxx")
 
-## Distribution
+    res, err := tp.XxxMethod(ctx, args[0], market)  // or FanOut for multi-symbol
 
-- **Homebrew**: tap repo at `coingecko/homebrew-coingecko-cli`
-- **Goreleaser**: `.goreleaser.yml` generates Homebrew formula
-- **Install script**: `install.sh` downloads the latest release binary
-- **Go install**: `go install github.com/mdnmdn/bits@latest`
+    if fallback { res.Fallback = true; ... }         // annotate if fallback
+    res = process.Apply(res, process.XxxEnricher)    // optional enrichment
+
+    switch format {
+    case "json": return renderjson.Render(os.Stdout, res)
+    default:     return rendertable.RenderXxx(os.Stdout, res)
+    }
+}
+```
+
+## Adding a New Provider
+
+1. Create `internal/provider/<name>/client.go` implementing `Provider` base interface
+2. Add capability interfaces as supported; all methods return `model.Response[T]` with `Provider` and `Market` populated
+3. Register capabilities in `Capabilities()` using `capability.NewCapabilityMatrix(...)`
+4. Add config struct to `internal/config/config.go`; add env var overrides in `applyEnvOverrides`
+5. Register in `internal/registry/registry.go` — one new case in `NewProvider` and `AllProviderIDs`
+
+## API Reference
+
+- **CoinGecko API docs**: https://docs.coingecko.com
+- Use `bits capabilities` to inspect the live capability matrix

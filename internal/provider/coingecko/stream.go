@@ -4,12 +4,12 @@ import (
 	"context"
 
 	"github.com/mdnmdn/bits/internal/model"
-	legacyws "github.com/mdnmdn/bits/internal/legacy/ws"
+	"github.com/mdnmdn/bits/internal/ws"
 )
 
 // WatchPrices streams live price updates for the given coin IDs.
 func (c *Client) WatchPrices(ctx context.Context, ids []string) (<-chan *model.CoinPrice, error) {
-	wsClient := legacyws.NewClient(c.cfg, ids)
+	wsClient := ws.NewClient(c.cfg, ids)
 	wsClient.UserAgent = c.UserAgent
 
 	legacyCh, err := wsClient.Connect(ctx)

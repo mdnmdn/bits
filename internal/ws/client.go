@@ -3,6 +3,7 @@ package ws
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/rand/v2"
 	"net/http"
@@ -12,8 +13,10 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/mdnmdn/bits/internal/config"
-	"github.com/mdnmdn/bits/internal/legacy/model"
 )
+
+// ErrPlanRestricted is returned when streaming requires a paid CoinGecko plan.
+var ErrPlanRestricted = errors.New("plan restricted: requires paid CoinGecko API key")
 
 const (
 	// DefaultWSURL is the CoinGecko WebSocket streaming endpoint.
@@ -24,25 +27,33 @@ const (
 	backoffMax     = 30 * time.Second
 	welcomeTimeout = 10 * time.Second
 	confirmTimeout = 10 * time.Second
-	// livenessTimeout is the maximum time to wait for any inbound message
-	// (data or ping) before treating the connection as stale. CoinGecko sends
-	// pings every ~3s and data every ~10s, so 60s provides ample headroom.
+	// livenessTimeout is the maximum time to wait for any inbound message.
 	livenessTimeout = 60 * time.Second
 )
+
+// Update carries a single price update from the CoinGecko stream.
+type Update struct {
+	CoinID    string
+	Price     float64
+	Change24h float64
+	MarketCap float64
+	Volume24h float64
+	UpdatedAt int64
+}
 
 // Client manages a WebSocket connection to CoinGecko's streaming API.
 type Client struct {
 	cfg       *config.Config
 	coinIDs   []string
 	wsURL     string
-	UserAgent string // sent with WebSocket handshake; set by cmd layer
+	UserAgent string
 
 	conn    *websocket.Conn
-	updates chan *model.CoinUpdate
-	done    chan struct{} // closed when readLoop exits for good
-	started atomic.Bool   // true once readLoop goroutine is launched
-	closing atomic.Bool   // set by Close(), suppresses reconnect
-	mu      sync.Mutex    // protects conn
+	updates chan *Update
+	done    chan struct{}
+	started atomic.Bool
+	closing atomic.Bool
+	mu      sync.Mutex
 }
 
 // NewClient creates a new WebSocket streaming client.
@@ -51,7 +62,7 @@ func NewClient(cfg *config.Config, coinIDs []string) *Client {
 		cfg:     cfg,
 		coinIDs: coinIDs,
 		wsURL:   DefaultWSURL,
-		updates: make(chan *model.CoinUpdate, 64),
+		updates: make(chan *Update, 64),
 		done:    make(chan struct{}),
 	}
 }
@@ -62,11 +73,9 @@ func (c *Client) SetURL(url string) {
 }
 
 // Connect establishes the WebSocket connection and starts reading updates.
-// Returns a channel that receives price updates. The channel is closed when
-// the client is shut down or the context is canceled.
-func (c *Client) Connect(ctx context.Context) (<-chan *model.CoinUpdate, error) {
-	if !c.cfg.IsPaid() {
-		return nil, model.ErrPlanRestricted
+func (c *Client) Connect(ctx context.Context) (<-chan *Update, error) {
+	if !c.cfg.CoinGecko.IsPaid() {
+		return nil, ErrPlanRestricted
 	}
 
 	if err := c.connect(ctx); err != nil {
@@ -89,10 +98,9 @@ func (c *Client) Connect(ctx context.Context) (<-chan *model.CoinUpdate, error) 
 	return c.updates, nil
 }
 
-// Close gracefully shuts down the WebSocket connection. It is idempotent.
+// Close gracefully shuts down the WebSocket connection.
 func (c *Client) Close() error {
 	if !c.closing.CompareAndSwap(false, true) {
-		// Already closing — wait for readLoop to finish if it was started.
 		if c.started.Load() {
 			<-c.done
 		}
@@ -102,12 +110,7 @@ func (c *Client) Close() error {
 	c.mu.Lock()
 	conn := c.conn
 	if conn != nil {
-		// Send unsubscribe before closing. Hold mu to prevent concurrent
-		// writes from reconnect (gorilla/websocket doesn't support concurrent writers).
-		unsub := actionCableCommand{
-			Command:    "unsubscribe",
-			Identifier: ChannelID,
-		}
+		unsub := actionCableCommand{Command: "unsubscribe", Identifier: ChannelID}
 		data, _ := json.Marshal(unsub)
 		_ = conn.WriteMessage(websocket.TextMessage, data)
 		_ = conn.WriteMessage(websocket.CloseMessage,
@@ -122,17 +125,13 @@ func (c *Client) Close() error {
 	return nil
 }
 
-// connect dials the WebSocket endpoint and waits for the welcome message.
 func (c *Client) connect(ctx context.Context) error {
 	url := c.wsURL + "?x_cg_pro_api_key=" + c.cfg.CoinGecko.APIKey
 
 	header := http.Header{}
 	header.Set("User-Agent", c.UserAgent)
 
-	dialer := websocket.Dialer{
-		HandshakeTimeout: 10 * time.Second,
-	}
-
+	dialer := websocket.Dialer{HandshakeTimeout: 10 * time.Second}
 	conn, _, err := dialer.DialContext(ctx, url, header)
 	if err != nil {
 		return err
@@ -142,21 +141,15 @@ func (c *Client) connect(ctx context.Context) error {
 	c.conn = conn
 	c.mu.Unlock()
 
-	// Wait for welcome message.
 	if err := c.waitForType("welcome", welcomeTimeout); err != nil {
 		c.closeConn()
 		return fmt.Errorf("waiting for welcome: %w", err)
 	}
-
 	return nil
 }
 
-// subscribe sends the subscribe command and waits for confirmation.
 func (c *Client) subscribe(ctx context.Context) error {
-	sub := actionCableCommand{
-		Command:    "subscribe",
-		Identifier: ChannelID,
-	}
+	sub := actionCableCommand{Command: "subscribe", Identifier: ChannelID}
 	data, _ := json.Marshal(sub)
 
 	c.mu.Lock()
@@ -165,25 +158,14 @@ func (c *Client) subscribe(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-
-	// CoinGecko sends {"code":2000,"message":"Subscription is successful..."}
-	// rather than ActionCable's standard {"type":"confirm_subscription"}.
 	return c.waitForSubscription(confirmTimeout)
 }
 
-// setTokens tells the server which coin IDs to stream.
 func (c *Client) setTokens() error {
-	inner := map[string]any{
-		"action":  "set_tokens",
-		"coin_id": c.coinIDs,
-	}
+	inner := map[string]any{"action": "set_tokens", "coin_id": c.coinIDs}
 	innerData, _ := json.Marshal(inner)
 
-	msg := actionCableCommand{
-		Command:    "message",
-		Identifier: ChannelID,
-		Data:       string(innerData),
-	}
+	msg := actionCableCommand{Command: "message", Identifier: ChannelID, Data: string(innerData)}
 	data, _ := json.Marshal(msg)
 
 	c.mu.Lock()
@@ -192,8 +174,6 @@ func (c *Client) setTokens() error {
 	return err
 }
 
-// readLoop reads messages from the WebSocket and dispatches updates.
-// On read failure, it reconnects unless Close() was called or ctx is done.
 func (c *Client) readLoop(ctx context.Context) {
 	defer close(c.done)
 	defer close(c.updates)
@@ -205,8 +185,6 @@ func (c *Client) readLoop(ctx context.Context) {
 		conn := c.conn
 		c.mu.Unlock()
 
-		// Set a liveness deadline so half-open connections are detected.
-		// Refreshed on every successful read (data or ping).
 		_ = conn.SetReadDeadline(time.Now().Add(livenessTimeout))
 
 		_, raw, err := conn.ReadMessage()
@@ -214,17 +192,13 @@ func (c *Client) readLoop(ctx context.Context) {
 			if c.closing.Load() || ctx.Err() != nil {
 				return
 			}
-
-			// Connection lost or stale — attempt reconnect with backoff.
 			c.closeConn()
-
 			if !c.reconnect(ctx, &backoff) {
 				return
 			}
 			continue
 		}
 
-		// Reset backoff on successful read.
 		backoff = backoffMin
 
 		update := c.parseMessage(raw)
@@ -240,15 +214,12 @@ func (c *Client) readLoop(ctx context.Context) {
 	}
 }
 
-// reconnect attempts to re-establish the WebSocket connection with exponential backoff.
-// Returns false if the client should stop (context done or closing).
 func (c *Client) reconnect(ctx context.Context, backoff *time.Duration) bool {
 	for {
 		if c.closing.Load() || ctx.Err() != nil {
 			return false
 		}
 
-		// Interruptible backoff with jitter.
 		jitter := time.Duration(rand.Int64N(int64(*backoff / 4)))
 		wait := *backoff + jitter
 
@@ -260,12 +231,10 @@ func (c *Client) reconnect(ctx context.Context, backoff *time.Duration) bool {
 			return false
 		}
 
-		// Check again after waking — Close() may have been called during sleep.
 		if c.closing.Load() {
 			return false
 		}
 
-		// Increase backoff for next attempt.
 		*backoff *= 2
 		if *backoff > backoffMax {
 			*backoff = backoffMax
@@ -282,12 +251,10 @@ func (c *Client) reconnect(ctx context.Context, backoff *time.Duration) bool {
 			c.closeConn()
 			continue
 		}
-
 		return true
 	}
 }
 
-// closeConn closes the current WebSocket connection.
 func (c *Client) closeConn() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -297,7 +264,6 @@ func (c *Client) closeConn() {
 	}
 }
 
-// waitForType reads messages until a message of the given type is received or timeout expires.
 func (c *Client) waitForType(msgType string, timeout time.Duration) error {
 	c.mu.Lock()
 	conn := c.conn
@@ -311,7 +277,6 @@ func (c *Client) waitForType(msgType string, timeout time.Duration) error {
 		if err != nil {
 			return fmt.Errorf("reading %s: %w", msgType, err)
 		}
-
 		var msg actionCableMessage
 		if err := json.Unmarshal(raw, &msg); err != nil {
 			continue
@@ -322,27 +287,15 @@ func (c *Client) waitForType(msgType string, timeout time.Duration) error {
 	}
 }
 
-// parseMessage parses a raw WebSocket message into a CoinUpdate.
-// Returns nil for non-data messages (ping, welcome, subscription confirmations).
-//
-// CoinGecko sends price updates as bare JSON payloads (not wrapped in an
-// ActionCable envelope):
-//
-//	{"c":"C1","i":"bitcoin","p":69982.9,"pp":-0.11,"m":1.39e12,"v":4.68e10,"t":1773277871}
-func (c *Client) parseMessage(raw []byte) *model.CoinUpdate {
-	// Try bare payload first (most common message type).
+func (c *Client) parseMessage(raw []byte) *Update {
 	var data wsPayload
 	if err := json.Unmarshal(raw, &data); err != nil {
 		return nil
 	}
-
-	// Skip control messages: ping ({"type":"ping",...}), welcome, subscription confirms.
-	// These parse into wsPayload with an empty CoinID.
 	if data.CoinID == "" {
 		return nil
 	}
-
-	return &model.CoinUpdate{
+	return &Update{
 		CoinID:    data.CoinID,
 		Price:     data.Price,
 		Change24h: data.PricePct,
@@ -352,9 +305,6 @@ func (c *Client) parseMessage(raw []byte) *model.CoinUpdate {
 	}
 }
 
-// waitForSubscription waits for CoinGecko's subscription confirmation.
-// CoinGecko sends {"code":2000,"message":"Subscription is successful..."} instead
-// of the standard ActionCable {"type":"confirm_subscription"}.
 func (c *Client) waitForSubscription(timeout time.Duration) error {
 	c.mu.Lock()
 	conn := c.conn
@@ -368,24 +318,19 @@ func (c *Client) waitForSubscription(timeout time.Duration) error {
 		if err != nil {
 			return fmt.Errorf("reading subscription confirm: %w", err)
 		}
-
 		var msg subscriptionResponse
 		if err := json.Unmarshal(raw, &msg); err != nil {
 			continue
 		}
-		// CoinGecko uses code 2000 for successful subscription.
 		if msg.Code == 2000 {
 			return nil
 		}
-		// Also accept standard ActionCable confirm.
 		var acMsg actionCableMessage
 		if json.Unmarshal(raw, &acMsg) == nil && acMsg.Type == "confirm_subscription" {
 			return nil
 		}
 	}
 }
-
-// Protocol types.
 
 type actionCableCommand struct {
 	Command    string `json:"command"`
@@ -404,7 +349,6 @@ type subscriptionResponse struct {
 	Message string `json:"message"`
 }
 
-// wsPayload is the inner message format for CGSimplePrice updates.
 type wsPayload struct {
 	Category  string  `json:"c"`
 	CoinID    string  `json:"i"`

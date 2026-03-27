@@ -15,10 +15,6 @@ const (
 	TierDemo = "demo"
 	TierPaid = "paid"
 
-	MarketTypeSpot   = "spot"
-	MarketTypeMargin = "margin"
-	MarketTypeFuture = "future"
-
 	demoBaseURL = "https://api.coingecko.com/api/v3"
 	proBaseURL  = "https://pro-api.coingecko.com/api/v3"
 
@@ -60,6 +56,21 @@ func (c CoinGeckoConfig) GetAuthHeader() (string, string) {
 		return proHeaderKey, c.APIKey
 	}
 	return demoHeaderKey, c.APIKey
+}
+
+func (c CoinGeckoConfig) ApplyAuth(req *http.Request) {
+	if c.APIKey != "" {
+		key, val := c.GetAuthHeader()
+		req.Header.Set(key, val)
+	}
+}
+
+func (c CoinGeckoConfig) MaskedKey() string {
+	apiKey := c.APIKey
+	if len(apiKey) <= 8 {
+		return strings.Repeat("*", len(apiKey))
+	}
+	return apiKey[:4] + strings.Repeat("*", len(apiKey)-8) + apiKey[len(apiKey)-4:]
 }
 
 // BinanceConfig holds Binance API credentials for all market types.
@@ -510,24 +521,6 @@ func Save(cfg *Config) error {
 	return os.Chmod(path, 0o600)
 }
 
-func (c *Config) BaseURL() string {
-	return c.CoinGecko.GetBaseURL()
-}
-
-func (c *Config) AuthHeader() (string, string) {
-	return c.CoinGecko.GetAuthHeader()
-}
-
-func (c *Config) ApplyAuth(req *http.Request) {
-	if c.CoinGecko.APIKey != "" {
-		key, val := c.AuthHeader()
-		req.Header.Set(key, val)
-	}
-}
-
-func (c *Config) IsPaid() bool {
-	return c.CoinGecko.IsPaid()
-}
 
 func IsValidTier(tier string) bool {
 	t := strings.ToLower(tier)
@@ -537,14 +530,6 @@ func IsValidTier(tier string) bool {
 		}
 	}
 	return false
-}
-
-func (c *Config) MaskedKey() string {
-	apiKey := c.CoinGecko.APIKey
-	if len(apiKey) <= 8 {
-		return strings.Repeat("*", len(apiKey))
-	}
-	return apiKey[:4] + strings.Repeat("*", len(apiKey)-8) + apiKey[len(apiKey)-4:]
 }
 
 func (c *Config) Redacted() *Config {

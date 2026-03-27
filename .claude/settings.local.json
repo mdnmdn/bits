@@ -15,7 +15,8 @@
       "Bash(./bits legacy:*)",
       "Bash(./bits --help)",
       "Bash(go doc:*)",
-      "Bash(./bits stream:*)"
+      "Bash(./bits stream:*)",
+      "Bash(./bits capabilities:*)"
     ]
   }
 }
