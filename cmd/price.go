@@ -63,7 +63,10 @@ func runPrice(cmd *cobra.Command, args []string) error {
 		return printDryRun(cfg, "price", "/simple/price", params, nil)
 	}
 
-	client := newAPIClient(cfg)
+	client, err := newAPIClientWithFeature("price")(cfg)
+	if err != nil {
+		return err
+	}
 	ctx := cmd.Context()
 
 	// Fetch prices by IDs and/or symbols directly — no /search resolution needed.

@@ -44,7 +44,10 @@ func runSearch(cmd *cobra.Command, args []string) error {
 		}, nil)
 	}
 
-	client := newAPIClient(cfg)
+	client, err := newAPIClientWithFeature("search")(cfg)
+	if err != nil {
+		return err
+	}
 	ctx := cmd.Context()
 
 	s, ok := client.(provider.Searcher)

@@ -116,7 +116,10 @@ func runHistory(cmd *cobra.Command, args []string) error {
 		return historyDryRun(cfg, coinID, dateStr, daysStr, fromStr, toStr, vs, interval, ohlc)
 	}
 
-	client := newAPIClient(cfg)
+	client, err := newAPIClientWithFeature("history")(cfg)
+	if err != nil {
+		return err
+	}
 	ctx := cmd.Context()
 
 	// OHLC via --days uses the base Provider interface (CoinOHLC).

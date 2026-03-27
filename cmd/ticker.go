@@ -37,7 +37,10 @@ func runTicker(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	client := newAPIClient(cfg)
+	client, err := newAPIClientWithFeature("ticker")(cfg)
+	if err != nil {
+		return err
+	}
 
 	tp, ok := client.(provider.TickerProvider)
 	if !ok {

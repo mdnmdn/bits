@@ -57,7 +57,10 @@ func runTUIMarkets(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	client := newAPIClient(cfg)
+	client, err := newAPIClientWithFeature("tui-markets")(cfg)
+	if err != nil {
+		return err
+	}
 	model := tui.NewMarketsModel(client, vs, category, total)
 
 	p := tea.NewProgram(model, tea.WithAltScreen())
@@ -72,7 +75,10 @@ func runTUITrending(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	client := newAPIClient(cfg)
+	client, err := newAPIClientWithFeature("tui-trending")(cfg)
+	if err != nil {
+		return err
+	}
 	showMax := ""
 	if cfg.IsPaid() {
 		showMax = "coins"

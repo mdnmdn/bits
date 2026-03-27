@@ -39,7 +39,10 @@ func runOrderbook(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	client := newAPIClient(cfg)
+	client, err := newAPIClientWithFeature("orderbook")(cfg)
+	if err != nil {
+		return err
+	}
 
 	obp, ok := client.(provider.OrderBookProvider)
 	if !ok {

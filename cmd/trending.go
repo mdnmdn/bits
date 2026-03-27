@@ -49,7 +49,10 @@ func runTrending(cmd *cobra.Command, args []string) error {
 		return printDryRun(cfg, "trending", "/search/trending", params, nil)
 	}
 
-	client := newAPIClient(cfg)
+	client, err := newAPIClientWithFeature("trending")(cfg)
+	if err != nil {
+		return err
+	}
 	ctx := cmd.Context()
 
 	tp, ok := client.(provider.TrendingProvider)

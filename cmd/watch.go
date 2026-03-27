@@ -65,7 +65,10 @@ func runWatch(cmd *cobra.Command, args []string) error {
 	// Create API client once for both ID validation and symbol resolution.
 	var client provider.Provider
 	if !dryRun {
-		client = newAPIClient(cfg)
+		client, err = newAPIClientWithFeature("watch")(cfg)
+		if err != nil {
+			return err
+		}
 	}
 
 	if idsStr != "" {

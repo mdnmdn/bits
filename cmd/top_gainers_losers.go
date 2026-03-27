@@ -67,7 +67,10 @@ func runTopGainersLosers(cmd *cobra.Command, args []string) error {
 		return printDryRun(cfg, "top-gainers-losers", "/coins/top_gainers_losers", params, nil)
 	}
 
-	client := newAPIClient(cfg)
+	client, err := newAPIClientWithFeature("top-gainers-losers")(cfg)
+	if err != nil {
+		return err
+	}
 	ctx := cmd.Context()
 
 	gl, ok := client.(provider.GainersLosersProvider)

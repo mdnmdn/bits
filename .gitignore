@@ -36,7 +36,7 @@ dist/
 *.key
 config.yaml
 
-./bits
 config.toml
 config.yaml
 config.yml
+bits

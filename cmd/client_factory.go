@@ -2,7 +2,9 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/mdnmdn/bits/internal/capability"
 	"github.com/mdnmdn/bits/internal/config"
 	"github.com/mdnmdn/bits/internal/model"
 	"github.com/mdnmdn/bits/internal/provider"
@@ -12,18 +14,26 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// userAgent is the User-Agent header sent with all API and WebSocket requests.
 var userAgent = "coingecko-cli/" + version
 
-// providerOverride is set by the --provider flag via PersistentPreRun on rootCmd.
-// Empty means use config default.
 var providerOverride string
-
-// marketTypeOverride is set by the --market-type flag via PersistentPreRun on rootCmd.
 var marketTypeOverride string
 
+var commandFeatureMap = map[string]capability.Feature{
+	"price":              capability.FeaturePrice,
+	"markets":            capability.FeatureMarketsList,
+	"search":             capability.FeatureSearch,
+	"trending":           capability.FeatureTrending,
+	"history":            capability.FeatureHistorical,
+	"top-gainers-losers": capability.FeatureGainersLosers,
+	"ticker":             capability.FeatureTicker24h,
+	"orderbook":          capability.FeatureOrderBook,
+	"watch":              capability.FeatureStreamPrice,
+	"tui-markets":        capability.FeatureMarketsList,
+	"tui-trending":       capability.FeatureTrending,
+}
+
 func init() {
-	// Resolve --provider flag before any subcommand runs.
 	existing := RootCmd.PersistentPreRun
 	RootCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
 		if p, _ := cmd.Flags().GetString("provider"); p != "" {
@@ -38,21 +48,53 @@ func init() {
 	}
 }
 
-// newAPIClient is the factory used by command handlers to create API clients.
-// Tests override this to inject httptest-backed clients.
-var newAPIClient = func(cfg *config.Config) provider.Provider {
-	name := cfg.ActiveProvider()
+func resolveProvider(cfg *config.Config, requiredFeature capability.Feature) (provider.Provider, error) {
+	providerName := cfg.ActiveProvider()
 	if providerOverride != "" {
-		name = providerOverride
+		providerName = providerOverride
 	}
 
+	allCaps := provider.AllCapabilities()
+
+	if requiredFeature != "" {
+		if providerOverride != "" {
+			if caps, ok := allCaps[providerName]; ok {
+				key := capability.CapabilityKey{Market: capability.MarketSpot, Feature: requiredFeature}
+				if caps[key] {
+					return createProviderClient(providerName, cfg)
+				}
+			}
+			return nil, fmt.Errorf("provider %q does not support %s", providerName, requiredFeature)
+		}
+
+		if caps, ok := allCaps[providerName]; ok {
+			key := capability.CapabilityKey{Market: capability.MarketSpot, Feature: requiredFeature}
+			if caps[key] {
+				return createProviderClient(providerName, cfg)
+			}
+		}
+
+		for _, name := range provider.AvailableProviders {
+			if caps, ok := allCaps[name]; ok {
+				key := capability.CapabilityKey{Market: capability.MarketSpot, Feature: requiredFeature}
+				if caps[key] {
+					return createProviderClient(name, cfg)
+				}
+			}
+		}
+		return nil, fmt.Errorf("no provider supports %s", requiredFeature)
+	}
+
+	return createProviderClient(providerName, cfg)
+}
+
+func createProviderClient(name string, cfg *config.Config) (provider.Provider, error) {
 	c, err := provider.NewProvider(name, cfg)
 	if err != nil {
-		// Fall back to coingecko on unknown provider.
 		c, _ = provider.NewProvider("coingecko", cfg)
+		return c, nil
 	}
 
-	// Apply market type override if specified
 	if marketTypeOverride != "" {
 		if bc, ok := c.(*binance.Client); ok {
 			bc.SetMarketType(marketTypeOverride)
@@ -62,7 +104,19 @@ var newAPIClient = func(cfg *config.Config) provider.Provider {
 	}
 
 	c.SetUserAgent(userAgent)
+	return c, nil
+}
+
+var newAPIClient = func(cfg *config.Config) provider.Provider {
+	c, _ := resolveProvider(cfg, "")
 	return c
+}
+
+var newAPIClientWithFeature = func(cmdName string) func(*config.Config) (provider.Provider, error) {
+	return func(cfg *config.Config) (provider.Provider, error) {
+		feature := commandFeatureMap[cmdName]
+		return resolveProvider(cfg, feature)
+	}
 }
 
 var loadedConfigPath string

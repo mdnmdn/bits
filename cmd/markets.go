@@ -43,7 +43,10 @@ func runMarkets(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	client := newAPIClient(cfg)
+	client, err := newAPIClientWithFeature("markets")(cfg)
+	if err != nil {
+		return err
+	}
 	ctx := cmd.Context()
 
 	perPage := 250
