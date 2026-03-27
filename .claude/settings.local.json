@@ -13,7 +13,8 @@
       "Bash(grep:*)",
       "Bash(git mv:*)",
       "Bash(./bits legacy:*)",
-      "Bash(./bits --help)"
+      "Bash(./bits --help)",
+      "Bash(go doc:*)"
     ]
   }
 }

@@ -385,7 +385,7 @@ func (r *Resolver) Resolve(feature capability.Feature, opts ResolutionOpts) (pro
 
 ---
 
-## Phase 5 — New provider implementations
+## Phase 5 — New provider implementations ✅ COMPLETED
 
 **Parallel across providers. Each provider is one agent.**
 
@@ -451,6 +451,18 @@ Scope: core interfaces only. Search, Trending, Historical, Gainers/Losers stay l
 **Gate:** `go test ./internal/provider/coingecko/...`
 
 After 5a–5c: update `internal/provider/registry.go` to wire all three into `NewProvider`.
+
+### Completion notes
+
+**5a Binance** (`internal/provider/binance/`): `client.go` (spot+futures clients, market-agnostic), `exchange.go` (`ServerTime`, `ExchangeInfo`), `market.go` (`Price`, `Candles`, `Ticker24h`, `OrderBook` — all dispatch on `market` parameter), `stream.go` (`WatchOrderBook` via gorilla/websocket combined-stream), `client_test.go` (interface assertions).
+
+**5b Bitget** (`internal/provider/bitget/`): `client.go` (HMAC-SHA256 via `legacy/auth`), `exchange.go` (`ServerTime` via `/api/v2/public/time`, `ExchangeInfo` for spot/futures), `market.go` (`Price`, `Candles`, `Ticker24h`), `client_test.go` (interface assertions).
+
+**5c CoinGecko** (`internal/provider/coingecko/`): `client.go`, `aggregator.go` (`CoinMarkets`), `market.go` (`Price`, `Candles`), `stream.go` (`WatchPrices` wrapping `legacy/ws.Client`), `client_test.go` (interface assertions).
+
+**Registry** moved to `internal/registry/registry.go` (separate package to avoid import cycle: `internal/provider` must not import its own sub-packages). `internal/provider/registry.go` is now a stub comment. `internal/registry.NewProvider` and `AllProviderIDs` wire all three providers.
+
+All builds and tests pass.
 
 ---
 
