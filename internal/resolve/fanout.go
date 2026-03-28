@@ -2,8 +2,8 @@ package resolve
 
 import (
 	"context"
-	"sync"
 	"github.com/mdnmdn/bits/internal/model"
+	"sync"
 )
 
 // FanOut calls fn for each symbol in parallel and collects results into a

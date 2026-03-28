@@ -63,8 +63,8 @@ func runCandles(cmd *cobra.Command, args []string) error {
 	}
 
 	p, market, fallback, rerr := resolver.Resolve(cmd.Context(), capability.FeatureCandles, resolve.ResolutionOpts{
-		Provider: opts.Provider,
-		Market:   opts.Market,
+		Provider:   opts.Provider,
+		Market:     opts.Market,
 		NoFallback: opts.NoFallback,
 	})
 	if rerr != nil {

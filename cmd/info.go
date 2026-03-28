@@ -34,8 +34,8 @@ func runInfo(cmd *cobra.Command, args []string) error {
 	resolver := newResolver(cfg)
 
 	p, market, fallback, rerr := resolver.Resolve(cmd.Context(), capability.FeatureExchangeInfo, resolve.ResolutionOpts{
-		Provider: opts.Provider,
-		Market:   opts.Market,
+		Provider:   opts.Provider,
+		Market:     opts.Market,
 		NoFallback: opts.NoFallback,
 	})
 	if rerr != nil {

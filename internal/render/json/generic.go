@@ -9,13 +9,13 @@ import (
 
 // envelope is the JSON output structure with provenance fields.
 type envelope[T any] struct {
-	Data              T                  `json:"data"`
-	Provider          string             `json:"provider"`
-	Market            model.MarketType   `json:"market"`
-	Fallback          bool               `json:"fallback,omitempty"`
-	RequestedProvider string             `json:"requested_provider,omitempty"`
-	RequestedMarket   model.MarketType   `json:"requested_market,omitempty"`
-	Errors            []itemError        `json:"errors,omitempty"`
+	Data              T                `json:"data"`
+	Provider          string           `json:"provider"`
+	Market            model.MarketType `json:"market"`
+	Fallback          bool             `json:"fallback,omitempty"`
+	RequestedProvider string           `json:"requested_provider,omitempty"`
+	RequestedMarket   model.MarketType `json:"requested_market,omitempty"`
+	Errors            []itemError      `json:"errors,omitempty"`
 }
 
 type itemError struct {

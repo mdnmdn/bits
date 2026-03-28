@@ -17,8 +17,8 @@ type bitgetTickerEntry struct {
 	LastPr    string `json:"lastPr"`
 	High24H   string `json:"high24h"`
 	Low24H    string `json:"low24h"`
-	Open      string `json:"open"`      // spot open price
-	OpenUtc   string `json:"openUtc"`   // futures open price at UTC 0
+	Open      string `json:"open"`    // spot open price
+	OpenUtc   string `json:"openUtc"` // futures open price at UTC 0
 	BaseVol   string `json:"baseVolume"`
 	QuoteVol  string `json:"quoteVolume"`
 	BidPr     string `json:"bidPr"`

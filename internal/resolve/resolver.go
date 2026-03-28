@@ -12,9 +12,9 @@ import (
 
 // ResolutionOpts controls how a provider is selected for a request.
 type ResolutionOpts struct {
-	Provider    string           // explicit provider id override ("" = use config/default)
-	Market      model.MarketType // explicit market ("" = spot)
-	NoFallback  bool             // if true, error instead of fallback
+	Provider   string           // explicit provider id override ("" = use config/default)
+	Market     model.MarketType // explicit market ("" = spot)
+	NoFallback bool             // if true, error instead of fallback
 }
 
 // Resolver selects a provider for a given feature, applying fallback logic.
