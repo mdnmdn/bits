@@ -279,12 +279,12 @@ func (c *Client) futuresTicker24h(ctx context.Context, symbol string, market mod
 		Result  []struct {
 			TickerID string `json:"ticker_id"`
 			Last     string `json:"last_price"`
-			High     string `json:"high_price"`
-			Low      string `json:"low_price"`
+			High     string `json:"high"`
+			Low      string `json:"low"`
 			Bid      string `json:"bid"`
 			Ask      string `json:"ask"`
-			Volume   string `json:"base_volume"`
-			QuoteVol string `json:"quote_volume"`
+			Volume   string `json:"stock_volume"`
+			QuoteVol string `json:"money_volume"`
 		} `json:"result"`
 	}
 	if err := json.Unmarshal(body, &resp); err != nil {

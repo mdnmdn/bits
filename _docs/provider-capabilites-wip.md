@@ -13,10 +13,10 @@ The goal is to achieve parity across supported exchanges where API support exist
 | exchange_info      | spot    | -         | ✓       | ✓      | ✓        |
 | exchange_info      | futures | -         | ✓       | ✓      | ✓        |
 | price              | spot    | ✓         | ✓       | ✓      | ✓        |
-| price              | futures | -         | ✓       | ✓      | ✓        |
+| price              | futures | -         | ✓       | ✓      | -        |
 | price              | margin  | -         | ✓       | ✓      | -        |
 | candles            | spot    | ✓         | ✓       | ✓      | ✓        |
-| candles            | futures | -         | ✓       | ✓      | ✓        |
+| candles            | futures | -         | ✓       | ✓      | -        |
 | candles            | margin  | -         | ✓       | -      | -        |
 | ticker_24h         | spot    | -         | ✓       | ✓      | ✓        |
 | ticker_24h         | futures | -         | ✓       | ✓      | ✓        |
@@ -88,3 +88,17 @@ The goal is to achieve parity across supported exchanges where API support exist
 - Verified all providers and markets (spot, futures, margin) for compilation and interface compliance.
 - Updated `_docs/ws-handling.md` with specifications.
 - Updated `_docs/providers/` documentation with margin/futures findings.
+
+---
+
+## Phase 5: Feedback Fixes & Final Polish ✅ COMPLETED
+
+**Goal:** Address PR feedback and ensure correctness.
+
+**Completed:**
+- Fixed WhiteBit Futures `ExchangeInfo` parsing and `_PERP` symbol translation.
+- Fixed WhiteBit Futures `Ticker24h` JSON field mapping (High/Low/Volume).
+- Fixed WhiteBit WebSocket `lastprice_update` parsing.
+- Refined Bitget `Capabilities()` to strictly match configuration.
+- Verified Bitget Margin market data fetching.
+- Removed unsupported capabilities (WhiteBit futures candles/price) to maintain parity with API reality.

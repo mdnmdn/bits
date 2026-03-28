@@ -53,6 +53,7 @@ type bitgetMarginSymbol struct {
 	Symbol    string `json:"symbol"`
 	BaseCoin  string `json:"baseCoin"`
 	QuoteCoin string `json:"quoteCoin"`
+	Status    string `json:"status"`
 }
 
 type bitgetMarginSymbolsResponse struct {
@@ -119,11 +120,16 @@ func (c *Client) marginExchangeInfo(market model.MarketType) (model.Response[mod
 
 	symbols := make([]model.Symbol, 0, len(resp.Data))
 	for _, s := range resp.Data {
+		status := model.SymbolStatusTrading
+		if s.Status == "offline" {
+			status = model.SymbolStatusBreak
+		}
+
 		symbols = append(symbols, model.Symbol{
 			Symbol:     s.Symbol,
 			BaseAsset:  s.BaseCoin,
 			QuoteAsset: s.QuoteCoin,
-			Status:     model.SymbolStatusTrading,
+			Status:     status,
 			Market:     market,
 		})
 	}
