@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/mdnmdn/bits/internal/model"
@@ -60,9 +61,17 @@ func (c *Client) fetchTicker(symbol string) (*whitebitTicker, error) {
 	return &resp.Result, nil
 }
 
+// translateFuturesSymbol converts a spot symbol to a futures symbol (e.g. BTC_USDT -> BTC_PERP)
+func translateFuturesSymbol(symbol string) string {
+	if strings.HasSuffix(symbol, "_USDT") {
+		return strings.TrimSuffix(symbol, "_USDT") + "_PERP"
+	}
+	return symbol
+}
+
 // Price fetches current prices for the given symbols.
 // ids are trading symbols (e.g. "BTC_USDT"). currency is used as metadata only.
-func (c *Client) Price(_ context.Context, ids []string, currency string) (model.Response[[]model.CoinPrice], error) {
+func (c *Client) Price(ctx context.Context, ids []string, currency string) (model.Response[[]model.CoinPrice], error) {
 	prices := make([]model.CoinPrice, 0, len(ids))
 	var itemErrors []model.ItemError
 
@@ -93,7 +102,11 @@ func (c *Client) Price(_ context.Context, ids []string, currency string) (model.
 }
 
 // Ticker24h fetches 24-hour rolling ticker statistics for the given symbol.
-func (c *Client) Ticker24h(_ context.Context, symbol string, market model.MarketType) (model.Response[model.Ticker24h], error) {
+func (c *Client) Ticker24h(ctx context.Context, symbol string, market model.MarketType) (model.Response[model.Ticker24h], error) {
+	if market == model.MarketFutures {
+		return c.futuresTicker24h(ctx, symbol, market)
+	}
+
 	ticker, err := c.fetchTicker(symbol)
 	if err != nil {
 		return model.Response[model.Ticker24h]{}, err
@@ -202,6 +215,9 @@ func (c *Client) Candles(_ context.Context, symbol string, market model.MarketTy
 
 // OrderBook fetches the order book (depth snapshot) for the given symbol.
 func (c *Client) OrderBook(_ context.Context, symbol string, market model.MarketType, depth int) (model.Response[model.OrderBook], error) {
+	if market == model.MarketFutures {
+		symbol = translateFuturesSymbol(symbol)
+	}
 	path := fmt.Sprintf("/api/v4/public/orderbook/%s?limit=%d", symbol, depth)
 	body, err := c.doRequest(path)
 	if err != nil {
@@ -251,6 +267,62 @@ func (c *Client) OrderBook(_ context.Context, symbol string, market model.Market
 }
 
 // convertInterval converts a standard interval string to WhiteBit API format.
+func (c *Client) futuresTicker24h(ctx context.Context, symbol string, market model.MarketType) (model.Response[model.Ticker24h], error) {
+	symbol = translateFuturesSymbol(symbol)
+	body, err := c.doRequest("/api/v4/public/futures")
+	if err != nil {
+		return model.Response[model.Ticker24h]{}, err
+	}
+
+	var resp struct {
+		Success bool `json:"success"`
+		Result  []struct {
+			TickerID string `json:"ticker_id"`
+			Last     string `json:"last_price"`
+			High     string `json:"high_price"`
+			Low      string `json:"low_price"`
+			Bid      string `json:"bid"`
+			Ask      string `json:"ask"`
+			Volume   string `json:"base_volume"`
+			QuoteVol string `json:"quote_volume"`
+		} `json:"result"`
+	}
+	if err := json.Unmarshal(body, &resp); err != nil {
+		return model.Response[model.Ticker24h]{}, fmt.Errorf("failed to parse futures ticker: %w", err)
+	}
+
+	for _, t := range resp.Result {
+		if t.TickerID == symbol {
+			lastPrice, _ := strconv.ParseFloat(t.Last, 64)
+			highPrice, _ := strconv.ParseFloat(t.High, 64)
+			lowPrice, _ := strconv.ParseFloat(t.Low, 64)
+			baseVol, _ := strconv.ParseFloat(t.Volume, 64)
+			quoteVol, _ := strconv.ParseFloat(t.QuoteVol, 64)
+			bidPrice, _ := strconv.ParseFloat(t.Bid, 64)
+			askPrice, _ := strconv.ParseFloat(t.Ask, 64)
+
+			return model.Response[model.Ticker24h]{
+				Kind:     model.KindTicker,
+				Provider: providerID,
+				Market:   market,
+				Data: model.Ticker24h{
+					Symbol:      symbol,
+					Market:      market,
+					LastPrice:   lastPrice,
+					HighPrice:   &highPrice,
+					LowPrice:    &lowPrice,
+					Volume:      &baseVol,
+					QuoteVolume: &quoteVol,
+					BidPrice:    &bidPrice,
+					AskPrice:    &askPrice,
+				},
+			}, nil
+		}
+	}
+
+	return model.Response[model.Ticker24h]{}, fmt.Errorf("ticker not found for symbol %s", symbol)
+}
+
 func convertInterval(interval string) string {
 	switch interval {
 	case "1m":

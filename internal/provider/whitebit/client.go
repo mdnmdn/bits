@@ -57,7 +57,6 @@ func (c *Client) Capabilities() capability.CapabilityMatrix {
 	// Register futures features (Time and Info are shared)
 	matrix[capability.CapabilityKey{Market: f, Feature: capability.FeatureExchangeInfo}] = true
 	matrix[capability.CapabilityKey{Market: f, Feature: capability.FeaturePrice}] = true
-	matrix[capability.CapabilityKey{Market: f, Feature: capability.FeatureCandles}] = true
 	matrix[capability.CapabilityKey{Market: f, Feature: capability.FeatureTicker24h}] = true
 	matrix[capability.CapabilityKey{Market: f, Feature: capability.FeatureOrderBook}] = true
 

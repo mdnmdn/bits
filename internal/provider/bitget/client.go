@@ -43,8 +43,7 @@ func (c *Client) ID() string { return providerID }
 func (c *Client) SetUserAgent(ua string) { c.userAgent = ua }
 
 // Capabilities returns the capability matrix based on the configured markets.
-// Spot is enabled if cfg.IsSpotEnabled() or neither market is enabled (default spot).
-// Futures is enabled if cfg.IsFuturesEnabled().
+// Spot is enabled if cfg.IsSpotEnabled() or nothing else is enabled (default spot).
 func (c *Client) Capabilities() capability.CapabilityMatrix {
 	s := capability.MarketSpot
 	f := capability.MarketFutures
@@ -55,20 +54,17 @@ func (c *Client) Capabilities() capability.CapabilityMatrix {
 	marginEnabled := c.cfg.IsMarginEnabled()
 
 	// Default to spot if nothing explicitly enabled
-	if !spotEnabled && !futuresEnabled {
+	if !spotEnabled && !futuresEnabled && !marginEnabled {
 		spotEnabled = true
 	}
 
 	matrix := capability.CapabilityMatrix{}
 
-	// ServerTime and ExchangeInfo are market-agnostic exchange features; register under spot.
+	// ServerTime is provider-level; register under spot.
 	matrix[capability.CapabilityKey{Market: s, Feature: capability.FeatureServerTime}] = true
-	matrix[capability.CapabilityKey{Market: s, Feature: capability.FeatureExchangeInfo}] = true
-
-	// Futures also has ExchangeInfo
-	matrix[capability.CapabilityKey{Market: f, Feature: capability.FeatureExchangeInfo}] = true
 
 	if spotEnabled {
+		matrix[capability.CapabilityKey{Market: s, Feature: capability.FeatureExchangeInfo}] = true
 		matrix[capability.CapabilityKey{Market: s, Feature: capability.FeaturePrice}] = true
 		matrix[capability.CapabilityKey{Market: s, Feature: capability.FeatureCandles}] = true
 		matrix[capability.CapabilityKey{Market: s, Feature: capability.FeatureTicker24h}] = true
@@ -78,24 +74,12 @@ func (c *Client) Capabilities() capability.CapabilityMatrix {
 	}
 
 	if futuresEnabled {
-		matrix[capability.CapabilityKey{Market: f, Feature: capability.FeaturePrice}] = true
-		matrix[capability.CapabilityKey{Market: f, Feature: capability.FeatureCandles}] = true
-		matrix[capability.CapabilityKey{Market: f, Feature: capability.FeatureTicker24h}] = true
-		matrix[capability.CapabilityKey{Market: f, Feature: capability.FeatureOrderBook}] = true
-		matrix[capability.CapabilityKey{Market: f, Feature: capability.FeatureStreamOrderBook}] = true
-	} else {
-		// Even if not explicitly enabled, we should allow discovery if queried
 		matrix[capability.CapabilityKey{Market: f, Feature: capability.FeatureExchangeInfo}] = true
 		matrix[capability.CapabilityKey{Market: f, Feature: capability.FeaturePrice}] = true
 		matrix[capability.CapabilityKey{Market: f, Feature: capability.FeatureCandles}] = true
 		matrix[capability.CapabilityKey{Market: f, Feature: capability.FeatureTicker24h}] = true
 		matrix[capability.CapabilityKey{Market: f, Feature: capability.FeatureOrderBook}] = true
 		matrix[capability.CapabilityKey{Market: f, Feature: capability.FeatureStreamOrderBook}] = true
-	}
-
-	// Always register OrderBook for spot (already done above, but just to be sure of parity)
-	if spotEnabled {
-		matrix[capability.CapabilityKey{Market: s, Feature: capability.FeatureOrderBook}] = true
 	}
 
 	if marginEnabled {

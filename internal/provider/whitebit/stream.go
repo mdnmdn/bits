@@ -69,22 +69,20 @@ func (h *whitebitHandler) Handle(ctx context.Context, raw []byte) (any, error) {
 			return nil, nil
 		}
 
-		var data whitebitWSTickerData
-		if err := json.Unmarshal(params[1], &data); err != nil {
+		var priceStr string
+		if err := json.Unmarshal(params[1], &priceStr); err != nil {
 			return nil, nil
 		}
 
-		price, _ := strconv.ParseFloat(data.Last, 64)
-		changePct, _ := strconv.ParseFloat(data.Change, 64)
+		price, _ := strconv.ParseFloat(priceStr, 64)
 
 		return &model.Response[model.CoinPrice]{
 			Kind:     model.KindPrice,
 			Provider: h.providerID,
 			Data: model.CoinPrice{
-				ID:        symbol,
-				Symbol:    symbol,
-				Price:     price,
-				Change24h: &changePct,
+				ID:     symbol,
+				Symbol: symbol,
+				Price:  price,
 			},
 		}, nil
 	}
@@ -139,13 +137,10 @@ func (h *whitebitHandler) OnCommand(ctx context.Context, cmd ws.Command, client 
 			return fmt.Errorf("invalid subscribe params")
 		}
 		method := "lastprice_subscribe"
-		// Simple heuristic to differentiate between ticker and depth subscription
-		if len(params) == 2 {
-			if _, ok := params[1].(int); ok {
-				method = "depth_subscribe"
-				// Add WhiteBit depth_subscribe specific params: [market, limit, interval, snapshot]
-				params = []any{params[0], params[1], "0", true}
-			}
+		if cmd.Method == "depth" {
+			method = "depth_subscribe"
+			// Add WhiteBit depth_subscribe specific params: [market, limit, interval, snapshot]
+			params = []any{params[0], params[1], "0", true}
 		}
 
 		return client.WriteJSON(whitebitWSRequest{
@@ -174,7 +169,7 @@ func (c *Client) WatchPrices(ctx context.Context, ids []string) (<-chan *model.C
 	for i, id := range ids {
 		params[i] = id
 	}
-	cmdChan <- ws.Command{Kind: ws.CommandSubscribe, Params: params}
+	cmdChan <- ws.Command{Kind: ws.CommandSubscribe, Method: "ticker", Params: params}
 
 	outChan, err := c.Stream(ctx, cmdChan)
 	if err != nil {
@@ -199,8 +194,10 @@ func (c *Client) WatchPrices(ctx context.Context, ids []string) (<-chan *model.C
 // WatchOrderBook implements provider.OrderBookStreamProvider using the unified Stream interface.
 func (c *Client) WatchOrderBook(ctx context.Context, symbol string, market model.MarketType, depth int) (<-chan *model.OrderBook, error) {
 	cmdChan := make(chan ws.Command, 1)
-	// For WhiteBit, depth_subscribe is separate. Handled in OnCommand.
-	cmdChan <- ws.Command{Kind: ws.CommandSubscribe, Params: []any{symbol, depth}}
+	if market == model.MarketFutures {
+		symbol = translateFuturesSymbol(symbol)
+	}
+	cmdChan <- ws.Command{Kind: ws.CommandSubscribe, Method: "depth", Params: []any{symbol, depth}}
 
 	outChan, err := c.Stream(ctx, cmdChan)
 	if err != nil {

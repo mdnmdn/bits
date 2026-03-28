@@ -208,6 +208,9 @@ type Manager struct {
 	handler     MessageHandler
 	pingTicker  *time.Ticker
 	pingTimeout time.Duration
+
+	mu           sync.RWMutex
+	subs         map[string]Command
 }
 
 type CommandKind string
@@ -220,6 +223,7 @@ const (
 
 type Command struct {
 	Kind    CommandKind
+	Method  string // optional: e.g. "depth" vs "ticker"
 	Params  any
 	Context context.Context
 }
@@ -243,11 +247,23 @@ func NewManager(url string, handler MessageHandler) *Manager {
 		outChan:     make(chan StreamResponse[any], 100),
 		handler:     handler,
 		pingTimeout: 30 * time.Second,
+		subs:        make(map[string]Command),
 	}
 }
 
 // Start initiates the message loop and returns the data channel.
 func (m *Manager) Start(ctx context.Context) (<-chan StreamResponse[any], error) {
+	m.client.OnConnect = func(ctx context.Context, conn *websocket.Conn) error {
+		m.mu.RLock()
+		defer m.mu.RUnlock()
+		for _, cmd := range m.subs {
+			if err := m.handler.OnCommand(ctx, cmd, m.client); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
 	m.client.OnMessage = func(ctx context.Context, raw []byte) error {
 		res, err := m.handler.Handle(ctx, raw)
 		if err != nil {
@@ -279,6 +295,26 @@ func (m *Manager) Start(ctx context.Context) (<-chan StreamResponse[any], error)
 				if cmd.Kind == CommandStop {
 					return
 				}
+
+				// Basic subscription tracking for reconnection
+				if cmd.Kind == CommandSubscribe {
+					m.mu.Lock()
+					key := string(cmd.Kind)
+					if cmd.Method != "" {
+						key += ":" + cmd.Method
+					}
+					m.subs[key] = cmd
+					m.mu.Unlock()
+				} else if cmd.Kind == CommandUnsubscribe {
+					m.mu.Lock()
+					key := string(CommandSubscribe)
+					if cmd.Method != "" {
+						key += ":" + cmd.Method
+					}
+					delete(m.subs, key)
+					m.mu.Unlock()
+				}
+
 				if err := m.handler.OnCommand(ctx, cmd, m.client); err != nil {
 					m.outChan <- StreamResponse[any]{Error: err}
 				}
