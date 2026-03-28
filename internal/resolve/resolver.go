@@ -12,9 +12,9 @@ import (
 
 // ResolutionOpts controls how a provider is selected for a request.
 type ResolutionOpts struct {
-	Provider string           // explicit provider id override ("" = use config/default)
-	Market   model.MarketType // explicit market ("" = spot)
-	Lock     bool             // if true, error instead of fallback
+	Provider    string           // explicit provider id override ("" = use config/default)
+	Market      model.MarketType // explicit market ("" = spot)
+	NoFallback  bool             // if true, error instead of fallback
 }
 
 // Resolver selects a provider for a given feature, applying fallback logic.
@@ -65,14 +65,14 @@ func (r *Resolver) Resolve(
 		}
 		// Requested market not supported — try spot as fallback market before
 		// trying a different provider.
-		if !opts.Lock && market != model.MarketSpot {
+		if !opts.NoFallback && market != model.MarketSpot {
 			if p.Capabilities()[capability.CapabilityKey{Market: model.MarketSpot, Feature: feature}] {
 				return p, model.MarketSpot, true, nil
 			}
 		}
 	}
 
-	if opts.Lock {
+	if opts.NoFallback {
 		return nil, "", false, fmt.Errorf(
 			"provider %q does not support feature %q for market %q", requestedID, feature, market,
 		)

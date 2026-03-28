@@ -81,9 +81,9 @@ The resolver selects the best provider+market for a requested feature, with opti
 
 ```go
 type ResolutionOpts struct {
-    Provider string          // explicit override ("" = config/default)
-    Market   MarketType      // explicit market ("" = spot)
-    Lock     bool            // if true, error instead of fallback
+    Provider   string          // explicit override ("" = config/default)
+    Market     MarketType      // explicit market ("" = spot)
+    NoFallback bool            // if true, error instead of fallback
 }
 
 // Returns: actualProvider, actualMarket, wasFallback, error
@@ -181,16 +181,19 @@ CoinGecko-specific helpers (`GetBaseURL`, `GetAuthHeader`, `IsPaid`, `MaskedKey`
 
 ## CLI Provider Resolution
 
-The `--provider` / `-p` flag selects the provider; `--market` / `-m` selects the market type; `--lock` / `-l` disables fallback.
+The `--provider` / `-p` flag selects the provider; `--market` / `-m` selects the market type.
+
+**Fallback policy:** specifying `--provider` disables fallback by default — `bits` will error rather than silently switch to a different provider. Pass `--allow-fallback` / `-f` to re-enable fallback even when `--provider` is set. When no provider is specified, fallback is always allowed.
 
 Resolution order: `--provider` flag → `BITS_PROVIDER` env → config file → `"coingecko"` default.
 
 ```bash
-bits price BTC ETH                             # CoinGecko (default), USD
-bits price BTCUSDT -p binance                  # Binance spot
-bits price BTCUSDT -p binance -m futures       # Binance futures
-bits ticker BTCUSDT -p coingecko               # coingecko lacks ticker → fallback to binance
-bits ticker BTCUSDT -p coingecko --lock        # error: coingecko does not support ticker
+bits price BTC ETH                              # CoinGecko (default), USD
+bits price BTCUSDT -p binance                   # Binance spot — no fallback (provider explicit)
+bits price BTCUSDT -p binance -m futures        # Binance futures — no fallback
+bits ticker BTCUSDT                             # no -p → fallback allowed; auto-routes to binance
+bits ticker BTCUSDT -p coingecko                # error: coingecko does not support ticker
+bits ticker BTCUSDT -p coingecko -f             # coingecko lacks ticker → fallback to binance
 ```
 
 ## Adding a New Provider

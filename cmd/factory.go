@@ -21,11 +21,11 @@ func newResolver(cfg *config.Config) *resolve.Resolver {
 func resolveOpts(cmd *cobra.Command) resolve.ResolutionOpts {
 	provider, _ := cmd.Root().PersistentFlags().GetString("provider")
 	market, _ := cmd.Root().PersistentFlags().GetString("market")
-	lock, _ := cmd.Root().PersistentFlags().GetBool("lock")
+	allowFallback, _ := cmd.Root().PersistentFlags().GetBool("allow-fallback")
 	return resolve.ResolutionOpts{
-		Provider: provider,
-		Market:   model.MarketType(market),
-		Lock:     lock,
+		Provider:   provider,
+		Market:     model.MarketType(market),
+		NoFallback: provider != "" && !allowFallback,
 	}
 }
 

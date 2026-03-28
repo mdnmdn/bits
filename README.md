@@ -34,11 +34,17 @@ Pick a provider with `-p`, a market with `-m`, an output format with `-o`. That'
 | **Binance** | spot · futures | Server time, exchange info, prices, candles, ticker, order book, live book stream |
 | **Bitget** | spot · futures | Server time, exchange info, prices, candles, ticker |
 
-Switch providers with `-p coingecko / -p binance / -p bitget`. When a provider doesn't support what you asked for, `bits` automatically falls back to one that does — and tells you. Use `--lock` to hard-fail instead.
+Switch providers with `-p coingecko / -p binance / -p bitget`.
+
+**Fallback is controlled by whether you use `-p`:**
+- No `-p` → fallback allowed; `bits` auto-routes to a capable provider.
+- With `-p` → no fallback by default; `bits` errors if that provider can't serve the request.
+- `-p ... -f` → opt-in to fallback even when the provider is explicit.
 
 ```sh
-bits ticker BTCUSDT -p coingecko        # no ticker on coingecko → falls back to binance
-bits ticker BTCUSDT -p coingecko -l     # error: coingecko does not support ticker
+bits ticker BTCUSDT                     # no -p → auto-routes to binance
+bits ticker BTCUSDT -p coingecko        # error: coingecko does not support ticker
+bits ticker BTCUSDT -p coingecko -f     # -f → falls back to binance
 ```
 
 ---
@@ -120,10 +126,10 @@ BITS_BITGET_API_KEY=your_key      BITS_BITGET_API_SECRET=your_secret   BITS_BITG
 ### Global flags
 
 ```
--p, --provider  string   coingecko | binance | bitget  (default: from config)
--m, --market    string   spot | futures | margin        (default: spot)
--o, --output    string   table | json | yaml | markdown | toon  (default: table)
--l, --lock               disable automatic provider fallback
+-p, --provider       string   coingecko | binance | bitget  (default: from config)
+-m, --market         string   spot | futures | margin        (default: spot)
+-o, --output         string   table | json | yaml | markdown | toon  (default: table)
+-f, --allow-fallback          allow fallback even when --provider is set
 ```
 
 ---

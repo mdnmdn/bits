@@ -35,7 +35,7 @@ func runTime(cmd *cobra.Command, args []string) error {
 	p, market, fallback, rerr := resolver.Resolve(cmd.Context(), capability.FeatureServerTime, resolve.ResolutionOpts{
 		Provider: opts.Provider,
 		Market:   opts.Market,
-		Lock:     opts.Lock,
+		NoFallback: opts.NoFallback,
 	})
 	if rerr != nil {
 		return rerr

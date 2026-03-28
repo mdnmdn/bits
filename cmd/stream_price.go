@@ -49,7 +49,7 @@ func runStreamPrice(cmd *cobra.Command, args []string) error {
 	p, _, _, rerr := resolver.Resolve(cmd.Context(), capability.FeatureStreamPrice, resolve.ResolutionOpts{
 		Provider: opts.Provider,
 		Market:   opts.Market,
-		Lock:     opts.Lock,
+		NoFallback: opts.NoFallback,
 	})
 	if rerr != nil {
 		return rerr

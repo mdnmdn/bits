@@ -13,10 +13,10 @@ var RootCmd = &cobra.Command{
 }
 
 func init() {
-	RootCmd.PersistentFlags().StringP("output", "o", "table", "Output format (table, json, markdown, yaml)")
+	RootCmd.PersistentFlags().StringP("output", "o", "table", "Output format (table, json, markdown, yaml, toon)")
 	RootCmd.PersistentFlags().StringP("provider", "p", "", "Data provider (coingecko, binance, bitget)")
 	RootCmd.PersistentFlags().StringP("market", "m", "spot", "Market type (spot, futures, margin)")
-	RootCmd.PersistentFlags().BoolP("lock", "l", false, "Disable provider fallback")
+	RootCmd.PersistentFlags().BoolP("allow-fallback", "f", false, "Allow provider fallback even when --provider is set")
 }
 
 func Execute() {

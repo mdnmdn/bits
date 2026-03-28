@@ -10,26 +10,31 @@ This document provides a comprehensive map of the features available in the Mult
 - **Binance**: Server time, exchange info, prices, candles, 24h ticker, order book, live order book streaming.
 - **Bitget**: Server time, exchange info, prices, candles, 24h ticker.
 
-Use the `--provider` / `-p` flag to select a provider, `--market` / `-m` for market type, and `--lock` / `-l` to prevent automatic fallback:
+Use the `--provider` / `-p` flag to select a provider and `--market` / `-m` for market type:
 
 ```bash
-bits price BTC ETH                             # CoinGecko (default), USD
-bits price BTCUSDT -p binance                  # Binance spot
-bits price BTCUSDT -p binance -m futures       # Binance futures
-bits ticker BTCUSDT -p coingecko               # no ticker on coingecko → fallback to binance
-bits ticker BTCUSDT -p coingecko --lock        # error: coingecko does not support ticker
+bits price BTC ETH                              # CoinGecko (default), USD
+bits price BTCUSDT -p binance                   # Binance spot (no fallback — provider explicit)
+bits price BTCUSDT -p binance -m futures        # Binance futures
+bits ticker BTCUSDT                             # no -p → fallback allowed; auto-routes to binance
+bits ticker BTCUSDT -p coingecko                # error: coingecko does not support ticker
+bits ticker BTCUSDT -p coingecko -f             # coingecko → fallback to binance (opt-in)
 ```
 
 ### Automatic Provider Fallback
 
-When a provider doesn't support the requested feature or market, `bits` transparently falls back to the first capable provider. The output always indicates when a fallback occurred:
+**Fallback is tied to whether you specify `--provider`:**
+
+- **No `--provider`**: fallback is always allowed — `bits` auto-routes to a capable provider.
+- **With `--provider`**: fallback is disabled by default — if the provider can't serve the request, `bits` errors. This prevents silent data-source switches.
+- **`--allow-fallback` / `-f`**: opt-in to fallback even when `--provider` is set.
+
+When a fallback occurs the output always indicates it:
 
 - **table**: footnote `† served by binance (requested: coingecko)`
-- **json / yaml**: top-level `fallback: true`, `provider`, `requested_provider` keys
+- **json / yaml**: top-level `fallback: true`, `requested_provider`, `requested_market` keys
 - **markdown**: blockquote `> † served by binance (requested: coingecko)`
 - **toon**: styled amber note below the output box
-
-Use `--lock` / `-l` to disable fallback and fail with an explicit error instead.
 
 ---
 
@@ -40,10 +45,10 @@ Use `--lock` / `-l` to disable fallback and fail with an explicit error instead.
 Applied to every command:
 
 ```
--p, --provider  string    provider id: coingecko | binance | bitget  (default: from config)
--m, --market    string    market type: spot | futures | margin        (default: spot)
--o, --output    string    output format: table | json | yaml | markdown | toon  (default: table)
--l, --lock                disable provider fallback
+-p, --provider       string    provider id: coingecko | binance | bitget  (default: from config)
+-m, --market         string    market type: spot | futures | margin        (default: spot)
+-o, --output         string    output format: table | json | yaml | markdown | toon  (default: table)
+-f, --allow-fallback           allow fallback even when --provider is set
 ```
 
 ---
@@ -97,8 +102,10 @@ bits price bitcoin -o toon                  # styled terminal output
 
 ```bash
 bits ticker BTCUSDT -p binance
-bits ticker BTCUSDT ETHUSDT -p binance     # multi-symbol fan-out
+bits ticker BTCUSDT ETHUSDT -p binance      # multi-symbol fan-out
 bits ticker BTCUSDT -p binance -m futures
+bits ticker BTCUSDT                         # no -p → auto-routes to binance
+bits ticker BTCUSDT -p coingecko -f         # explicit provider + -f → fallback to binance
 ```
 
 ---
