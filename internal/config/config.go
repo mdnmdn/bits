@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/spf13/viper"
 )
@@ -101,6 +102,26 @@ type WhiteBitConfig struct {
 	Spot      MarketConfig `mapstructure:"spot"`
 }
 
+// SymbolConfig holds symbol resolution settings.
+type SymbolConfig struct {
+	CacheTTL time.Duration `mapstructure:"cache_ttl"`
+	CacheDir string        `mapstructure:"cache_dir"`
+}
+
+func (c SymbolConfig) GetCacheTTL() time.Duration {
+	if c.CacheTTL <= 0 {
+		return 5 * time.Minute
+	}
+	return c.CacheTTL
+}
+
+func (c SymbolConfig) GetCacheDir() string {
+	if c.CacheDir == "" {
+		return "/tmp/bits"
+	}
+	return c.CacheDir
+}
+
 func (c WhiteBitConfig) IsSpotEnabled() bool { return c.Spot.Enabled }
 
 func (c BinanceConfig) IsSpotEnabled() bool    { return c.Spot.Enabled }
@@ -118,6 +139,7 @@ type Config struct {
 	Binance   BinanceConfig   `mapstructure:"binance"`
 	Bitget    BitgetConfig    `mapstructure:"bitget"`
 	WhiteBit  WhiteBitConfig  `mapstructure:"whitebit"`
+	Symbol    SymbolConfig    `mapstructure:"symbol"`
 }
 
 func ConfigDirs() []string {
@@ -187,6 +209,8 @@ func Load() (*Config, string, error) {
 	v.SetDefault("coingecko.tier", TierDemo)
 	v.SetDefault("provider", "coingecko")
 	v.SetDefault("binance.spot.enabled", true)
+	v.SetDefault("symbol.cache_ttl", "5m")
+	v.SetDefault("symbol.cache_dir", "/tmp/bits")
 
 	if err := v.ReadInConfig(); err != nil {
 		// Ignore "config file not found" errors - use defaults
@@ -279,6 +303,11 @@ api_secret = ""
 
 [whitebit.spot]
 enabled = false
+
+# Symbol resolution cache settings
+[symbol]
+# cache_ttl = "5m"       # TTL for symbol cache (e.g., 5m, 10m, 1h)
+# cache_dir = "/tmp/bits"  # Cache directory for symbol data
 `
 
 func defaultSaveDir() string {
@@ -446,6 +475,15 @@ func applyEnvMap(envVars map[string]string, cfg *Config) {
 	if v, ok := envVars["whitebit.spot.enabled"]; ok {
 		cfg.WhiteBit.Spot.Enabled = v == "true" || v == "1"
 	}
+	// Symbol config
+	if v, ok := envVars["symbol.cache_ttl"]; ok {
+		if d, err := time.ParseDuration(v); err == nil {
+			cfg.Symbol.CacheTTL = d
+		}
+	}
+	if v, ok := envVars["symbol.cache_dir"]; ok {
+		cfg.Symbol.CacheDir = v
+	}
 }
 
 // applyEnvOverrides applies BITS_* environment variable overrides to the config.
@@ -522,6 +560,15 @@ func applyEnvOverrides(cfg *Config) {
 	}
 	if v := os.Getenv("BITS_WHITEBIT_SPOT_ENABLED"); v != "" {
 		cfg.WhiteBit.Spot.Enabled = v == "true" || v == "1"
+	}
+	// Symbol resolution cache
+	if v := os.Getenv("BITS_SYMBOL_CACHE_TTL"); v != "" {
+		if d, err := time.ParseDuration(v); err == nil {
+			cfg.Symbol.CacheTTL = d
+		}
+	}
+	if v := os.Getenv("BITS_SYMBOL_CACHE_DIR"); v != "" {
+		cfg.Symbol.CacheDir = v
 	}
 }
 
@@ -615,6 +662,10 @@ func (c *Config) Redacted() *Config {
 			APISecret: maskedLong(c.WhiteBit.APISecret),
 			BaseURL:   c.WhiteBit.BaseURL,
 			Spot:      c.WhiteBit.Spot,
+		},
+		Symbol: SymbolConfig{
+			CacheTTL: c.Symbol.CacheTTL,
+			CacheDir: c.Symbol.CacheDir,
 		},
 	}
 }

@@ -48,7 +48,14 @@ func runBook(cmd *cobra.Command, args []string) error {
 		return rerr
 	}
 
-	res, err := obp.OrderBook(cmd.Context(), args[0], market, depth)
+	symResolver := newSymbolResolver(p)
+	symbol := args[0]
+	resolved, err := symResolver.Resolve(cmd.Context(), symbol, market)
+	if err == nil && resolved != "" {
+		symbol = resolved
+	}
+
+	res, err := obp.OrderBook(cmd.Context(), symbol, market, depth)
 	if err != nil {
 		return err
 	}

@@ -76,7 +76,14 @@ func runCandles(cmd *cobra.Command, args []string) error {
 		return rerr
 	}
 
-	res, err := cp.Candles(cmd.Context(), args[0], market, interval, candleOpts)
+	symResolver := newSymbolResolver(p)
+	symbol := args[0]
+	resolved, err := symResolver.Resolve(cmd.Context(), symbol, market)
+	if err == nil && resolved != "" {
+		symbol = resolved
+	}
+
+	res, err := cp.Candles(cmd.Context(), symbol, market, interval, candleOpts)
 	if err != nil {
 		return err
 	}

@@ -3,9 +3,11 @@ package cmd
 import (
 	"github.com/mdnmdn/bits/internal/config"
 	"github.com/mdnmdn/bits/internal/model"
+	"github.com/mdnmdn/bits/internal/provider"
 	"github.com/mdnmdn/bits/internal/registry"
 	"github.com/mdnmdn/bits/internal/render"
 	"github.com/mdnmdn/bits/internal/resolve"
+	"github.com/mdnmdn/bits/internal/resolve/symbol"
 	"github.com/spf13/cobra"
 )
 
@@ -18,12 +20,16 @@ func newResolver(cfg *config.Config) *resolve.Resolver {
 	return resolve.New(cfg, registry.NewProvider, registry.AllProviderIDs)
 }
 
+func newSymbolResolver(p provider.Provider) *symbol.SymbolResolver {
+	return symbol.New(p)
+}
+
 func resolveOpts(cmd *cobra.Command) resolve.ResolutionOpts {
 	provider, _ := cmd.Root().PersistentFlags().GetString("provider")
 	market, _ := cmd.Root().PersistentFlags().GetString("market")
 	allowFallback, _ := cmd.Root().PersistentFlags().GetBool("allow-fallback")
 	return resolve.ResolutionOpts{
-		Provider:   provider,
+		Provider:   registry.ResolveProvider(provider),
 		Market:     model.MarketType(market),
 		NoFallback: provider != "" && !allowFallback,
 	}

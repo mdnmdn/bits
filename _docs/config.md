@@ -123,6 +123,26 @@ enabled = false        # Enable spot trading
 enabled = false        # Enable futures trading
 ```
 
+### WhiteBit
+
+```toml
+[whitebit]
+api_key = ""           # Your WhiteBit API key
+api_secret = ""        # Your WhiteBit API secret
+base_url = ""          # Optional custom endpoint (default: https://whitebit.com)
+
+[whitebit.spot]
+enabled = false        # Enable spot trading
+```
+
+### Symbol Resolution (Cache)
+
+```toml
+[symbol]
+cache_ttl = "5m"       # Cache TTL (e.g., 5m, 10m, 1h)
+cache_dir = "/tmp/bits" # Cache directory for symbol data
+```
+
 ## Environment Variables
 
 ### Format
@@ -150,6 +170,10 @@ BITS_BINANCE__SPOT__ENABLED=true
 BITS_BITGET_API_KEY=your-key
 BITS_BITGET_API_SECRET=your-secret
 BITS_BITGET_PASSPHRASE=your-passphrase
+
+# Symbol cache
+BITS_SYMBOL_CACHE_TTL=5m
+BITS_SYMBOL_CACHE_DIR=/tmp/bits
 ```
 
 ## .env File

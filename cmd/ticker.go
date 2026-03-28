@@ -48,8 +48,14 @@ func runTicker(cmd *cobra.Command, args []string) error {
 		return rerr
 	}
 
+	symResolver := newSymbolResolver(p)
+
 	res := resolve.FanOut(cmd.Context(), args, func(ctx context.Context, symbol string) (model.Response[model.Ticker24h], error) {
-		return tp.Ticker24h(ctx, symbol, market)
+		resolved, err := symResolver.Resolve(ctx, symbol, market)
+		if err != nil {
+			return tp.Ticker24h(ctx, symbol, market)
+		}
+		return tp.Ticker24h(ctx, resolved, market)
 	})
 
 	if fallback {

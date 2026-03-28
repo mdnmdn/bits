@@ -40,3 +40,8 @@ enabled = true  # default if nothing specified
 
 [bitget.futures]
 enabled = false
+
+# Symbol resolution cache settings
+[symbol]
+cache_ttl = "5m"
+cache_dir = "/tmp/bits"

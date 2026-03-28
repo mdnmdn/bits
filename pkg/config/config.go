@@ -3,6 +3,7 @@ package config
 import (
 	"net/http"
 	"strings"
+	"time"
 )
 
 const (
@@ -79,11 +80,31 @@ type BitgetConfig struct {
 func (c BitgetConfig) IsSpotEnabled() bool    { return c.Spot.Enabled }
 func (c BitgetConfig) IsFuturesEnabled() bool { return c.Futures.Enabled }
 
+type SymbolConfig struct {
+	CacheTTL time.Duration `yaml:"cache_ttl" toml:"cache_ttl" mapstructure:"cache_ttl"`
+	CacheDir string        `yaml:"cache_dir" toml:"cache_dir" mapstructure:"cache_dir"`
+}
+
+func (c SymbolConfig) GetCacheTTL() time.Duration {
+	if c.CacheTTL <= 0 {
+		return 5 * time.Minute
+	}
+	return c.CacheTTL
+}
+
+func (c SymbolConfig) GetCacheDir() string {
+	if c.CacheDir == "" {
+		return "/tmp/bits"
+	}
+	return c.CacheDir
+}
+
 type Config struct {
 	Provider  string          `yaml:"provider" toml:"provider" mapstructure:"provider"`
 	CoinGecko CoinGeckoConfig `yaml:"coingecko" toml:"coingecko" mapstructure:"coingecko"`
 	Binance   BinanceConfig   `yaml:"binance" toml:"binance" mapstructure:"binance"`
 	Bitget    BitgetConfig    `yaml:"bitget" toml:"bitget" mapstructure:"bitget"`
+	Symbol    SymbolConfig    `yaml:"symbol" toml:"symbol" mapstructure:"symbol"`
 }
 
 func (c *Config) ActiveProvider() string {
