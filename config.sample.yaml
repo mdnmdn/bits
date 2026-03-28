@@ -41,4 +41,4 @@ bitget:
 # Symbol resolution cache settings
 symbol:
   cache_ttl: "5m"
-  cache_dir: "/tmp/bits"
+  # cache_dir: ""  # defaults to system temp directory

@@ -116,10 +116,10 @@ func (c SymbolConfig) GetCacheTTL() time.Duration {
 }
 
 func (c SymbolConfig) GetCacheDir() string {
-	if c.CacheDir == "" {
-		return "/tmp/bits"
+	if c.CacheDir != "" {
+		return c.CacheDir
 	}
-	return c.CacheDir
+	return filepath.Join(os.TempDir(), "bits")
 }
 
 func (c WhiteBitConfig) IsSpotEnabled() bool { return c.Spot.Enabled }

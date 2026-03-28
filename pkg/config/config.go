@@ -2,6 +2,8 @@ package config
 
 import (
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -93,10 +95,10 @@ func (c SymbolConfig) GetCacheTTL() time.Duration {
 }
 
 func (c SymbolConfig) GetCacheDir() string {
-	if c.CacheDir == "" {
-		return "/tmp/bits"
+	if c.CacheDir != "" {
+		return c.CacheDir
 	}
-	return c.CacheDir
+	return filepath.Join(os.TempDir(), "bits")
 }
 
 type Config struct {

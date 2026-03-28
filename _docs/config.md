@@ -140,7 +140,7 @@ enabled = false        # Enable spot trading
 ```toml
 [symbol]
 cache_ttl = "5m"       # Cache TTL (e.g., 5m, 10m, 1h)
-cache_dir = "/tmp/bits" # Cache directory for symbol data
+# cache_dir = ""       # Cache directory (defaults to system temp dir)
 ```
 
 ## Environment Variables
@@ -173,7 +173,7 @@ BITS_BITGET_PASSPHRASE=your-passphrase
 
 # Symbol cache
 BITS_SYMBOL_CACHE_TTL=5m
-BITS_SYMBOL_CACHE_DIR=/tmp/bits
+# BITS_SYMBOL_CACHE_DIR=  # defaults to system temp dir
 ```
 
 ## .env File
