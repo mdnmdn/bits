@@ -48,6 +48,10 @@ func (c *Client) Capabilities() capability.CapabilityMatrix {
 
 // get makes an authenticated GET request and decodes the JSON response.
 func (c *Client) get(ctx context.Context, path string, result any) error {
+	if c.cfg.CoinGecko.APIKey == "" {
+		return fmt.Errorf("CoinGecko API key not configured — set coingecko.api_key in config or BITS_COINGECKO_API_KEY env var (free demo key at coingecko.com/api)")
+	}
+
 	url := c.cfg.CoinGecko.GetBaseURL() + path
 
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
@@ -56,9 +60,7 @@ func (c *Client) get(ctx context.Context, path string, result any) error {
 	}
 
 	key, val := c.cfg.CoinGecko.GetAuthHeader()
-	if c.cfg.CoinGecko.APIKey != "" {
-		req.Header.Set(key, val)
-	}
+	req.Header.Set(key, val)
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("User-Agent", c.UserAgent)
 

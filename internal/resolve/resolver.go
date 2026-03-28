@@ -55,6 +55,9 @@ func (r *Resolver) Resolve(
 
 	// Try the requested provider first.
 	p, err := r.registry(requestedID, r.cfg)
+	if err != nil && opts.Provider != "" {
+		return nil, "", false, err
+	}
 	if err == nil {
 		key := capability.CapabilityKey{Market: market, Feature: feature}
 		if p.Capabilities()[key] {

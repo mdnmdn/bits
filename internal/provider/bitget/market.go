@@ -84,8 +84,14 @@ func (c *Client) Candles(_ context.Context, symbol string, market model.MarketTy
 		path = "/api/v2/mix/market/history-candles"
 		granularity = convertGranularityFutures(interval)
 	default:
-		path = "/api/v2/spot/market/history-candles"
 		granularity = convertGranularitySpot(interval)
+		// history-candles requires startTime; use the plain candles endpoint when
+		// no time range is requested so that limit-based fetching works.
+		if opts.From != nil {
+			path = "/api/v2/spot/market/history-candles"
+		} else {
+			path = "/api/v2/spot/market/candles"
+		}
 	}
 
 	query := fmt.Sprintf("symbol=%s&granularity=%s", symbol, granularity)

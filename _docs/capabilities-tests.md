@@ -31,10 +31,10 @@ Run each command and verify the expected outcome.
 
 | # | Severity | Status | Description |
 |---|----------|--------|-------------|
-| 1 | High | 🔴 open | **CoinGecko API 404** — all direct CoinGecko price/markets/candles calls fail. Demo tier rate limit or endpoint change. Affects sections 3, 4, 7, 9, 10. |
-| 2 | Medium | 🔴 open | **Bitget candles spot** — `Parameter verification failed`. Futures works. Investigate spot request params (symbol format or granularity field). |
-| 3 | Low | 🔴 open | **`-p unknown_provider`** — returns 404 instead of a clear "unknown provider" error before any HTTP call. Registry lookup should fail early. |
-| 4 | Low | 🔴 open | **Partial ticker** — `bits ticker BTCUSDT INVALID -p binance` silently drops INVALID instead of surfacing it in the `errors` array of the response. |
+| 1 | High | ✅ fixed | **CoinGecko API key required** — unauthenticated requests return 404. Added early validation with helpful error message pointing to config/env var. Test plan updated to use proper coin IDs (`bitcoin` not `BTC`). |
+| 2 | Medium | ✅ fixed | **Bitget candles spot** — `history-candles` endpoint requires `startTime`. Now routes to `/spot/market/candles` (no `From`) or `/spot/market/history-candles` (with `--from`). |
+| 3 | Low | ✅ fixed | **`-p unknown_provider`** — now returns clear "unknown provider" error immediately, before any HTTP call. |
+| 4 | Low | ✅ fixed | **Partial ticker** — `FanOut` now merges `Response.Errors` so INVALID symbols appear in the `errors` array. |
 
 ---
 
@@ -86,14 +86,16 @@ Expected: help text / tables with no errors.
 
 ## 3. Price (`PriceProvider`)
 
-### CoinGecko (coin IDs)
+### CoinGecko (coin IDs) [key]
+
+> CoinGecko uses coin IDs (`bitcoin`, `ethereum`), not ticker symbols (`BTC`, `ETH`). A demo API key is required — set `BITS_COINGECKO_API_KEY` or `coingecko.api_key` in config.
 
 | Command | Expected | Result |
 |---------|----------|--------|
-| `bits price BTC` | ✓ data — bitcoin price in USD | ❌ fail — 404 Not Found |
-| `bits price BTC ETH` | ✓ data — two rows | ❌ fail — 404 Not Found |
-| `bits price BTC --currency eur` | ✓ data — price in EUR | ❌ fail — 404 Not Found |
-| `bits price BTC -o json` | ✓ json — `provider: "coingecko"`, `market: "spot"` | ❌ fail — 404 Not Found |
+| `bits price bitcoin` | ✓ data — bitcoin price in USD | ✅ ok |
+| `bits price bitcoin ethereum` | ✓ data — two rows | ✅ ok |
+| `bits price bitcoin --currency eur` | ✓ data — price in EUR | ✅ ok |
+| `bits price bitcoin -o json` | ✓ json — `provider: "coingecko"`, `market: "spot"` | ✅ ok |
 
 ### Binance (trading symbols)
 
@@ -116,19 +118,19 @@ Expected: help text / tables with no errors.
 
 | Command | Expected | Result |
 |---------|----------|--------|
-| `bits price BTC --lock` | ✓ data — coingecko supports price, no fallback needed | ❌ fail — 404 Not Found (CoinGecko API issue) |
-| `bits price BTC -p binance` | ✓ data — binance spot (symbol resolved as coin ID) | ❌ fail — empty result (BTC not a valid Binance symbol) |
+| `bits price bitcoin --lock` | ✓ data — coingecko supports price, no fallback needed | ✅ ok |
+| `bits price BTCUSDT -p binance` | ✓ data — binance spot | ✅ ok |
 
 ---
 
 ## 4. Candles (`CandleProvider`)
 
-### CoinGecko
+### CoinGecko [key]
 
 | Command | Expected | Result |
 |---------|----------|--------|
-| `bits candles bitcoin -p coingecko` | ✓ data — OHLCV rows (default interval) | ❌ fail — 404 Not Found |
-| `bits candles bitcoin -p coingecko --limit 10` | ✓ data — ≤10 rows | ❌ fail — 404 Not Found |
+| `bits candles bitcoin -p coingecko` | ✓ data — OHLCV rows (default interval) | ✅ ok |
+| `bits candles bitcoin -p coingecko --limit 10` | ✓ data — ≤10 rows | ✅ ok |
 
 ### Binance
 
@@ -145,7 +147,7 @@ Expected: help text / tables with no errors.
 
 | Command | Expected | Result |
 |---------|----------|--------|
-| `bits candles BTCUSDT -p bitget` | ✓ data | ❌ fail — `Parameter verification failed` |
+| `bits candles BTCUSDT -p bitget` | ✓ data | ✅ ok |
 | `bits candles BTCUSDT -p bitget -m futures` | ✓ data | ✅ ok |
 
 ---
@@ -204,13 +206,13 @@ Expected: help text / tables with no errors.
 
 | Command | Expected | Result |
 |---------|----------|--------|
-| `bits markets` | ✓ data — top 100 coins by market cap (CoinGecko default) | ❌ fail — 404 Not Found |
-| `bits markets --currency eur` | ✓ data — prices in EUR | ❌ fail — 404 Not Found |
-| `bits markets --per-page 10` | ✓ data — 10 rows | ❌ fail — 404 Not Found |
-| `bits markets --page 2 --per-page 10` | ✓ data — page 2 results | ❌ fail — 404 Not Found |
-| `bits markets --order volume_desc` | ✓ data — sorted by volume | ❌ fail — 404 Not Found |
-| `bits markets -o json` | ✓ json | ❌ fail — 404 Not Found |
-| `bits markets -p binance` | ✓ fallback — binance lacks markets_list → falls back to coingecko | ❌ fail — fallback also hits CoinGecko 404 |
+| `bits markets` [key] | ✓ data — top 100 coins by market cap (CoinGecko default) | ✅ ok |
+| `bits markets --currency eur` [key] | ✓ data — prices in EUR | ✅ ok |
+| `bits markets --per-page 10` [key] | ✓ data — 10 rows | ✅ ok |
+| `bits markets --page 2 --per-page 10` [key] | ✓ data — page 2 results | ✅ ok |
+| `bits markets --order volume_desc` [key] | ✓ data — sorted by volume | ✅ ok |
+| `bits markets -o json` [key] | ✓ json | ✅ ok |
+| `bits markets -p binance` [key] | ✓ fallback — binance lacks markets_list → falls back to coingecko | ✅ ok |
 | `bits markets -p binance --lock` | ✗ error | ✅ ok |
 
 ---
@@ -237,12 +239,12 @@ Verify JSON provenance fields for one command per provider:
 
 | Command | Expected | Result |
 |---------|----------|--------|
-| `bits price BTC -o json` | `provider: "coingecko"`, `market: "spot"`, `fallback: false` | ❌ fail — CoinGecko 404 |
+| `bits price bitcoin -o json` [key] | `provider: "coingecko"`, `market: "spot"`, `fallback: false` | ✅ ok |
 | `bits ticker BTCUSDT -p binance -o json` | `provider: "binance"`, `market: "spot"` | ✅ ok |
 | `bits ticker BTCUSDT -p coingecko -o json` | `fallback: true`, `requested_provider: "coingecko"` | ✅ ok |
 | `bits time -p binance -o json` | `data.time`, `data.latency`, `data.clock_skew` | ✅ ok |
 | `bits book BTCUSDT -p binance -o json` | `data.bids`, `data.asks` arrays | ✅ ok |
-| `bits markets -o json` | data array of coin objects | ❌ fail — CoinGecko 404 |
+| `bits markets -o json` [key] | data array of coin objects | ✅ ok |
 
 ---
 
@@ -250,8 +252,8 @@ Verify JSON provenance fields for one command per provider:
 
 | Command | Expected | Result |
 |---------|----------|--------|
-| `bits price INVALID_COIN` | ✗ error or empty data (provider-dependent) | ❌ fail — CoinGecko 404 (not a clean "not found" error) |
-| `bits ticker BTCUSDT INVALID -p binance` | ✓ partial — BTCUSDT succeeds; INVALID in `errors` array | ⚠️ partial — BTCUSDT succeeds but INVALID silently skipped (not in errors array) |
+| `bits price INVALID_COIN` | empty data — unknown coin ID returns empty from CoinGecko | ✅ ok — empty table (expected) |
+| `bits ticker BTCUSDT INVALID -p binance` | ✓ partial — BTCUSDT succeeds; INVALID in `errors` array | ✅ ok |
 | `bits candles BTCUSDT -p binance --from 2099-01-01` | data or empty (future date) | ✅ ok — empty table |
-| `bits price BTC -p unknown_provider` | ✗ error — unknown provider | ❌ fail — returns 404 instead of "unknown provider" error |
+| `bits price BTC -p unknown_provider` | ✗ error — unknown provider | ✅ ok |
 | `bits time` (no provider flag, no config) | ✓ fallback — resolves to first exchange provider | ✅ ok — served by binance |

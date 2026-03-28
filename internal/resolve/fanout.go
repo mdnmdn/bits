@@ -43,6 +43,7 @@ func FanOut[T any](
 			continue
 		}
 		out.Data = append(out.Data, r.res.Data)
+		out.Errors = append(out.Errors, r.res.Errors...)
 		if out.Provider == "" {
 			out.Provider = r.res.Provider
 			out.Market = r.res.Market
