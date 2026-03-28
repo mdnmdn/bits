@@ -14,8 +14,8 @@ const (
 
 type Symbol struct {
 	Symbol         string         `json:"sym"              yaml:"sym"              toon:"sym"`
-	BaseAsset      string         `json:"base"             yaml:"base"             toon:"base"`             // e.g. "BTC"
-	QuoteAsset     string         `json:"quote"            yaml:"quote"            toon:"quote"`            // e.g. "USDT"
+	BaseAsset      string         `json:"base"             yaml:"base"             toon:"base"`  // e.g. "BTC"
+	QuoteAsset     string         `json:"quote"            yaml:"quote"            toon:"quote"` // e.g. "USDT"
 	Status         SymbolStatus   `json:"status"           yaml:"status"           toon:"status"`
 	Market         MarketType     `json:"mkt"              yaml:"mkt"              toon:"mkt"`
 	PricePrecision *int           `json:"pp,omitempty"     yaml:"pp,omitempty"     toon:"pp,omitempty"`
@@ -24,7 +24,7 @@ type Symbol struct {
 	MaxPrice       *float64       `json:"max_p,omitempty"  yaml:"max_p,omitempty"  toon:"max_p,omitempty"`
 	MinQty         *float64       `json:"min_q,omitempty"  yaml:"min_q,omitempty"  toon:"min_q,omitempty"`
 	MaxQty         *float64       `json:"max_q,omitempty"  yaml:"max_q,omitempty"  toon:"max_q,omitempty"`
-	StepSize       *float64       `json:"step,omitempty"   yaml:"step,omitempty"   toon:"step,omitempty"`   // quantity increment
+	StepSize       *float64       `json:"step,omitempty"   yaml:"step,omitempty"   toon:"step,omitempty"` // quantity increment
 	MakerFee       *float64       `json:"maker,omitempty"  yaml:"maker,omitempty"  toon:"maker,omitempty"`
 	TakerFee       *float64       `json:"taker,omitempty"  yaml:"taker,omitempty"  toon:"taker,omitempty"`
 	Extra          map[string]any `json:"extra,omitempty"  yaml:"extra,omitempty"  toon:"extra,omitempty"`

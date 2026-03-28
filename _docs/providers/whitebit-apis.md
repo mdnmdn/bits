@@ -216,29 +216,52 @@ klines, err := sdk.Kline.GetKlines(ctx, "BTC_USD", "1m", 100)
 ### Connect
 
 ```
-wss://ws.whitebit.com
+wss://api.whitebit.com/ws
 ```
 
-### Subscribe
+The API is based on JSON RPC over WebSocket.
+
+### Subscribe (Last Price)
 
 ```json
 {
-  "method": "subscribe",
-  "params": {
-    "channels": ["ticker.BTC_USD"]
-  },
-  "id": 1
+  "id": 1,
+  "method": "lastprice_subscribe",
+  "params": ["BTC_USDT", "ETH_USDT"]
 }
 ```
 
+### Subscribe (Order Book / Depth)
+
+```json
+{
+  "id": 2,
+  "method": "depth_subscribe",
+  "params": ["BTC_USDT", 20, "0", true]
+}
+```
+
+### Keep-Alive (Ping)
+
+Server closes connection after 60s of inactivity. Send ping every 50s.
+
+```json
+{
+  "id": 0,
+  "method": "ping",
+  "params": []
+}
+```
+
+Response: `{"id": 0, "result": "pong", "error": null}`
+
 ### Channels
 
-| Channel | Description |
+| Method | Description |
 |---------|-------------|
-| `ticker.{market}` | Ticker |
-| `trades.{market}` | Trades |
-| `kline.{market}.{interval}` | Klines |
-| `depth.{market}` | Order book |
+| `lastprice_subscribe` | Last price updates |
+| `depth_subscribe` | Order book updates |
+| `klines_subscribe` | Candle updates |
 
 ---
 

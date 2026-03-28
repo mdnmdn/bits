@@ -48,9 +48,11 @@ func (c *Client) SetUserAgent(ua string) { c.userAgent = ua }
 func (c *Client) Capabilities() capability.CapabilityMatrix {
 	s := capability.MarketSpot
 	f := capability.MarketFutures
+	m := capability.MarketMargin
 
 	spotEnabled := c.cfg.IsSpotEnabled()
 	futuresEnabled := c.cfg.IsFuturesEnabled()
+	marginEnabled := c.cfg.IsMarginEnabled()
 
 	// Default to spot if nothing explicitly enabled
 	if !spotEnabled && !futuresEnabled {
@@ -78,6 +80,12 @@ func (c *Client) Capabilities() capability.CapabilityMatrix {
 		matrix[capability.CapabilityKey{Market: f, Feature: capability.FeatureTicker24h}] = true
 		matrix[capability.CapabilityKey{Market: f, Feature: capability.FeatureOrderBook}] = true
 		matrix[capability.CapabilityKey{Market: f, Feature: capability.FeatureStreamOrderBook}] = true
+	}
+
+	if marginEnabled {
+		matrix[capability.CapabilityKey{Market: m, Feature: capability.FeatureExchangeInfo}] = true
+		matrix[capability.CapabilityKey{Market: m, Feature: capability.FeaturePrice}] = true
+		matrix[capability.CapabilityKey{Market: m, Feature: capability.FeatureTicker24h}] = true
 	}
 
 	return matrix

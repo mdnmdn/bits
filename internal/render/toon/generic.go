@@ -3,8 +3,8 @@ package rendertoon
 import (
 	"io"
 
-	toon "github.com/toon-format/toon-go"
 	"github.com/mdnmdn/bits/internal/model"
+	toon "github.com/toon-format/toon-go"
 )
 
 // envelope mirrors the JSON/YAML envelope for consistent structured output.

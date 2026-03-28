@@ -3,10 +3,10 @@ package bitget
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strconv"
 	"time"
 
-	"github.com/gorilla/websocket"
 	"github.com/mdnmdn/bits/internal/model"
 	"github.com/mdnmdn/bits/internal/ws"
 )
@@ -39,120 +39,54 @@ type bitgetWSDepthData struct {
 	Ts   string     `json:"ts"`
 }
 
-// WatchPrices implements provider.PriceStreamProvider.
-func (c *Client) WatchPrices(ctx context.Context, ids []string) (<-chan *model.CoinPrice, error) {
-	updates := make(chan *model.CoinPrice, 100)
-	base := ws.NewBaseClient(wsURL)
-	base.UserAgent = c.userAgent
+type bitgetHandler struct {
+	providerID string
+	userAgent  string
+}
 
-	base.OnConnect = func(ctx context.Context, conn *websocket.Conn) error {
-		args := make([]map[string]string, 0, len(ids))
-		for _, id := range ids {
-			args = append(args, map[string]string{
-				"instType": "SPOT",
-				"channel":  "ticker",
-				"instId":   id,
-			})
-		}
-		return base.WriteJSON(map[string]any{
-			"op":   "subscribe",
-			"args": args,
-		})
+func (h *bitgetHandler) Handle(ctx context.Context, raw []byte) (any, error) {
+	var msg bitgetWSMessage
+	if err := json.Unmarshal(raw, &msg); err != nil {
+		return nil, nil
+	}
+	if msg.Action != "snapshot" && msg.Action != "update" {
+		return nil, nil
 	}
 
-	base.OnMessage = func(ctx context.Context, raw []byte) error {
-		var msg bitgetWSMessage
-		if err := json.Unmarshal(raw, &msg); err != nil {
-			return nil
-		}
-		if msg.Action != "snapshot" && msg.Action != "update" {
-			return nil
-		}
-
+	if msg.Arg.Channel == "ticker" {
 		var data []bitgetWSTickerData
 		if err := json.Unmarshal(msg.Data, &data); err != nil {
-			return nil
+			return nil, nil
 		}
+		if len(data) == 0 {
+			return nil, nil
+		}
+		d := data[0]
+		price, _ := strconv.ParseFloat(d.LastPr, 64)
+		changePct, _ := strconv.ParseFloat(d.Change24h, 64)
+		changePct *= 100
 
-		for _, d := range data {
-			price, _ := strconv.ParseFloat(d.LastPr, 64)
-			changePct, _ := strconv.ParseFloat(d.Change24h, 64)
-			changePct *= 100
-
-			select {
-			case updates <- &model.CoinPrice{
+		return &model.Response[model.CoinPrice]{
+			Kind:     model.KindPrice,
+			Provider: h.providerID,
+			Data: model.CoinPrice{
 				ID:        d.InstID,
 				Symbol:    d.InstID,
 				Price:     price,
 				Change24h: &changePct,
-			}:
-			case <-ctx.Done():
-				return nil
-			}
-		}
-		return nil
-	}
-
-	if err := base.Connect(ctx); err != nil {
-		return nil, err
-	}
-
-	go func() {
-		<-ctx.Done()
-		_ = base.Close()
-		close(updates)
-	}()
-
-	return updates, nil
-}
-
-// WatchOrderBook implements provider.OrderBookStreamProvider.
-func (c *Client) WatchOrderBook(ctx context.Context, symbol string, market model.MarketType, depth int) (<-chan *model.OrderBook, error) {
-	updates := make(chan *model.OrderBook, 100)
-	base := ws.NewBaseClient(wsURL)
-	base.UserAgent = c.userAgent
-
-	instType := "SPOT"
-	if market == model.MarketFutures {
-		instType = "USDT-FUTURES"
-	}
-
-	channel := "depth"
-	if depth > 0 && depth <= 15 {
-		// Bitget supports depth5, depth15 for aggregated depth
-		if depth <= 5 {
-			channel = "depth5"
-		} else {
-			channel = "depth15"
-		}
-	}
-
-	base.OnConnect = func(ctx context.Context, conn *websocket.Conn) error {
-		return base.WriteJSON(map[string]any{
-			"op": "subscribe",
-			"args": []map[string]string{
-				{
-					"instType": instType,
-					"channel":  channel,
-					"instId":   symbol,
-				},
 			},
-		})
+		}, nil
 	}
 
-	base.OnMessage = func(ctx context.Context, raw []byte) error {
-		var msg bitgetWSMessage
-		if err := json.Unmarshal(raw, &msg); err != nil {
-			return nil
-		}
-		if msg.Action != "snapshot" && msg.Action != "update" {
-			return nil
-		}
-
+	if msg.Arg.Channel == "depth" || msg.Arg.Channel == "depth5" || msg.Arg.Channel == "depth15" {
 		var data []bitgetWSDepthData
 		if err := json.Unmarshal(msg.Data, &data); err != nil {
-			return nil
+			return nil, nil
 		}
+		if len(data) == 0 {
+			return nil, nil
+		}
+		d := data[0]
 
 		parseEntries := func(raw [][]string) []model.OrderBookEntry {
 			entries := make([]model.OrderBookEntry, 0, len(raw))
@@ -166,41 +100,148 @@ func (c *Client) WatchOrderBook(ctx context.Context, symbol string, market model
 			return entries
 		}
 
-		for _, d := range data {
-			var ts *time.Time
-			if d.Ts != "" {
-				if ms, err := strconv.ParseInt(d.Ts, 10, 64); err == nil {
-					t := time.UnixMilli(ms)
-					ts = &t
-				}
+		var ts *time.Time
+		if d.Ts != "" {
+			if ms, err := strconv.ParseInt(d.Ts, 10, 64); err == nil {
+				t := time.UnixMilli(ms)
+				ts = &t
 			}
+		}
 
-			ob := &model.OrderBook{
-				Symbol: symbol,
-				Market: market,
+		return &model.Response[model.OrderBook]{
+			Kind:     model.KindOrderBook,
+			Provider: h.providerID,
+			Data: model.OrderBook{
+				Symbol: msg.Arg.InstID,
 				Bids:   parseEntries(d.Bids),
 				Asks:   parseEntries(d.Asks),
 				Time:   ts,
-			}
-
-			select {
-			case updates <- ob:
-			case <-ctx.Done():
-				return nil
-			}
-		}
-		return nil
+			},
+		}, nil
 	}
 
-	if err := base.Connect(ctx); err != nil {
+	return nil, nil
+}
+
+func (h *bitgetHandler) OnCommand(ctx context.Context, cmd ws.Command, client *ws.BaseClient) error {
+	switch cmd.Kind {
+	case ws.CommandSubscribe:
+		args, ok := cmd.Params.([]map[string]string)
+		if !ok {
+			return fmt.Errorf("invalid subscribe params")
+		}
+		return client.WriteJSON(map[string]any{
+			"op":   "subscribe",
+			"args": args,
+		})
+	case ws.CommandUnsubscribe:
+		args, ok := cmd.Params.([]map[string]string)
+		if !ok {
+			return fmt.Errorf("invalid unsubscribe params")
+		}
+		return client.WriteJSON(map[string]any{
+			"op":   "unsubscribe",
+			"args": args,
+		})
+	}
+	return nil
+}
+
+func (h *bitgetHandler) OnPing(ctx context.Context, client *ws.BaseClient) error {
+	return client.WriteJSON("ping")
+}
+
+func (c *Client) Stream(ctx context.Context, cmdChan <-chan ws.Command) (<-chan ws.StreamResponse[any], error) {
+	handler := &bitgetHandler{
+		providerID: providerID,
+		userAgent:  c.userAgent,
+	}
+	mgr := ws.NewManager(wsURL, handler)
+
+	go func() {
+		for cmd := range cmdChan {
+			mgr.Commands() <- cmd
+		}
+	}()
+
+	return mgr.Start(ctx)
+}
+
+// WatchPrices implements provider.PriceStreamProvider.
+func (c *Client) WatchPrices(ctx context.Context, ids []string) (<-chan *model.CoinPrice, error) {
+	cmdChan := make(chan ws.Command, 1)
+	args := make([]map[string]string, 0, len(ids))
+	for _, id := range ids {
+		args = append(args, map[string]string{
+			"instType": "SPOT",
+			"channel":  "ticker",
+			"instId":   id,
+		})
+	}
+	cmdChan <- ws.Command{Kind: ws.CommandSubscribe, Params: args}
+
+	outChan, err := c.Stream(ctx, cmdChan)
+	if err != nil {
 		return nil, err
 	}
 
+	prices := make(chan *model.CoinPrice, 100)
 	go func() {
-		<-ctx.Done()
-		_ = base.Close()
-		close(updates)
+		defer close(prices)
+		for res := range outChan {
+			if res.Error != nil || res.Response == nil {
+				continue
+			}
+			if resp, ok := res.Response.(*model.Response[model.CoinPrice]); ok {
+				prices <- &resp.Data
+			}
+		}
 	}()
+	return prices, nil
+}
 
-	return updates, nil
+// WatchOrderBook implements provider.OrderBookStreamProvider.
+func (c *Client) WatchOrderBook(ctx context.Context, symbol string, market model.MarketType, depth int) (<-chan *model.OrderBook, error) {
+	cmdChan := make(chan ws.Command, 1)
+	instType := "SPOT"
+	if market == model.MarketFutures {
+		instType = "USDT-FUTURES"
+	}
+
+	channel := "depth"
+	if depth > 0 && depth <= 15 {
+		if depth <= 5 {
+			channel = "depth5"
+		} else {
+			channel = "depth15"
+		}
+	}
+
+	args := []map[string]string{
+		{
+			"instType": instType,
+			"channel":  channel,
+			"instId":   symbol,
+		},
+	}
+	cmdChan <- ws.Command{Kind: ws.CommandSubscribe, Params: args}
+
+	outChan, err := c.Stream(ctx, cmdChan)
+	if err != nil {
+		return nil, err
+	}
+
+	books := make(chan *model.OrderBook, 100)
+	go func() {
+		defer close(books)
+		for res := range outChan {
+			if res.Error != nil || res.Response == nil {
+				continue
+			}
+			if resp, ok := res.Response.(*model.Response[model.OrderBook]); ok {
+				books <- &resp.Data
+			}
+		}
+	}()
+	return books, nil
 }

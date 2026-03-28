@@ -1,7 +1,7 @@
 package model
 
 type CoinPrice struct {
-	ID        string         `json:"id"              yaml:"id"              toon:"id"`              // coin id (aggregators) or trading symbol (exchanges)
+	ID        string         `json:"id"              yaml:"id"              toon:"id"` // coin id (aggregators) or trading symbol (exchanges)
 	Symbol    string         `json:"sym"             yaml:"sym"             toon:"sym"`
 	Currency  string         `json:"cur"             yaml:"cur"             toon:"cur"`
 	Price     float64        `json:"price"           yaml:"price"           toon:"price"`

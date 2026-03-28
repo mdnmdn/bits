@@ -34,6 +34,25 @@ type bitgetTickersResponse struct {
 	Data []bitgetTickerEntry `json:"data"`
 }
 
+type bitgetMarginTickerEntry struct {
+	Symbol    string `json:"symbol"`
+	LastPr    string `json:"lastPr"`
+	High24H   string `json:"high24h"`
+	Low24H    string `json:"low24h"`
+	Open      string `json:"open"`
+	BaseVol   string `json:"baseVolume"`
+	QuoteVol  string `json:"quoteVolume"`
+	BidPr     string `json:"bidPr"`
+	AskPr     string `json:"askPr"`
+	Change24H string `json:"change24h"`
+}
+
+type bitgetMarginTickersResponse struct {
+	Code string                    `json:"code"`
+	Msg  string                    `json:"msg"`
+	Data []bitgetMarginTickerEntry `json:"data"`
+}
+
 // bitgetCandlesResponse is the response envelope for candle endpoints.
 type bitgetCandlesResponse struct {
 	Code string     `json:"code"`
@@ -303,6 +322,8 @@ func (c *Client) fetchTicker(symbol string, market model.MarketType) (*bitgetTic
 	case model.MarketFutures:
 		path = "/api/v2/mix/market/ticker"
 		query = fmt.Sprintf("symbol=%s&productType=USDT-FUTURES", symbol)
+	case model.MarketMargin:
+		return c.fetchMarginTicker(symbol)
 	default:
 		path = "/api/v2/spot/market/tickers"
 		query = fmt.Sprintf("symbol=%s", symbol)
@@ -350,6 +371,41 @@ func convertGranularitySpot(interval string) string {
 }
 
 // convertGranularityFutures converts an interval string to Bitget futures API granularity format.
+func (c *Client) fetchMarginTicker(symbol string) (*bitgetTickerEntry, error) {
+	path := "/api/v2/margin/market/tickers"
+	query := fmt.Sprintf("symbol=%s&productType=isolated", symbol)
+
+	body, err := c.doRequest("GET", path, query)
+	if err != nil {
+		return nil, err
+	}
+
+	var resp bitgetMarginTickersResponse
+	if err := json.Unmarshal(body, &resp); err != nil {
+		return nil, fmt.Errorf("failed to parse margin ticker response: %w", err)
+	}
+	if resp.Code != "00000" {
+		return nil, fmt.Errorf("API error: %s", resp.Msg)
+	}
+	if len(resp.Data) == 0 {
+		return nil, fmt.Errorf("no margin ticker data returned for symbol %s", symbol)
+	}
+
+	d := resp.Data[0]
+	return &bitgetTickerEntry{
+		Symbol:    d.Symbol,
+		LastPr:    d.LastPr,
+		High24H:   d.High24H,
+		Low24H:    d.Low24H,
+		Open:      d.Open,
+		BaseVol:   d.BaseVol,
+		QuoteVol:  d.QuoteVol,
+		BidPr:     d.BidPr,
+		AskPr:     d.AskPr,
+		Change24H: d.Change24H,
+	}, nil
+}
+
 func convertGranularityFutures(interval string) string {
 	switch interval {
 	case "1m":

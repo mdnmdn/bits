@@ -275,14 +275,41 @@ Response:
 
 ---
 
-## Margin API
+## Margin API (v2)
 
-### Common
+Bitget Margin supports both **Cross** and **Isolated** margin.
 
-#### Get Support Currencies
+### Market Data (REST)
+
+#### Get Margin Tickers
+
+```
+GET /api/v2/margin/market/tickers
+```
+
+Query: `symbol`, `productType` (cross/isolated)
+
+#### Get Margin Currencies
 
 ```
 GET /api/v2/margin/currencies
+```
+
+### WebSocket Channels
+
+| Channel | Description |
+|---------|-------------|
+| `indexPrice` | Index price for margin |
+| `cross_account` | Cross margin account updates (Auth) |
+| `isolate_account` | Isolated margin account updates (Auth) |
+
+### Trading (Private)
+
+#### Place Margin Order
+
+```
+POST /api/v2/margin/isolated/order/place-order
+POST /api/v2/margin/cross/order/place-order
 ```
 
 Response:

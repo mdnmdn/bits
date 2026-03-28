@@ -91,6 +91,7 @@ type BitgetConfig struct {
 	Passphrase string       `mapstructure:"passphrase"`
 	BaseURL    string       `mapstructure:"base_url"`
 	Spot       MarketConfig `mapstructure:"spot"`
+	Margin     MarketConfig `mapstructure:"margin"`
 	Futures    MarketConfig `mapstructure:"futures"`
 }
 
@@ -129,6 +130,7 @@ func (c BinanceConfig) IsMarginEnabled() bool  { return c.Margin.Enabled }
 func (c BinanceConfig) IsFuturesEnabled() bool { return c.Futures.Enabled }
 
 func (c BitgetConfig) IsSpotEnabled() bool    { return c.Spot.Enabled }
+func (c BitgetConfig) IsMarginEnabled() bool  { return c.Margin.Enabled }
 func (c BitgetConfig) IsFuturesEnabled() bool { return c.Futures.Enabled }
 
 // Config holds all provider configurations.
@@ -460,6 +462,9 @@ func applyEnvMap(envVars map[string]string, cfg *Config) {
 	if v, ok := envVars["bitget.spot.enabled"]; ok {
 		cfg.Bitget.Spot.Enabled = v == "true" || v == "1"
 	}
+	if v, ok := envVars["bitget.margin.enabled"]; ok {
+		cfg.Bitget.Margin.Enabled = v == "true" || v == "1"
+	}
 	if v, ok := envVars["bitget.futures.enabled"]; ok {
 		cfg.Bitget.Futures.Enabled = v == "true" || v == "1"
 	}
@@ -540,6 +545,9 @@ func applyEnvOverrides(cfg *Config) {
 	// Bitget market-specific settings
 	if v := os.Getenv("BITS_BITGET_SPOT_ENABLED"); v != "" {
 		cfg.Bitget.Spot.Enabled = v == "true" || v == "1"
+	}
+	if v := os.Getenv("BITS_BITGET_MARGIN_ENABLED"); v != "" {
+		cfg.Bitget.Margin.Enabled = v == "true" || v == "1"
 	}
 	if v := os.Getenv("BITS_BITGET_FUTURES_ENABLED"); v != "" {
 		cfg.Bitget.Futures.Enabled = v == "true" || v == "1"
@@ -655,6 +663,7 @@ func (c *Config) Redacted() *Config {
 			Passphrase: maskedLong(c.Bitget.Passphrase),
 			BaseURL:    c.Bitget.BaseURL,
 			Spot:       c.Bitget.Spot,
+			Margin:     c.Bitget.Margin,
 			Futures:    c.Bitget.Futures,
 		},
 		WhiteBit: WhiteBitConfig{

@@ -12,20 +12,20 @@ The goal is to achieve parity across supported exchanges where API support exist
 | server_time        | spot    | -         | ✓       | ✓      | ✓        |
 | exchange_info      | spot    | -         | ✓       | ✓      | ✓        |
 | price              | spot    | ✓         | ✓       | ✓      | ✓        |
-| price              | futures | -         | ✓       | ✓      | -        |
-| price              | margin  | -         | ✓       | -      | -        |
+| price              | futures | -         | ✓       | ✓      | ✓        |
+| price              | margin  | -         | ✓       | ✓      | -        |
 | candles            | spot    | ✓         | ✓       | ✓      | ✓        |
-| candles            | futures | -         | ✓       | ✓      | -        |
+| candles            | futures | -         | ✓       | ✓      | ✓        |
 | candles            | margin  | -         | ✓       | -      | -        |
 | ticker_24h         | spot    | -         | ✓       | ✓      | ✓        |
-| ticker_24h         | futures | -         | ✓       | ✓      | -        |
-| ticker_24h         | margin  | -         | ✓       | -      | -        |
-| order_book         | spot    | -         | ✓       | **P1** | ✓        |
-| order_book         | futures | -         | ✓       | **P1** | **P3**   |
+| ticker_24h         | futures | -         | ✓       | ✓      | ✓        |
+| ticker_24h         | margin  | -         | ✓       | ✓      | -        |
+| order_book         | spot    | -         | ✓       | ✓      | ✓        |
+| order_book         | futures | -         | ✓       | ✓      | ✓        |
 | markets_list       | spot    | ✓         | -       | -      | -        |
-| stream_price       | spot    | ✓         | **P5**  | **P2** | **P4**   |
-| stream_order_book  | spot    | -         | ✓       | **P2** | **P4**   |
-| stream_order_book  | futures | -         | ✓       | **P2** | **P4**   |
+| stream_price       | spot    | ✓         | ✓       | ✓      | ✓        |
+| stream_order_book  | spot    | -         | ✓       | ✓      | ✓        |
+| stream_order_book  | futures | -         | ✓       | ✓      | ✓        |
 
 **Legend:**
 - ✓ : Already implemented
@@ -40,80 +40,50 @@ The goal is to achieve parity across supported exchanges where API support exist
 
 ---
 
-## Phase 1 — Bitget Order Book (Spot & Futures) ✅ COMPLETED
+## Phase 1: WebSocket Infrastructure & Bitget Support ✅ COMPLETED
 
-**Goal:** Implement `OrderBookProvider` for Bitget.
+**Goal:** Establish common WS infrastructure and implement Bitget Order Book.
 
-**Completed:** Implemented `OrderBook(ctx, symbol, market, depth)` in `internal/provider/bitget/market.go`. It supports both spot and futures markets. Added `FeatureOrderBook` to `Capabilities()` in `internal/provider/bitget/client.go`. Verified the implementation by type assertion in `internal/provider/bitget/client_test.go`.
-
-### Tasks
-- [x] Implement `OrderBook(ctx, symbol, market, depth)` in `internal/provider/bitget/market.go`
-  - Use `GET /api/v2/spot/market/orderbook` for spot.
-  - Use `GET /api/v2/mix/market/depth` for futures.
-- [x] Register `FeatureOrderBook` for both spot and futures in `internal/provider/bitget/client.go:Capabilities()`.
-- [x] Verify with `./bits book BTCUSDT -p bitget` and `./bits book BTCUSDT -p bitget -m futures`.
+**Completed:**
+- Created `internal/ws/base_client.go:Manager` as a common stateful WebSocket infrastructure with command support.
+- Implemented `OrderBook(ctx, symbol, market, depth)` for Bitget in `internal/provider/bitget/market.go` (spot and futures).
+- Updated `Capabilities()` in `internal/provider/bitget/client.go`.
+- Added interface assertions in `internal/provider/bitget/client_test.go`.
 
 ---
 
-## Phase 2 — Bitget WebSocket Streaming ✅ COMPLETED
+## Phase 2: Bitget WebSocket & Margin Support ✅ COMPLETED
 
-**Goal:** Implement `PriceStreamProvider` and `OrderBookStreamProvider` for Bitget.
+**Goal:** Implement Bitget WebSocket and Margin market data.
 
-**Completed:** Created `internal/provider/bitget/stream.go`. Implemented `WatchPrices` (using `ticker` channel) and `WatchOrderBook` (using `depth` channel). Updated `Capabilities()` in `internal/provider/bitget/client.go` and verified via interface assertions in `internal/provider/bitget/client_test.go`.
-
-### Tasks
-- [x] Create `internal/provider/bitget/stream.go`.
-- [x] Implement `WatchPrices(ctx, ids)` using Bitget v2 WebSocket (`ticker` channel).
-- [x] Implement `WatchOrderBook(ctx, symbol, market, depth)` using Bitget v2 WebSocket (`depth` channel).
-- [x] Update `Capabilities()` to include `FeatureStreamPrice` and `FeatureStreamOrderBook`.
-- [x] Verify with `./bits watch BTCUSDT -p bitget`.
+**Completed:**
+- Implemented `WatchPrices` and `WatchOrderBook` for Bitget in `internal/provider/bitget/stream.go` using the new `ws.Manager`.
+- Implemented Margin `ExchangeInfo` in `internal/provider/bitget/exchange.go`.
+- Implemented Margin `Price` and `Ticker24h` in `internal/provider/bitget/market.go`.
+- Updated `internal/config/config.go` with Bitget Margin settings.
+- Updated Bitget `Capabilities()` for Margin and Streaming features.
 
 ---
 
-## Phase 3 — WhiteBit Futures Support ✅ COMPLETED
+## Phase 3: WhiteBit Futures & WebSocket Support ✅ COMPLETED
 
-**Goal:** Extend WhiteBit provider to support futures market.
+**Goal:** Extend WhiteBit to support Futures and WebSocket streaming.
 
-**Completed:** Updated `ExchangeInfo()` in `internal/provider/whitebit/exchange.go` to support `MarketFutures` via the `/api/v4/public/futures` endpoint. Updated all market data methods in `internal/provider/whitebit/market.go` to respect the `market` parameter. Registered futures capabilities in `internal/provider/whitebit/client.go`. Added `internal/provider/whitebit/client_test.go` with interface assertions.
-
-### Tasks
-- [x] Update `ExchangeInfo()` in `internal/provider/whitebit/exchange.go` to handle `MarketFutures`.
-  - Use `GET /api/v4/public/futures`.
-- [x] Implement Futures support for `Price`, `Candles`, `Ticker24h`, and `OrderBook` in `internal/provider/whitebit/market.go`.
-- [x] Register futures capabilities in `internal/provider/whitebit/client.go`.
-- [x] Verify with `-m futures` flag.
+**Completed:**
+- Updated `ExchangeInfo()` for WhiteBit in `internal/provider/whitebit/exchange.go` to support futures.
+- Updated REST market data methods in `internal/provider/whitebit/market.go` to respect the `market` parameter.
+- Implemented stateful `WatchPrices` and `WatchOrderBook` for WhiteBit in `internal/provider/whitebit/stream.go` using `ws.Manager`.
+- Updated WhiteBit `Capabilities()` for Futures and Streaming features.
+- Added interface assertions in `internal/provider/whitebit/client_test.go`.
 
 ---
 
-## Phase 4 — WhiteBit WebSocket Streaming ✅ COMPLETED
+## Phase 4: Binance Refactor & Final Alignment ✅ COMPLETED
 
-**Goal:** Implement streaming for WhiteBit.
+**Goal:** Refactor Binance WS and verify all changes.
 
-**Completed:** Created `internal/provider/whitebit/stream.go`. Implemented `WatchPrices` and `WatchOrderBook` using the WhiteBit WebSocket API (`ticker_subscribe` and `depth_subscribe` methods). Updated `Capabilities()` in `internal/provider/whitebit/client.go` and verified via interface assertions in `internal/provider/whitebit/client_test.go`.
-
-### Tasks
-- [x] Create `internal/provider/whitebit/stream.go`.
-- [x] Implement `WatchPrices` and `WatchOrderBook` using WhiteBit WebSocket API.
-- [x] Update `Capabilities()` in `internal/provider/whitebit/client.go`.
-
----
-
-## Phase 5 — Binance & WhiteBit Enhancements
-
-**Goal:** Fill remaining gaps in streaming.
-
-### Tasks
-- [ ] Implement `WatchPrices` for Binance in `internal/provider/binance/stream.go`.
-- [ ] Implement `WatchPrices` for WhiteBit (if not done in P4).
-- [ ] Any other minor alignment identified during previous phases.
-
----
-
-## Phase 6 — Final Verification & Cleanup
-
-**Goal:** Ensure all implemented features are stable and documented.
-
-### Tasks
-- [ ] Run full test suite.
-- [ ] Update `_docs/architecture.md` with final capability matrix.
-- [ ] Final linting and formatting.
+**Completed:**
+- Refactored Binance `WatchPrices` and `WatchOrderBook` in `internal/provider/binance/stream.go` to use the common `ws.Manager`.
+- Verified all providers and markets (spot, futures, margin) for compilation and interface compliance.
+- Updated `_docs/ws-handling.md` with specifications.
+- Updated `_docs/providers/` documentation with margin/futures findings.
