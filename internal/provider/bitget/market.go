@@ -34,6 +34,25 @@ type bitgetTickersResponse struct {
 	Data []bitgetTickerEntry `json:"data"`
 }
 
+type bitgetMarginTickerEntry struct {
+	Symbol    string `json:"symbol"`
+	LastPr    string `json:"lastPr"`
+	High24H   string `json:"high24h"`
+	Low24H    string `json:"low24h"`
+	Open      string `json:"open"`
+	BaseVol   string `json:"baseVolume"`
+	QuoteVol  string `json:"quoteVolume"`
+	BidPr     string `json:"bidPr"`
+	AskPr     string `json:"askPr"`
+	Change24H string `json:"change24h"`
+}
+
+type bitgetMarginTickersResponse struct {
+	Code string                    `json:"code"`
+	Msg  string                    `json:"msg"`
+	Data []bitgetMarginTickerEntry `json:"data"`
+}
+
 // bitgetCandlesResponse is the response envelope for candle endpoints.
 type bitgetCandlesResponse struct {
 	Code string     `json:"code"`
@@ -41,13 +60,29 @@ type bitgetCandlesResponse struct {
 	Data [][]string `json:"data"`
 }
 
+// bitgetOrderBookData represents the order book data in Bitget responses.
+type bitgetOrderBookData struct {
+	Asks [][]string `json:"asks"`
+	Bids [][]string `json:"bids"`
+	Ts   string     `json:"ts"`
+}
+
+// bitgetOrderBookResponse is the response envelope for order book endpoints.
+type bitgetOrderBookResponse struct {
+	Code string              `json:"code"`
+	Msg  string              `json:"msg"`
+	Data bitgetOrderBookData `json:"data"`
+}
+
 // Price fetches current prices for the given symbols.
 // ids are trading symbols (e.g. "BTCUSDT"). currency is used as metadata only.
-func (c *Client) Price(_ context.Context, ids []string, currency string) (model.Response[[]model.CoinPrice], error) {
+func (c *Client) Price(ctx context.Context, ids []string, currency string) (model.Response[[]model.CoinPrice], error) {
 	prices := make([]model.CoinPrice, 0, len(ids))
 	var itemErrors []model.ItemError
 
 	for _, symbol := range ids {
+		// Price command usually doesn't pass market, so we try to find the best fit.
+		// For Bitget, we'll try spot first.
 		entry, err := c.fetchTicker(symbol, model.MarketSpot)
 		if err != nil {
 			itemErrors = append(itemErrors, model.ItemError{Symbol: symbol, Err: err})
@@ -156,6 +191,72 @@ func (c *Client) Candles(_ context.Context, symbol string, market model.MarketTy
 	}, nil
 }
 
+// OrderBook fetches the order book (depth snapshot) for the given symbol and market.
+func (c *Client) OrderBook(_ context.Context, symbol string, market model.MarketType, depth int) (model.Response[model.OrderBook], error) {
+	var path, query string
+
+	switch market {
+	case model.MarketFutures:
+		path = "/api/v2/mix/market/depth"
+		query = fmt.Sprintf("symbol=%s&productType=USDT-FUTURES", symbol)
+	default:
+		path = "/api/v2/spot/market/orderbook"
+		query = fmt.Sprintf("symbol=%s", symbol)
+	}
+
+	if depth > 0 {
+		query += fmt.Sprintf("&limit=%d", depth)
+	}
+
+	body, err := c.doRequest("GET", path, query)
+	if err != nil {
+		return model.Response[model.OrderBook]{}, err
+	}
+
+	var resp bitgetOrderBookResponse
+	if err := json.Unmarshal(body, &resp); err != nil {
+		return model.Response[model.OrderBook]{}, fmt.Errorf("failed to parse orderbook response: %w", err)
+	}
+	if resp.Code != "00000" {
+		return model.Response[model.OrderBook]{}, fmt.Errorf("API error: %s", resp.Msg)
+	}
+
+	parseEntries := func(raw [][]string) []model.OrderBookEntry {
+		entries := make([]model.OrderBookEntry, 0, len(raw))
+		for _, e := range raw {
+			if len(e) >= 2 {
+				price, _ := strconv.ParseFloat(e[0], 64)
+				qty, _ := strconv.ParseFloat(e[1], 64)
+				entries = append(entries, model.OrderBookEntry{Price: price, Quantity: qty})
+			}
+		}
+		return entries
+	}
+
+	var ts *time.Time
+	if resp.Data.Ts != "" {
+		if ms, err := strconv.ParseInt(resp.Data.Ts, 10, 64); err == nil {
+			t := time.UnixMilli(ms)
+			ts = &t
+		}
+	}
+
+	orderbook := model.OrderBook{
+		Symbol: symbol,
+		Market: market,
+		Bids:   parseEntries(resp.Data.Bids),
+		Asks:   parseEntries(resp.Data.Asks),
+		Time:   ts,
+	}
+
+	return model.Response[model.OrderBook]{
+		Kind:     model.KindOrderBook,
+		Provider: providerID,
+		Market:   market,
+		Data:     orderbook,
+	}, nil
+}
+
 // Ticker24h fetches 24-hour rolling ticker statistics for the given symbol and market.
 func (c *Client) Ticker24h(_ context.Context, symbol string, market model.MarketType) (model.Response[model.Ticker24h], error) {
 	entry, err := c.fetchTicker(symbol, market)
@@ -223,6 +324,8 @@ func (c *Client) fetchTicker(symbol string, market model.MarketType) (*bitgetTic
 	case model.MarketFutures:
 		path = "/api/v2/mix/market/ticker"
 		query = fmt.Sprintf("symbol=%s&productType=USDT-FUTURES", symbol)
+	case model.MarketMargin:
+		return c.fetchMarginTicker(symbol)
 	default:
 		path = "/api/v2/spot/market/tickers"
 		query = fmt.Sprintf("symbol=%s", symbol)
@@ -270,6 +373,41 @@ func convertGranularitySpot(interval string) string {
 }
 
 // convertGranularityFutures converts an interval string to Bitget futures API granularity format.
+func (c *Client) fetchMarginTicker(symbol string) (*bitgetTickerEntry, error) {
+	path := "/api/v2/margin/market/tickers"
+	query := fmt.Sprintf("symbol=%s&productType=isolated", symbol)
+
+	body, err := c.doRequest("GET", path, query)
+	if err != nil {
+		return nil, err
+	}
+
+	var resp bitgetMarginTickersResponse
+	if err := json.Unmarshal(body, &resp); err != nil {
+		return nil, fmt.Errorf("failed to parse margin ticker response: %w", err)
+	}
+	if resp.Code != "00000" {
+		return nil, fmt.Errorf("API error: %s", resp.Msg)
+	}
+	if len(resp.Data) == 0 {
+		return nil, fmt.Errorf("no margin ticker data returned for symbol %s", symbol)
+	}
+
+	d := resp.Data[0]
+	return &bitgetTickerEntry{
+		Symbol:    d.Symbol,
+		LastPr:    d.LastPr,
+		High24H:   d.High24H,
+		Low24H:    d.Low24H,
+		Open:      d.Open,
+		BaseVol:   d.BaseVol,
+		QuoteVol:  d.QuoteVol,
+		BidPr:     d.BidPr,
+		AskPr:     d.AskPr,
+		Change24H: d.Change24H,
+	}, nil
+}
+
 func convertGranularityFutures(interval string) string {
 	switch interval {
 	case "1m":

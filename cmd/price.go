@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/mdnmdn/bits/internal/capability"
+	"github.com/mdnmdn/bits/internal/resolve/symbol"
 	rendertable "github.com/mdnmdn/bits/internal/render/table"
 	"github.com/mdnmdn/bits/internal/resolve"
 	"github.com/spf13/cobra"
@@ -48,7 +49,18 @@ func runPrice(cmd *cobra.Command, args []string) error {
 		return rerr
 	}
 
-	res, err := pp.Price(cmd.Context(), args, currency)
+	sr := symbol.New(p)
+	resolvedArgs := make([]string, len(args))
+	for i, arg := range args {
+		resolved, err := sr.Resolve(cmd.Context(), arg, market)
+		if err != nil {
+			resolvedArgs[i] = arg
+		} else {
+			resolvedArgs[i] = resolved
+		}
+	}
+
+	res, err := pp.Price(cmd.Context(), resolvedArgs, currency)
 	if err != nil {
 		return err
 	}

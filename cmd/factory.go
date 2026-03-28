@@ -30,7 +30,7 @@ func resolveOpts(cmd *cobra.Command) resolve.ResolutionOpts {
 	allowFallback, _ := cmd.Root().PersistentFlags().GetBool("allow-fallback")
 	return resolve.ResolutionOpts{
 		Provider:   registry.ResolveProvider(provider),
-		Market:     model.MarketType(market),
+		Market:     model.ParseMarketType(market),
 		NoFallback: provider != "" && !allowFallback,
 	}
 }

@@ -1,4 +1,4 @@
-package bitget
+package whitebit
 
 import "github.com/mdnmdn/bits/internal/provider"
 
