@@ -47,7 +47,12 @@ func (c *Client) ServerTime(_ context.Context) (model.Response[model.ServerTime]
 
 // ExchangeInfo fetches exchange symbol information for the specified market.
 func (c *Client) ExchangeInfo(_ context.Context, market model.MarketType) (model.Response[model.ExchangeInfo], error) {
-	body, err := c.doRequest("/api/v4/public/markets")
+	path := "/api/v4/public/markets"
+	if market == model.MarketFutures {
+		path = "/api/v4/public/futures"
+	}
+
+	body, err := c.doRequest(path)
 	if err != nil {
 		return model.Response[model.ExchangeInfo]{}, err
 	}
@@ -69,17 +74,17 @@ func (c *Client) ExchangeInfo(_ context.Context, market model.MarketType) (model
 			BaseAsset:  m.Stock,
 			QuoteAsset: m.Money,
 			Status:     status,
-			Market:     model.MarketSpot,
+			Market:     market,
 		})
 	}
 
 	return model.Response[model.ExchangeInfo]{
 		Kind:     model.KindExchangeInfo,
 		Provider: providerID,
-		Market:   model.MarketSpot,
+		Market:   market,
 		Data: model.ExchangeInfo{
 			ExchangeID: providerID,
-			Market:     model.MarketSpot,
+			Market:     market,
 			Symbols:    symbols,
 		},
 	}, nil

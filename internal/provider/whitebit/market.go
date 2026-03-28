@@ -86,7 +86,7 @@ func (c *Client) Price(_ context.Context, ids []string, currency string) (model.
 	return model.Response[[]model.CoinPrice]{
 		Kind:     model.KindPrice,
 		Provider: providerID,
-		Market:   model.MarketSpot,
+		Market:   model.MarketSpot, // Price usually defaults to spot in this app's context if not specified
 		Data:     prices,
 		Errors:   itemErrors,
 	}, nil
@@ -112,7 +112,7 @@ func (c *Client) Ticker24h(_ context.Context, symbol string, market model.Market
 
 	t24h := model.Ticker24h{
 		Symbol:             symbol,
-		Market:             model.MarketSpot,
+		Market:             market,
 		LastPrice:          lastPrice,
 		PriceChange:        &priceChange,
 		PriceChangePercent: &changePct,
@@ -128,7 +128,7 @@ func (c *Client) Ticker24h(_ context.Context, symbol string, market model.Market
 	return model.Response[model.Ticker24h]{
 		Kind:     model.KindTicker,
 		Provider: providerID,
-		Market:   model.MarketSpot,
+		Market:   market,
 		Data:     t24h,
 	}, nil
 }
@@ -195,7 +195,7 @@ func (c *Client) Candles(_ context.Context, symbol string, market model.MarketTy
 	return model.Response[[]model.Candle]{
 		Kind:     model.KindCandle,
 		Provider: providerID,
-		Market:   model.MarketSpot,
+		Market:   market,
 		Data:     candles,
 	}, nil
 }
@@ -236,7 +236,7 @@ func (c *Client) OrderBook(_ context.Context, symbol string, market model.Market
 
 	orderbook := model.OrderBook{
 		Symbol: symbol,
-		Market: model.MarketSpot,
+		Market: market,
 		Bids:   bids,
 		Asks:   asks,
 		Time:   ts,
@@ -245,7 +245,7 @@ func (c *Client) OrderBook(_ context.Context, symbol string, market model.Market
 	return model.Response[model.OrderBook]{
 		Kind:     model.KindOrderBook,
 		Provider: providerID,
-		Market:   model.MarketSpot,
+		Market:   market,
 		Data:     orderbook,
 	}, nil
 }

@@ -41,6 +41,20 @@ type bitgetCandlesResponse struct {
 	Data [][]string `json:"data"`
 }
 
+// bitgetOrderBookData represents the order book data in Bitget responses.
+type bitgetOrderBookData struct {
+	Asks [][]string `json:"asks"`
+	Bids [][]string `json:"bids"`
+	Ts   string     `json:"ts"`
+}
+
+// bitgetOrderBookResponse is the response envelope for order book endpoints.
+type bitgetOrderBookResponse struct {
+	Code string              `json:"code"`
+	Msg  string              `json:"msg"`
+	Data bitgetOrderBookData `json:"data"`
+}
+
 // Price fetches current prices for the given symbols.
 // ids are trading symbols (e.g. "BTCUSDT"). currency is used as metadata only.
 func (c *Client) Price(_ context.Context, ids []string, currency string) (model.Response[[]model.CoinPrice], error) {
@@ -153,6 +167,72 @@ func (c *Client) Candles(_ context.Context, symbol string, market model.MarketTy
 		Provider: providerID,
 		Market:   market,
 		Data:     candles,
+	}, nil
+}
+
+// OrderBook fetches the order book (depth snapshot) for the given symbol and market.
+func (c *Client) OrderBook(_ context.Context, symbol string, market model.MarketType, depth int) (model.Response[model.OrderBook], error) {
+	var path, query string
+
+	switch market {
+	case model.MarketFutures:
+		path = "/api/v2/mix/market/depth"
+		query = fmt.Sprintf("symbol=%s&productType=USDT-FUTURES", symbol)
+	default:
+		path = "/api/v2/spot/market/orderbook"
+		query = fmt.Sprintf("symbol=%s", symbol)
+	}
+
+	if depth > 0 {
+		query += fmt.Sprintf("&limit=%d", depth)
+	}
+
+	body, err := c.doRequest("GET", path, query)
+	if err != nil {
+		return model.Response[model.OrderBook]{}, err
+	}
+
+	var resp bitgetOrderBookResponse
+	if err := json.Unmarshal(body, &resp); err != nil {
+		return model.Response[model.OrderBook]{}, fmt.Errorf("failed to parse orderbook response: %w", err)
+	}
+	if resp.Code != "00000" {
+		return model.Response[model.OrderBook]{}, fmt.Errorf("API error: %s", resp.Msg)
+	}
+
+	parseEntries := func(raw [][]string) []model.OrderBookEntry {
+		entries := make([]model.OrderBookEntry, 0, len(raw))
+		for _, e := range raw {
+			if len(e) >= 2 {
+				price, _ := strconv.ParseFloat(e[0], 64)
+				qty, _ := strconv.ParseFloat(e[1], 64)
+				entries = append(entries, model.OrderBookEntry{Price: price, Quantity: qty})
+			}
+		}
+		return entries
+	}
+
+	var ts *time.Time
+	if resp.Data.Ts != "" {
+		if ms, err := strconv.ParseInt(resp.Data.Ts, 10, 64); err == nil {
+			t := time.UnixMilli(ms)
+			ts = &t
+		}
+	}
+
+	orderbook := model.OrderBook{
+		Symbol: symbol,
+		Market: market,
+		Bids:   parseEntries(resp.Data.Bids),
+		Asks:   parseEntries(resp.Data.Asks),
+		Time:   ts,
+	}
+
+	return model.Response[model.OrderBook]{
+		Kind:     model.KindOrderBook,
+		Provider: providerID,
+		Market:   market,
+		Data:     orderbook,
 	}, nil
 }
 
