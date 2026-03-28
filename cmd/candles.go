@@ -7,7 +7,6 @@ import (
 
 	"github.com/mdnmdn/bits/internal/capability"
 	"github.com/mdnmdn/bits/internal/model"
-	renderjson "github.com/mdnmdn/bits/internal/render/json"
 	rendertable "github.com/mdnmdn/bits/internal/render/table"
 	"github.com/mdnmdn/bits/internal/resolve"
 	"github.com/spf13/cobra"
@@ -89,12 +88,10 @@ func runCandles(cmd *cobra.Command, args []string) error {
 	}
 	res.Market = market
 
-	switch format {
-	case "json":
-		return renderjson.Render(os.Stdout, res)
-	default:
-		return rendertable.RenderCandles(os.Stdout, res)
+	if ok, err := renderGeneric(os.Stdout, format, res); ok || err != nil {
+		return err
 	}
+	return rendertable.RenderCandles(os.Stdout, res)
 }
 
 func parseTime(s string) (time.Time, error) {

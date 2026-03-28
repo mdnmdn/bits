@@ -7,9 +7,12 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/mdnmdn/bits/internal/capability"
+	"github.com/mdnmdn/bits/internal/render"
 	"github.com/mdnmdn/bits/internal/resolve"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 
 	"github.com/mdnmdn/bits/internal/provider"
 )
@@ -24,6 +27,14 @@ var streamPriceCmd = &cobra.Command{
 func init() {
 	streamCmd.AddCommand(streamPriceCmd)
 }
+
+var (
+	streamToonID     = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("205"))
+	streamToonPrice  = lipgloss.NewStyle().Foreground(lipgloss.Color("82"))
+	streamToonUp     = lipgloss.NewStyle().Foreground(lipgloss.Color("46"))
+	streamToonDown   = lipgloss.NewStyle().Foreground(lipgloss.Color("196"))
+	streamToonNeutrl = lipgloss.NewStyle().Faint(true)
+)
 
 func runStreamPrice(cmd *cobra.Command, args []string) error {
 	cfg, err := loadConfig()
@@ -61,16 +72,51 @@ func runStreamPrice(cmd *cobra.Command, args []string) error {
 		if update == nil {
 			continue
 		}
+		change := "-"
+		if update.Change24h != nil {
+			change = fmt.Sprintf("%.2f%%", *update.Change24h)
+		}
+
 		switch format {
-		case "json":
+		case render.FormatJSON:
+			// JSONL: one compact JSON object per line
 			b, _ := json.Marshal(update)
 			fmt.Fprintf(os.Stdout, "%s\n", b)
-		default:
-			change := "-"
+
+		case render.FormatYAML:
+			// one YAML document per update, separated by ---
+			enc := yaml.NewEncoder(os.Stdout)
+			enc.SetIndent(2)
+			_ = enc.Encode(update)
+			_ = enc.Close()
+
+		case render.FormatMarkdown:
+			// one markdown bullet per update
+			fmt.Fprintf(os.Stdout, "- **%s** %.6f %s  _%s_\n",
+				update.ID, update.Price, update.Currency, change)
+
+		case render.FormatToon:
+			// compact colored line: ID  PRICE CURRENCY  CHANGE
+			chgStyle := streamToonNeutrl
 			if update.Change24h != nil {
-				change = fmt.Sprintf("%.2f%%", *update.Change24h)
+				if *update.Change24h > 0 {
+					change = "▲" + change
+					chgStyle = streamToonUp
+				} else if *update.Change24h < 0 {
+					change = "▼" + change
+					chgStyle = streamToonDown
+				}
 			}
-			fmt.Fprintf(os.Stdout, "%s  %.6f %s  %s\n", update.ID, update.Price, update.Currency, change)
+			fmt.Fprintf(os.Stdout, "%s  %s %s  %s\n",
+				streamToonID.Render(update.ID),
+				streamToonPrice.Render(fmt.Sprintf("%.6f", update.Price)),
+				update.Currency,
+				chgStyle.Render(change))
+
+		default:
+			// table: compact plain line
+			fmt.Fprintf(os.Stdout, "%s  %.6f %s  %s\n",
+				update.ID, update.Price, update.Currency, change)
 		}
 	}
 	return nil

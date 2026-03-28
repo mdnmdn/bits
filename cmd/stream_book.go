@@ -7,9 +7,12 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/mdnmdn/bits/internal/capability"
+	"github.com/mdnmdn/bits/internal/render"
 	"github.com/mdnmdn/bits/internal/resolve"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 
 	"github.com/mdnmdn/bits/internal/provider"
 )
@@ -25,6 +28,12 @@ func init() {
 	streamBookCmd.Flags().Int("depth", 20, "Order book depth")
 	streamCmd.AddCommand(streamBookCmd)
 }
+
+var (
+	streamBookSymbol = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("39"))
+	streamBookBids   = lipgloss.NewStyle().Foreground(lipgloss.Color("46"))
+	streamBookAsks   = lipgloss.NewStyle().Foreground(lipgloss.Color("196"))
+)
 
 func runStreamBook(cmd *cobra.Command, args []string) error {
 	cfg, err := loadConfig()
@@ -63,10 +72,32 @@ func runStreamBook(cmd *cobra.Command, args []string) error {
 		if update == nil {
 			continue
 		}
+
 		switch format {
-		case "json":
+		case render.FormatJSON:
+			// JSONL: one compact JSON object per line
 			b, _ := json.Marshal(update)
 			fmt.Fprintf(os.Stdout, "%s\n", b)
+
+		case render.FormatYAML:
+			// one YAML document per update
+			enc := yaml.NewEncoder(os.Stdout)
+			enc.SetIndent(2)
+			_ = enc.Encode(update)
+			_ = enc.Close()
+
+		case render.FormatMarkdown:
+			// compact markdown line
+			fmt.Fprintf(os.Stdout, "- **%s/%s** bids:%d asks:%d\n",
+				update.Symbol, update.Market, len(update.Bids), len(update.Asks))
+
+		case render.FormatToon:
+			// compact colored line
+			fmt.Fprintf(os.Stdout, "%s  bids:%s  asks:%s\n",
+				streamBookSymbol.Render(fmt.Sprintf("%s/%s", update.Symbol, update.Market)),
+				streamBookBids.Render(fmt.Sprintf("%d", len(update.Bids))),
+				streamBookAsks.Render(fmt.Sprintf("%d", len(update.Asks))))
+
 		default:
 			fmt.Fprintf(os.Stdout, "[%s/%s] bids:%d asks:%d\n",
 				update.Symbol, update.Market, len(update.Bids), len(update.Asks))

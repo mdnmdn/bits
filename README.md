@@ -1,443 +1,266 @@
-# bits — bits CLI
+# bits
 
-A fast, full-featured terminal interface for the [CoinGecko API](https://docs.coingecko.com), built in Go. Includes an interactive TUI with 7-day price charts, CSV export, 50+ currency symbols, 500+ categories, and more than 10 years of historical data. 
+**The crypto Swiss Army knife for your terminal.**
+
+One CLI. Three exchanges. Every format. Real-time streams, snapshots, order books, candles — all from the same command set, no matter which provider you're pointing at.
 
 > [!NOTE]
 > bits CLI is currently in Beta.
-> We're constantly improving, and your feedback is crucial. Please share your feedback via this [form](https://forms.gle/VgpVbwsSJLgE7D8Q7), or submit a PR.
+> We're constantly improving — feedback welcome via this [form](https://forms.gle/VgpVbwsSJLgE7D8Q7) or a PR.
 
-<img width="584" height="705" alt="Screenshot 2026-03-07 at 4 31 27 PM" src="https://github.com/user-attachments/assets/7973c959-233b-4cb4-8f9e-37f3954c67a3" />
+---
 
+## What it does
 
-## Features at a Glance
-- **🎮 Interactive TUI** — Full-screen terminal dashboard with live navigation and 7-day braille price charts
-- **⚡ Real-Time Prices** — Current prices by CoinGecko ID or ticker symbol, with 50+ currency symbols
-- **📅 Deep Historical Data** — Snapshots, OHLC, and custom date ranges with CSV export
-- **🏷️ Category Filtering** — Filter by 500+ categories including AI, Layer-2, Tokenized Stocks, Gold, and Silver
-- **📊 Unlimited Markets** — Fetch 1,000+ coins with automatic pagination
-- **🔥 Trending & Top Movers** — Real-time trending coins, NFTs, and categories
-- **📥 CSV Export** — Export any market or history query for analysis in Excel or Python
-- **📡 Live WebSocket Streaming** — Real-time price updates via `bits watch` with NDJSON output for piping
-- **⌨️ JSON Output** — Machine-readable `-o json` for scripting and pipelines
-- **🤖 Agent/LLM Friendly** — `--dry-run` mode and `bits commands` for tool integration
+```sh
+bits price bitcoin ethereum                    # prices from CoinGecko
+bits price BTCUSDT -p binance -m futures       # or Binance futures
+bits ticker BTCUSDT ETHUSDT -p binance         # 24h stats, parallel fan-out
+bits book BTCUSDT -p binance --depth 50        # order book snapshot
+bits candles BTCUSDT -p bitget --interval 1h   # OHLCV history
+bits stream price bitcoin -o json | jq .price  # live WebSocket → jq
+bits capabilities                              # what can each provider do?
+```
 
-<img width="701" height="412" alt="Screenshot 2026-03-07 at 4 06 14 PM" src="https://github.com/user-attachments/assets/a62b26d3-da95-4040-b421-371409202e82" />
-<img width="774" height="562" alt="Screenshot 2026-03-07 at 4 07 19 PM" src="https://github.com/user-attachments/assets/b2d34cc7-7cc0-48b5-9f24-4c2e909d434e" />
+Pick a provider with `-p`, a market with `-m`, an output format with `-o`. That's it.
 
+---
+
+## Providers
+
+| Provider | Markets | What it gives you |
+|---|---|---|
+| **CoinGecko** | — | Prices, candles, ranked markets, live price stream |
+| **Binance** | spot · futures | Server time, exchange info, prices, candles, ticker, order book, live book stream |
+| **Bitget** | spot · futures | Server time, exchange info, prices, candles, ticker |
+
+Switch providers with `-p coingecko / -p binance / -p bitget`. When a provider doesn't support what you asked for, `bits` automatically falls back to one that does — and tells you. Use `--lock` to hard-fail instead.
+
+```sh
+bits ticker BTCUSDT -p coingecko        # no ticker on coingecko → falls back to binance
+bits ticker BTCUSDT -p coingecko -l     # error: coingecko does not support ticker
+```
+
+---
+
+## Output formats
+
+Every command supports `-o` with five formats:
+
+| Flag | Output |
+|---|---|
+| `table` | Aligned tabwriter — human-readable (default) |
+| `json` | Pretty-printed JSON envelope with provenance metadata |
+| `yaml` | Same as JSON but YAML |
+| `markdown` | Markdown doc — heading + fenced YAML block |
+| `toon` | Lipgloss-styled terminal box with colored header |
+
+Streaming commands (`bits stream`) emit continuous compact output per update:
+
+| Flag | Streaming output |
+|---|---|
+| `json` | JSONL — one compact JSON object per line |
+| `yaml` | One YAML doc per update, `---` separated |
+| `markdown` | One markdown bullet per update |
+| `toon` | Colored inline line per update |
 
 ---
 
 ## Install
 
-### Homebrew (macOS/Linux)
-
 ```sh
+# Homebrew
 brew install mdnmdn/bits/bits
-```
 
-Or tap first, then install:
-
-```sh
-brew tap mdnmdn/bits
-brew install bits
-```
-
-### Shell script
-
-```sh
+# Shell script
 curl -sSfL https://raw.githubusercontent.com/mdnmdn/bits/main/install.sh | sh
-```
 
-### Go install
-
-```sh
+# Go
 go install github.com/mdnmdn/bits@latest
 ```
 
-### Manual
-
-Download the binary for your platform from [Releases](https://github.com/mdnmdn/bits/releases), extract, and place `bits` in your `$PATH`.
+Or download a binary from [Releases](https://github.com/mdnmdn/bits/releases).
 
 ---
 
 ## Setup
 
-Get a free API key at [coingecko.com/en/api](https://www.coingecko.com/en/api), then run:
+Config file: `~/Library/Application Support/bits-cli/config.yaml` (macOS) or `~/.config/bits/config.yaml` (Linux).
 
-```sh
-# Interactive setup (recommended — input is masked)
-bits auth
+```yaml
+provider: coingecko
 
-# Or via environment variables (avoids shell history exposure)
-CG_API_KEY=YOUR_API_KEY CG_API_TIER=demo bits auth
+[coingecko]
+api_key: ""
+tier: demo        # demo | paid
 
-# Or with flags (note: key may be visible in shell history and process listings)
-bits auth --key YOUR_API_KEY --tier demo
+[binance]
+api_key: ""
+api_secret: ""
+
+[bitget]
+api_key: ""
+api_secret: ""
+passphrase: ""
 ```
 
-Tiers: `demo` (free, public API), `paid` (pro API with full historical data and extra endpoints)
+All values accept `BITS_*` environment variable overrides:
 
 ```sh
-# Verify configuration
-bits status
+BITS_PROVIDER=binance
+BITS_COINGECKO_API_KEY=your_key   BITS_COINGECKO_TIER=paid
+BITS_BINANCE_API_KEY=your_key     BITS_BINANCE_API_SECRET=your_secret
+BITS_BITGET_API_KEY=your_key      BITS_BITGET_API_SECRET=your_secret   BITS_BITGET_PASSPHRASE=your_pass
 ```
 
 ---
 
-## Global Flags
+## Command reference
 
-```sh
-# JSON output (for scripting and automation)
-bits price --ids bitcoin -o json
-bits markets --total 10 -o json | jq '.[0].name'
+### Global flags
 
-# Dry-run mode (shows the API request without executing it)
-bits price --ids bitcoin --dry-run
 ```
-
-All data commands support `-o json` / `--output json` for machine-readable output. Diagnostics and warnings are written to stderr, so stdout is always clean data.
+-p, --provider  string   coingecko | binance | bitget  (default: from config)
+-m, --market    string   spot | futures | margin        (default: spot)
+-o, --output    string   table | json | yaml | markdown | toon  (default: table)
+-l, --lock               disable automatic provider fallback
+```
 
 ---
 
-## Commands
+### `bits price`
 
-### `bits price` — Live Coin Prices
-
-Fetch the current price of one or more coins. Supports both CoinGecko IDs and ticker symbols.
-
-> **Tip:** Find coin IDs by browsing the respective [CoinGecko coin page](https://www.coingecko.com/en/coins/bitcoin) and copying the 'API ID'. You can also get the full list of coin IDs via this [endpoint](https://docs.coingecko.com/reference/coins-list) or [Google Sheet](https://docs.google.com/spreadsheets/d/1wTTuxXt8n9q7C4NDXqQpI3wpKu1_5bGVmP9Xz0XGSyU/edit?gid=0#gid=0).
+Current price for one or more coin IDs (CoinGecko) or symbols (exchanges). Batch-native — one API call regardless of how many IDs you pass.
 
 ```sh
-# By CoinGecko ID
-bits price --ids bitcoin,ethereum
-
-# By ticker symbol (for coins that share the same symbol, the coin with highest market cap will be prioritised)
-bits price --symbols btc,eth
-
-# Different target currency
-bits price --ids bitcoin --vs eur
+bits price bitcoin ethereum
+bits price bitcoin --currency eur
+bits price BTCUSDT ETHUSDT -p binance -m futures
+bits price bitcoin -o toon
 ```
-
-#### Supported Currencies
-For `--vs` currency, refer below for the full supported currency IDs. By default, it will always lookup by `usd`
-| IDs | Currency Name | Type |
-| :--- | :--- | :--- |
-| `usd` | US Dollar | Fiat |
-| `eur` | Euro | Fiat |
-| `eth` | Ether | Crypto |
-| `xau` | Gold - Troy Ounce | Commodity |
-
-<details>
-<summary>Click to see full list of supported IDs</summary>
-  
-| IDs | Currency Name | Type |
-| :--- | :--- | :--- |
-| `bch` | Bitcoin Cash | Crypto |
-| `bnb` | Binance Coin | Crypto |
-| `eos` | EOS | Crypto |
-| `xrp` | XRP | Crypto |
-| `xlm` | Stellar | Crypto |
-| `link` | Chainlink | Crypto |
-| `dot` | Polkadot | Crypto |
-| `yfi` | yearn.finance | Crypto |
-| `sol` | Solana | Crypto |
-| `usd` | US Dollar | Fiat |
-| `aed` | UAE Dirham | Fiat |
-| `ars` | Argentine Peso | Fiat |
-| `aud` | Australian Dollar | Fiat |
-| `bdt` | Bangladeshi Taka | Fiat |
-| `bhd` | Bahraini Dinar | Fiat |
-| `bmd` | Bermudian Dollar | Fiat |
-| `brl` | Brazil Real | Fiat |
-| `cad` | Canadian Dollar | Fiat |
-| `chf` | Swiss Franc | Fiat |
-| `clp` | Chilean Peso | Fiat |
-| `cny` | Chinese Yuan | Fiat |
-| `czk` | Czech Koruna | Fiat |
-| `dkk` | Danish Krone | Fiat |
-| `eur` | Euro | Fiat |
-| `gbp` | British Pound Sterling | Fiat |
-| `gel` | Georgian Lari | Fiat |
-| `hkd` | Hong Kong Dollar | Fiat |
-| `huf` | Hungarian Forint | Fiat |
-| `idr` | Indonesian Rupiah | Fiat |
-| `ils` | Israeli New Shekel | Fiat |
-| `inr` | Indian Rupee | Fiat |
-| `jpy` | Japanese Yen | Fiat |
-| `krw` | South Korean Won | Fiat |
-| `kwd` | Kuwaiti Dinar | Fiat |
-| `lkr` | Sri Lankan Rupee | Fiat |
-| `mmk` | Burmese Kyat | Fiat |
-| `mxn` | Mexican Peso | Fiat |
-| `myr` | Malaysian Ringgit | Fiat |
-| `ngn` | Nigerian Naira | Fiat |
-| `nok` | Norwegian Krone | Fiat |
-| `nzd` | New Zealand Dollar | Fiat |
-| `php` | Philippine Peso | Fiat |
-| `pkr` | Pakistani Rupee | Fiat |
-| `pln` | Polish Zloty | Fiat |
-| `rub` | Russian Ruble | Fiat |
-| `sar` | Saudi Riyal | Fiat |
-| `sek` | Swedish Krona | Fiat |
-| `sgd` | Singapore Dollar | Fiat |
-| `thb` | Thai Baht | Fiat |
-| `try` | Turkish Lira | Fiat |
-| `twd` | New Taiwan Dollar | Fiat |
-| `uah` | Ukrainian Hryvnia | Fiat |
-| `vef` | Venezuelan Bolívar Fuerte | Fiat |
-| `vnd` | Vietnamese Dong | Fiat |
-| `zar` | South African Rand | Fiat |
-| `xdr` | IMF Special Drawing Rights | Other |
-| `xag` | Silver - Troy Ounce | Commodity |
-| `xau` | Gold - Troy Ounce | Commodity |
-| `bits` | Bits (Bitcoin) | Unit |
-| `sats` | Satoshis (Bitcoin) | Unit |
-
-</details>
-
-**Output columns:** Coin | Price | 24h Change
 
 ---
 
-### `bits markets` — Top Coins by Market Cap
+### `bits ticker`
 
-Fetch ranked market data with automatic pagination. The API is queried in 250-coin pages, so `--total 1000` makes exactly 4 API calls.
+24h rolling stats — last price, change %, high, low, volume. Multi-symbol calls fan out in parallel; partial failures don't abort the rest.
+
+```sh
+bits ticker BTCUSDT -p binance
+bits ticker BTCUSDT ETHUSDT SOLUSDT -p binance
+bits ticker BTCUSDT -p binance -m futures -o json
+```
+
+---
+
+### `bits book`
+
+Order book depth snapshot — bids and asks side by side.
+
+```sh
+bits book BTCUSDT -p binance
+bits book BTCUSDT -p binance --depth 100
+bits book BTCUSDT -p binance -m futures -o yaml
+```
+
+---
+
+### `bits candles`
+
+OHLCV candle history with flexible time range.
+
+```sh
+bits candles BTCUSDT -p binance --interval 1h
+bits candles BTCUSDT -p binance -m futures --from 2024-01-01 --to 2024-06-01
+bits candles bitcoin --limit 100 -o json
+```
+
+| Flag | Default | Description |
+|---|---|---|
+| `--interval` | `1h` | `1m` `5m` `1h` `4h` `1d` etc. |
+| `--from` | — | RFC3339 or `YYYY-MM-DD` |
+| `--to` | — | RFC3339 or `YYYY-MM-DD` |
+| `--limit` | — | Max candles (0 = provider default) |
+
+---
+
+### `bits time`
+
+Exchange server time with computed round-trip latency and clock skew. Exchanges only (Binance, Bitget).
+
+```sh
+bits time -p binance
+bits time -p bitget -o json
+```
+
+---
+
+### `bits info`
+
+Full symbol catalogue for an exchange. Use `--symbol` to filter.
+
+```sh
+bits info -p binance
+bits info -p binance -m futures
+bits info -p binance --symbol BTCUSDT
+```
+
+---
+
+### `bits markets`
+
+Ranked coin list by market cap. CoinGecko only (aggregator feature); automatically routed there.
 
 ```sh
 bits markets
-bits markets --total 100
-bits markets --total 500 --vs eur
-bits markets --total 250 --order gecko_desc
-bits markets --total 250 --export data.csv
+bits markets --currency eur --per-page 50
+bits markets --page 3 -o yaml
 ```
-
-| Flag | Default | Description |
-|---|---|---|
-| `--total` | `100` | Number of coins to fetch |
-| `--vs` | `usd` | Quote currency |
-| `--order` | `market_cap_desc` | Sort order (e.g. `volume_desc`, `gecko_desc`) |
-| `--category` | — | Filter by category ID (e.g. `layer-2`, `decentralized-finance-defi`) |
-| `--export` | — | Export to CSV file path |
-
-**Output columns:** # | Name | Symbol | Price | Market Cap | Volume | 24h Change
 
 ---
 
-### `bits search` — Search Coins
+### `bits stream price`
 
-Search for any coin by name or symbol. Returns the top matches with their CoinGecko coin IDs.
+Live WebSocket price feed — CoinGecko paid plan required. One update per line; Ctrl+C to stop.
 
 ```sh
-bits search solana
-bits search dog --limit 5
+bits stream price bitcoin ethereum
+bits stream price bitcoin -o json | jq .price    # pipe prices
+bits stream price bitcoin -o yaml                # YAML docs, --- separated
+bits stream price bitcoin -o toon                # colored live lines
 ```
-
-| Flag | Default | Description |
-|---|---|---|
-| `--limit` | `10` | Max results to show |
-
-**Output columns:** Rank | Name | Symbol | ID
 
 ---
 
-### `bits trending` — Trending (24h)
+### `bits stream book`
 
-Shows the three trending tables in one view:
+Live WebSocket order book feed — Binance only. One update per line; Ctrl+C to stop.
 
 ```sh
-bits trending
+bits stream book BTCUSDT -p binance
+bits stream book BTCUSDT -p binance --depth 5
+bits stream book BTCUSDT -p binance -o json      # JSONL
 ```
-
-- **Top 15 trending coins** — with market cap rank
-- **Top 7 trending NFTs** — with floor price change
-- **Top 6 trending categories** — with market cap change
 
 ---
 
-### `bits history` — Historical Price Data
+### `bits providers`
 
-Three modes for querying historical data. All modes support `--vs` currency and `--export`.
+List all registered providers and which one is currently active.
 
-**Single date snapshot:**
 ```sh
-bits history bitcoin --date 2024-01-15
-bits history ethereum --date 2024-06-01 --vs eur
+bits providers
 ```
-
-**Past N days (price data):**
-```sh
-bits history bitcoin --days 7
-bits history bitcoin --days 30 --export btc_30d.csv
-bits history bitcoin --days 7 --ohlc          # OHLC candle data instead
-```
-
-**Custom date range:**
-```sh
-bits history bitcoin --from 2024-01-01 --to 2024-06-30
-bits history bitcoin --from 2024-01-01 --to 2024-03-31 --export q1.csv
-bits history bitcoin --from 2024-01-01 --to 2024-06-30 --ohlc   # OHLC output
-```
-
-| Flag | Description |
-|---|---|
-| `--date YYYY-MM-DD` | Single-day snapshot (price, market cap, volume) |
-| `--days N` | Past N days of price data (any integer, or `max`) |
-| `--from / --to YYYY-MM-DD` | Inclusive date range (price data) |
-| `--ohlc` | Switch `--days` or `--from/--to` to OHLC output |
-| `--vs` | Quote currency (default: `usd`) |
-| `--interval` | Data granularity: `daily`, `hourly`, or `5m` |
-| `--export` | Export to CSV file path |
-
-Note: `hourly` and `5m` interval data are only available from **February 2, 2018** onwards. `5m` interval is exclusive for [Enterprise](https://www.coingecko.com/en/api/pricing) plan only. 
 
 ---
 
-### `bits top-gainers-losers` — Top Movers (Exclusive for [Analyst plan](https://www.coingecko.com/en/api/pricing) & above)
+### `bits capabilities` / `bits caps`
+
+The capability matrix: which features each provider supports, by market type. No API key needed.
 
 ```sh
-bits top-gainers-losers
-bits top-gainers-losers --losers --duration 7d
-bits top-gainers-losers --top-coins 300 --export gainers.csv
-```
-
-| Flag | Default | Description |
-|---|---|---|
-| `--vs` | `usd` | Quote currency |
-| `--duration` | `24h` | Time window (1h, 24h, 7d, 14d, 30d, 60d, 1y) |
-| `--top-coins` | `1000` | Pool size (300, 500, 1000, all) |
-| `--losers` | `false` | Show losers instead of gainers |
-| `--export` | — | Export to CSV file path |
-
----
-
-### `bits watch` — Live Price Streaming (Exclusive for [Analyst plan](https://www.coingecko.com/en/api/pricing) & above)
-
-Stream real-time price updates via CoinGecko's WebSocket API. USD prices only.
-
-```sh
-bits watch --ids bitcoin,ethereum          # Live updating table
-bits watch --symbols btc,eth               # Resolve symbols, then stream
-bits watch --ids bitcoin -o json           # NDJSON output (pipe-friendly)
-bits watch --ids bitcoin -o json | jq .price  # Stream prices with jq
-bits watch --ids bitcoin --dry-run         # Show WebSocket request info
-```
-
-| Flag | Default | Description |
-|---|---|---|
-| `--ids` | — | Comma-separated coin IDs |
-| `--symbols` | — | Comma-separated symbols (resolved to IDs) |
-
-**Table mode** (default): clears screen and re-renders on each update. Press `Ctrl+C` to quit.
-
-**JSON mode** (`-o json`): one JSON object per line per update to stdout. Exits cleanly on broken pipe.
-
----
-
-## Category Filtering
-
-CoinGecko tracks 500+ categories including Real World Assets, commodities, and tokenized stocks. Use the `--category` flag to filter:
-
-```sh
-bits markets --category tokenized-gold              # Gold & Silver pegged assets
-bits markets --category real-world-assets-rwa        # Real Estate & T-Bills
-bits markets --category artificial-intelligence      # Top AI coins
-bits markets --category layer-2 --export l2.csv      # Export all L2 tokens
-bits tui markets --category solana-meme-coins        # Browse in TUI mode
-```
-
-The `--category` flag works in both `bits markets` and `bits tui markets`. In TUI mode, the active category is displayed in the header.
-
-> **Tip:** Find category IDs by browsing the [CoinGecko categories page](https://www.coingecko.com/en/categories) and copying the ID from the URL. You can also get the full list via this [endpoint](https://docs.coingecko.com/reference/coins-categories-list) or [Google Sheet](https://docs.google.com/spreadsheets/d/1wTTuxXt8n9q7C4NDXqQpI3wpKu1_5bGVmP9Xz0XGSyU/edit?gid=214581757#gid=214581757).
-
----
-
-## CSV Export
-
-`markets` and `history` commands can export raw data to CSV for analysis in Excel, Python, etc.
-
-```sh
-bits markets --total 500 --export top500.csv
-bits history bitcoin --days 30 --export btc_30d.csv
-bits history bitcoin --from 2024-01-01 --to 2024-12-31 --export btc_2024.csv
-bits top-gainers-losers --export gainers.csv
-```
-
-CSV files contain raw numbers (not formatted strings), making them directly usable in data pipelines.
-
----
-
-## Interactive TUI
-
-### `bits tui markets` — Top Market Cap Ranked Coins
-
-```sh
-bits tui markets
-bits tui markets --category layer-1
-```
-
-Launches a live interactive table of the top 50 coins by market cap.
-
-### `bits tui trending` — Trending Coins
-
-```sh
-bits tui trending
-```
-
-Launches a live interactive table of the top 15 trending coins (up to 30 on paid plans).
-
-### Keyboard Controls
-
-| Key | Action |
-|---|---|
-| `j` / `↓` | Move selection down |
-| `k` / `↑` | Move selection up |
-| `Enter` | Open detail view |
-| `Esc` / `Backspace` | Back to list |
-| `q` / `Ctrl+C` | Quit |
-
-### Detail View
-
-Pressing `Enter` on any coin opens a split-panel detail view:
-
-**Left panel** — Key metrics: price, 24h change, high/low, market cap, volume, ATH/ATL, circulating and total supply.
-
-**Right panel** — 7-day price chart rendered as a braille-dot line graph in the terminal.
-
-
----
-
-## Full Command Reference
-
-```
-bits [command]
-
-Commands:
-  auth                 Save your CoinGecko API key and tier (demo/paid)
-  status               Show current auth configuration
-  price                Get the current price of one or more coins
-  markets              List top coins by market cap
-  search               Search for coins by name or symbol
-  trending             Show trending coins, NFTs, and categories (24h)
-  history              Get historical price data for a coin
-  top-gainers-losers   Show top gaining and losing coins (paid plans only)
-  watch                Stream live coin prices via WebSocket (analyst or above)
-  tui                  Interactive terminal UI (markets, trending)
-  commands             List all commands with API metadata (for agents/LLMs)
-  help                 Print help for a command
-
-Global Flags:
-  -o, --output string  Output format: table, json (default "table")
-      --dry-run        Show the API request without executing it
-  -h, --help           Print help
-  -v, --version        Print version
-```
-
-For per-command help:
-
-```sh
-bits price --help
-bits markets --help
-bits history --help
+bits capabilities
+bits caps -p binance
 ```
 
 ---
@@ -445,27 +268,20 @@ bits history --help
 ## Development
 
 ```sh
-# Build
-make build
-
-# Test
-make test
-
-# Lint (requires golangci-lint)
-make lint
+make build    # → ./bits
+make test     # go test -race ./...
+make lint     # golangci-lint
 ```
 
 ## Tech Stack
 
 | Package | Purpose |
 |---|---|
-| [cobra](https://github.com/spf13/cobra) | CLI framework and command routing |
-| [viper](https://github.com/spf13/viper) | Configuration management |
-| [bubbletea](https://github.com/charmbracelet/bubbletea) | Interactive TUI framework |
-| [lipgloss](https://github.com/charmbracelet/lipgloss) | Terminal styling and layout |
-| [huh](https://github.com/charmbracelet/huh) | Interactive auth prompts |
-| [ntcharts](https://github.com/NimbleMarkets/ntcharts) | Braille terminal charts |
-| [gorilla/websocket](https://github.com/gorilla/websocket) | WebSocket client for live price streaming |
+| [cobra](https://github.com/spf13/cobra) | CLI framework |
+| [viper](https://github.com/spf13/viper) | Config (YAML + env vars) |
+| [go-binance/v2](https://github.com/adshao/go-binance) | Binance HTTP client |
+| [gorilla/websocket](https://github.com/gorilla/websocket) | WebSocket streaming |
+| [lipgloss](https://github.com/charmbracelet/lipgloss) | Terminal styling (`toon` format) |
 | [goreleaser](https://goreleaser.com) | Cross-platform release builds |
 
 ## License

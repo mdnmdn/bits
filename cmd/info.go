@@ -4,7 +4,6 @@ import (
 	"os"
 
 	"github.com/mdnmdn/bits/internal/capability"
-	renderjson "github.com/mdnmdn/bits/internal/render/json"
 	rendertable "github.com/mdnmdn/bits/internal/render/table"
 	"github.com/mdnmdn/bits/internal/resolve"
 	"github.com/spf13/cobra"
@@ -70,10 +69,8 @@ func runInfo(cmd *cobra.Command, args []string) error {
 		res.Data.Symbols = filtered
 	}
 
-	switch format {
-	case "json":
-		return renderjson.Render(os.Stdout, res)
-	default:
-		return rendertable.RenderExchangeInfo(os.Stdout, res)
+	if ok, err := renderGeneric(os.Stdout, format, res); ok || err != nil {
+		return err
 	}
+	return rendertable.RenderExchangeInfo(os.Stdout, res)
 }
