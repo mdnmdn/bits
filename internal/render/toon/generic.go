@@ -1,55 +1,49 @@
 package rendertoon
 
 import (
-	"bytes"
-	"fmt"
 	"io"
 
-	"github.com/charmbracelet/lipgloss"
+	toon "github.com/toon-format/toon-go"
 	"github.com/mdnmdn/bits/internal/model"
-	"github.com/mdnmdn/bits/internal/render"
-	"gopkg.in/yaml.v3"
 )
 
-var (
-	headerStyle = lipgloss.NewStyle().
-			Bold(true).
-			Foreground(lipgloss.Color("205")).
-			PaddingLeft(1)
+// envelope mirrors the JSON/YAML envelope for consistent structured output.
+type envelope[T any] struct {
+	Kind              string           `toon:"kind"`
+	Provider          string           `toon:"provider"`
+	Market            model.MarketType `toon:"mkt,omitempty"`
+	Fallback          bool             `toon:"fallback,omitempty"`
+	RequestedProvider string           `toon:"req_provider,omitempty"`
+	RequestedMarket   model.MarketType `toon:"req_mkt,omitempty"`
+	Metadata          map[string]any   `toon:"metadata,omitempty"`
+	Errors            []itemError      `toon:"errors,omitempty"`
+	Data              T                `toon:"data"`
+}
 
-	boxStyle = lipgloss.NewStyle().
-			Border(lipgloss.RoundedBorder()).
-			BorderForeground(lipgloss.Color("62")).
-			Padding(0, 1)
+type itemError struct {
+	Symbol string `toon:"sym"`
+	Error  string `toon:"err"`
+}
 
-	noteStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("214")).
-			Italic(true).
-			PaddingLeft(1)
-)
-
-// Render writes res as a lipgloss-styled terminal document to w.
-// It uses a rounded box containing the data serialised as YAML.
+// Render writes res as a TOON document to w, including all provenance fields.
 func Render[T any](w io.Writer, res model.Response[T]) error {
-	header := headerStyle.Render("◈ " + render.ProviderLabel(res))
-
-	var buf bytes.Buffer
-	enc := yaml.NewEncoder(&buf)
-	enc.SetIndent(2)
-	if err := enc.Encode(res.Data); err != nil {
+	env := envelope[T]{
+		Kind:              res.Kind,
+		Data:              res.Data,
+		Provider:          res.Provider,
+		Market:            res.Market,
+		Fallback:          res.Fallback,
+		RequestedProvider: res.RequestedProvider,
+		RequestedMarket:   res.RequestedMarket,
+		Metadata:          res.Metadata,
+	}
+	for _, e := range res.Errors {
+		env.Errors = append(env.Errors, itemError{Symbol: e.Symbol, Error: e.Err.Error()})
+	}
+	out, err := toon.MarshalString(env)
+	if err != nil {
 		return err
 	}
-	// trim trailing newline so the box doesn't get extra padding
-	content := buf.String()
-	if len(content) > 0 && content[len(content)-1] == '\n' {
-		content = content[:len(content)-1]
-	}
-
-	fmt.Fprintln(w, header)
-	fmt.Fprintln(w, boxStyle.Render(content))
-
-	if note := render.FallbackFootnote(res); note != "" {
-		fmt.Fprintln(w, noteStyle.Render("† "+note))
-	}
-	return nil
+	_, err = io.WriteString(w, out)
+	return err
 }

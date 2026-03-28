@@ -6,6 +6,8 @@ package capability
 // MarketType represents a market segment supported by a provider.
 type MarketType string
 
+func (m MarketType) String() string { return string(m) }
+
 const (
 	MarketSpot    MarketType = "spot"
 	MarketFutures MarketType = "futures"

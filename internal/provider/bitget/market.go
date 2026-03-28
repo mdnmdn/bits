@@ -68,6 +68,7 @@ func (c *Client) Price(_ context.Context, ids []string, currency string) (model.
 	}
 
 	return model.Response[[]model.CoinPrice]{
+		Kind:     model.KindPrice,
 		Provider: providerID,
 		Data:     prices,
 		Errors:   itemErrors,
@@ -148,6 +149,7 @@ func (c *Client) Candles(_ context.Context, symbol string, market model.MarketTy
 	}
 
 	return model.Response[[]model.Candle]{
+		Kind:     model.KindCandle,
 		Provider: providerID,
 		Market:   market,
 		Data:     candles,
@@ -206,6 +208,7 @@ func (c *Client) Ticker24h(_ context.Context, symbol string, market model.Market
 	}
 
 	return model.Response[model.Ticker24h]{
+		Kind:     model.KindTicker,
 		Provider: providerID,
 		Market:   market,
 		Data:     ticker,

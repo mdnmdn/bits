@@ -45,6 +45,7 @@ func (c *Client) Price(ctx context.Context, ids []string, currency string) (mode
 	}
 
 	return model.Response[[]model.CoinPrice]{
+		Kind:     model.KindPrice,
 		Data:     prices,
 		Provider: providerID,
 		Market:   model.MarketSpot,
@@ -110,6 +111,7 @@ func (c *Client) Candles(ctx context.Context, symbol string, market model.Market
 	}
 
 	return model.Response[[]model.Candle]{
+		Kind:     model.KindCandle,
 		Data:     candles,
 		Provider: providerID,
 		Market:   model.MarketSpot,

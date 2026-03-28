@@ -6,10 +6,10 @@ import (
 	"text/tabwriter"
 
 	"github.com/mdnmdn/bits/internal/model"
-	"github.com/mdnmdn/bits/internal/render"
 )
 
 func RenderTickers(w io.Writer, res model.Response[[]model.Ticker24h]) error {
+	printHeader(w, res)
 	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
 	fmt.Fprintln(tw, "SYMBOL\tMARKET\tLAST\tCHANGE%\tHIGH\tLOW\tVOLUME")
 	for _, t := range res.Data {
@@ -21,9 +21,7 @@ func RenderTickers(w io.Writer, res model.Response[[]model.Ticker24h]) error {
 			t.Symbol, t.Market, t.LastPrice, chg, hi, lo, vol)
 	}
 	tw.Flush()
-	if note := render.FallbackFootnote(res); note != "" {
-		fmt.Fprintf(w, "\n%s\n", note)
-	}
+	printFooter(w, res)
 	return nil
 }
 

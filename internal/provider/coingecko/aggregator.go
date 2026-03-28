@@ -82,6 +82,7 @@ func (c *Client) CoinMarkets(ctx context.Context, opts model.MarketOpts) (model.
 	}
 
 	return model.Response[[]model.CoinMarket]{
+		Kind:     model.KindCoinMarket,
 		Data:     coins,
 		Provider: providerID,
 		Market:   model.MarketSpot,

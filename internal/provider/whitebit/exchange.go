@@ -37,6 +37,7 @@ func (c *Client) ServerTime(_ context.Context) (model.Response[model.ServerTime]
 	serverTime := time.Unix(resp.Time, 0)
 
 	return model.Response[model.ServerTime]{
+		Kind:     model.KindServerTime,
 		Provider: providerID,
 		Data: model.ServerTime{
 			Time: serverTime,
@@ -73,6 +74,7 @@ func (c *Client) ExchangeInfo(_ context.Context, market model.MarketType) (model
 	}
 
 	return model.Response[model.ExchangeInfo]{
+		Kind:     model.KindExchangeInfo,
 		Provider: providerID,
 		Market:   model.MarketSpot,
 		Data: model.ExchangeInfo{

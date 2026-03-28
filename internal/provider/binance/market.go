@@ -29,6 +29,7 @@ func (c *Client) Price(ctx context.Context, ids []string, currency string) (mode
 	}
 
 	return model.Response[[]model.CoinPrice]{
+		Kind:     model.KindPrice,
 		Provider: providerID,
 		Data:     prices,
 		Errors:   errs,
@@ -113,6 +114,7 @@ func (c *Client) Candles(ctx context.Context, symbol string, market model.Market
 	}
 
 	return model.Response[[]model.Candle]{
+		Kind:     model.KindCandle,
 		Provider: providerID,
 		Market:   market,
 		Data:     candles,
@@ -223,7 +225,7 @@ func (c *Client) Ticker24h(ctx context.Context, symbol string, market model.Mark
 		}
 		s := stats[0]
 		t := convertFuturesTicker(s, market)
-		return model.Response[model.Ticker24h]{Provider: providerID, Market: market, Data: t}, nil
+		return model.Response[model.Ticker24h]{Kind: model.KindTicker, Provider: providerID, Market: market, Data: t}, nil
 
 	default:
 		if c.spotClient == nil {
@@ -238,7 +240,7 @@ func (c *Client) Ticker24h(ctx context.Context, symbol string, market model.Mark
 		}
 		s := stats[0]
 		t := convertSpotTicker(s, market)
-		return model.Response[model.Ticker24h]{Provider: providerID, Market: market, Data: t}, nil
+		return model.Response[model.Ticker24h]{Kind: model.KindTicker, Provider: providerID, Market: market, Data: t}, nil
 	}
 }
 
@@ -330,7 +332,7 @@ func (c *Client) OrderBook(ctx context.Context, symbol string, market model.Mark
 			Bids:         convertFuturesDepth(d.Bids),
 			Asks:         convertFuturesDepth(d.Asks),
 		}
-		return model.Response[model.OrderBook]{Provider: providerID, Market: market, Data: ob}, nil
+		return model.Response[model.OrderBook]{Kind: model.KindOrderBook, Provider: providerID, Market: market, Data: ob}, nil
 
 	default:
 		if c.spotClient == nil {
@@ -348,7 +350,7 @@ func (c *Client) OrderBook(ctx context.Context, symbol string, market model.Mark
 			Bids:         convertSpotDepth(d.Bids),
 			Asks:         convertSpotDepth(d.Asks),
 		}
-		return model.Response[model.OrderBook]{Provider: providerID, Market: market, Data: ob}, nil
+		return model.Response[model.OrderBook]{Kind: model.KindOrderBook, Provider: providerID, Market: market, Data: ob}, nil
 	}
 }
 

@@ -6,10 +6,10 @@ import (
 	"text/tabwriter"
 
 	"github.com/mdnmdn/bits/internal/model"
-	"github.com/mdnmdn/bits/internal/render"
 )
 
 func RenderExchangeInfo(w io.Writer, res model.Response[model.ExchangeInfo]) error {
+	printHeader(w, res)
 	info := res.Data
 	fmt.Fprintf(w, "Exchange : %s\n", info.ExchangeID)
 	fmt.Fprintf(w, "Market   : %s\n", info.Market)
@@ -24,8 +24,6 @@ func RenderExchangeInfo(w io.Writer, res model.Response[model.ExchangeInfo]) err
 		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", s.Symbol, s.BaseAsset, s.QuoteAsset, s.Status)
 	}
 	tw.Flush()
-	if note := render.FallbackFootnote(res); note != "" {
-		fmt.Fprintf(w, "\n%s\n", note)
-	}
+	printFooter(w, res)
 	return nil
 }

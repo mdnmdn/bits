@@ -6,10 +6,10 @@ import (
 	"text/tabwriter"
 
 	"github.com/mdnmdn/bits/internal/model"
-	"github.com/mdnmdn/bits/internal/render"
 )
 
 func RenderCandles(w io.Writer, res model.Response[[]model.Candle]) error {
+	printHeader(w, res)
 	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
 	fmt.Fprintln(tw, "OPEN TIME\tOPEN\tHIGH\tLOW\tCLOSE\tVOLUME")
 	for _, c := range res.Data {
@@ -22,8 +22,6 @@ func RenderCandles(w io.Writer, res model.Response[[]model.Candle]) error {
 			c.Open, c.High, c.Low, c.Close, vol)
 	}
 	tw.Flush()
-	if note := render.FallbackFootnote(res); note != "" {
-		fmt.Fprintf(w, "\n%s\n", note)
-	}
+	printFooter(w, res)
 	return nil
 }

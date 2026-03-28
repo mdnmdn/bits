@@ -37,7 +37,9 @@
       "Bash(python3 -c \"import json,sys; raw=sys.stdin.read\\(\\); print\\(raw[:500]\\)\")",
       "Bash(curl -s \"https://whitebit.com/api/v4/public/markets\")",
       "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); btc=[x for x in d if x.get\\(''''name''''\\)==''''BTC_USDT'''']; print\\(json.dumps\\(btc[0] if btc else d[0], indent=2\\)\\)\")",
-      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(list\\(d.keys\\(\\)\\)[:5]\\); print\\(json.dumps\\(d.get\\(''''BTC_USDT'''',{}\\), indent=2\\)\\)\")"
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(list\\(d.keys\\(\\)\\)[:5]\\); print\\(json.dumps\\(d.get\\(''''BTC_USDT'''',{}\\), indent=2\\)\\)\")",
+      "WebFetch(domain:github.com)",
+      "Bash(go get:*)"
     ]
   }
 }

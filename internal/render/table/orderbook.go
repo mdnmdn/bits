@@ -6,10 +6,10 @@ import (
 	"text/tabwriter"
 
 	"github.com/mdnmdn/bits/internal/model"
-	"github.com/mdnmdn/bits/internal/render"
 )
 
 func RenderOrderBook(w io.Writer, res model.Response[model.OrderBook]) error {
+	printHeader(w, res)
 	ob := res.Data
 	fmt.Fprintf(w, "Order Book: %s (%s)\n\n", ob.Symbol, ob.Market)
 	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
@@ -33,8 +33,6 @@ func RenderOrderBook(w io.Writer, res model.Response[model.OrderBook]) error {
 		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", bidP, bidQ, askP, askQ)
 	}
 	tw.Flush()
-	if note := render.FallbackFootnote(res); note != "" {
-		fmt.Fprintf(w, "\n%s\n", note)
-	}
+	printFooter(w, res)
 	return nil
 }

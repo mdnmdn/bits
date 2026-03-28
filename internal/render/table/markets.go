@@ -6,10 +6,10 @@ import (
 	"text/tabwriter"
 
 	"github.com/mdnmdn/bits/internal/model"
-	"github.com/mdnmdn/bits/internal/render"
 )
 
 func RenderMarkets(w io.Writer, res model.Response[[]model.CoinMarket]) error {
+	printHeader(w, res)
 	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
 	fmt.Fprintln(tw, "#\tID\tSYMBOL\tNAME\tPRICE\tCHANGE 24H\tMKT CAP\tVOLUME 24H")
 	for _, m := range res.Data {
@@ -24,8 +24,6 @@ func RenderMarkets(w io.Writer, res model.Response[[]model.CoinMarket]) error {
 			rank, m.ID, m.Symbol, m.Name, m.Price, chg, cap, vol)
 	}
 	tw.Flush()
-	if note := render.FallbackFootnote(res); note != "" {
-		fmt.Fprintf(w, "\n%s\n", note)
-	}
+	printFooter(w, res)
 	return nil
 }

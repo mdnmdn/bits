@@ -5,10 +5,10 @@ import (
 	"io"
 
 	"github.com/mdnmdn/bits/internal/model"
-	"github.com/mdnmdn/bits/internal/render"
 )
 
 func RenderServerTime(w io.Writer, res model.Response[model.ServerTime]) error {
+	printHeader(w, res)
 	st := res.Data
 	fmt.Fprintf(w, "Server Time : %s\n", st.Time.Format("2006-01-02 15:04:05 UTC"))
 	if st.LocalTime != nil {
@@ -20,8 +20,6 @@ func RenderServerTime(w io.Writer, res model.Response[model.ServerTime]) error {
 	if st.ClockSkew != nil {
 		fmt.Fprintf(w, "Clock Skew  : %s\n", st.ClockSkew)
 	}
-	if note := render.FallbackFootnote(res); note != "" {
-		fmt.Fprintf(w, "\n%s\n", note)
-	}
+	printFooter(w, res)
 	return nil
 }

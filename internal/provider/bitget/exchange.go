@@ -71,6 +71,7 @@ func (c *Client) ServerTime(_ context.Context) (model.Response[model.ServerTime]
 	serverTime := time.UnixMilli(tsMs)
 
 	return model.Response[model.ServerTime]{
+		Kind:     model.KindServerTime,
 		Provider: providerID,
 		Data: model.ServerTime{
 			Time: serverTime,
@@ -114,6 +115,7 @@ func (c *Client) spotExchangeInfo(market model.MarketType) (model.Response[model
 	}
 
 	return model.Response[model.ExchangeInfo]{
+		Kind:     model.KindExchangeInfo,
 		Provider: providerID,
 		Market:   market,
 		Data: model.ExchangeInfo{
@@ -150,6 +152,7 @@ func (c *Client) futuresExchangeInfo(market model.MarketType) (model.Response[mo
 	}
 
 	return model.Response[model.ExchangeInfo]{
+		Kind:     model.KindExchangeInfo,
 		Provider: providerID,
 		Market:   market,
 		Data: model.ExchangeInfo{

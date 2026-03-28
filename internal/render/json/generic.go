@@ -9,29 +9,33 @@ import (
 
 // envelope is the JSON output structure with provenance fields.
 type envelope[T any] struct {
-	Data              T                `json:"data"`
+	Kind              string           `json:"kind"`
 	Provider          string           `json:"provider"`
-	Market            model.MarketType `json:"market"`
+	Market            model.MarketType `json:"mkt"`
 	Fallback          bool             `json:"fallback,omitempty"`
-	RequestedProvider string           `json:"requested_provider,omitempty"`
-	RequestedMarket   model.MarketType `json:"requested_market,omitempty"`
+	RequestedProvider string           `json:"req_provider,omitempty"`
+	RequestedMarket   model.MarketType `json:"req_mkt,omitempty"`
+	Metadata          map[string]any   `json:"metadata,omitempty"`
 	Errors            []itemError      `json:"errors,omitempty"`
+	Data              T                `json:"data"`
 }
 
 type itemError struct {
-	Symbol string `json:"symbol"`
-	Error  string `json:"error"`
+	Symbol string `json:"sym"`
+	Error  string `json:"err"`
 }
 
 // Render writes res as JSON to w, including all provenance fields.
 func Render[T any](w io.Writer, res model.Response[T]) error {
 	env := envelope[T]{
+		Kind:              res.Kind,
 		Data:              res.Data,
 		Provider:          res.Provider,
 		Market:            res.Market,
 		Fallback:          res.Fallback,
 		RequestedProvider: res.RequestedProvider,
 		RequestedMarket:   res.RequestedMarket,
+		Metadata:          res.Metadata,
 	}
 	for _, e := range res.Errors {
 		env.Errors = append(env.Errors, itemError{Symbol: e.Symbol, Error: e.Err.Error()})
