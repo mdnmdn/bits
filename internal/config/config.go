@@ -93,6 +93,16 @@ type BitgetConfig struct {
 	Futures    MarketConfig `mapstructure:"futures"`
 }
 
+// WhiteBitConfig holds WhiteBit API credentials.
+type WhiteBitConfig struct {
+	APIKey    string       `mapstructure:"api_key"`
+	APISecret string       `mapstructure:"api_secret"`
+	BaseURL   string       `mapstructure:"base_url"`
+	Spot      MarketConfig `mapstructure:"spot"`
+}
+
+func (c WhiteBitConfig) IsSpotEnabled() bool { return c.Spot.Enabled }
+
 func (c BinanceConfig) IsSpotEnabled() bool    { return c.Spot.Enabled }
 func (c BinanceConfig) IsMarginEnabled() bool  { return c.Margin.Enabled }
 func (c BinanceConfig) IsFuturesEnabled() bool { return c.Futures.Enabled }
@@ -107,6 +117,7 @@ type Config struct {
 	CoinGecko CoinGeckoConfig `mapstructure:"coingecko"`
 	Binance   BinanceConfig   `mapstructure:"binance"`
 	Bitget    BitgetConfig    `mapstructure:"bitget"`
+	WhiteBit  WhiteBitConfig  `mapstructure:"whitebit"`
 }
 
 func ConfigDirs() []string {
@@ -258,6 +269,15 @@ api_secret = ""
 enabled = false
 
 [bitget.futures]
+enabled = false
+
+# WhiteBit configuration
+[whitebit]
+api_key = ""
+api_secret = ""
+# base_url = "https://whitebit.com"
+
+[whitebit.spot]
 enabled = false
 `
 
@@ -414,6 +434,18 @@ func applyEnvMap(envVars map[string]string, cfg *Config) {
 	if v, ok := envVars["bitget.futures.enabled"]; ok {
 		cfg.Bitget.Futures.Enabled = v == "true" || v == "1"
 	}
+	if v, ok := envVars["whitebit.api_key"]; ok {
+		cfg.WhiteBit.APIKey = v
+	}
+	if v, ok := envVars["whitebit.api_secret"]; ok {
+		cfg.WhiteBit.APISecret = v
+	}
+	if v, ok := envVars["whitebit.base_url"]; ok {
+		cfg.WhiteBit.BaseURL = v
+	}
+	if v, ok := envVars["whitebit.spot.enabled"]; ok {
+		cfg.WhiteBit.Spot.Enabled = v == "true" || v == "1"
+	}
 }
 
 // applyEnvOverrides applies BITS_* environment variable overrides to the config.
@@ -478,6 +510,19 @@ func applyEnvOverrides(cfg *Config) {
 	if v := os.Getenv("BITS_BITGET_PASSPHRASE"); v != "" {
 		cfg.Bitget.Passphrase = v
 	}
+	// WhiteBit
+	if v := os.Getenv("BITS_WHITEBIT_API_KEY"); v != "" {
+		cfg.WhiteBit.APIKey = v
+	}
+	if v := os.Getenv("BITS_WHITEBIT_API_SECRET"); v != "" {
+		cfg.WhiteBit.APISecret = v
+	}
+	if v := os.Getenv("BITS_WHITEBIT_BASE_URL"); v != "" {
+		cfg.WhiteBit.BaseURL = v
+	}
+	if v := os.Getenv("BITS_WHITEBIT_SPOT_ENABLED"); v != "" {
+		cfg.WhiteBit.Spot.Enabled = v == "true" || v == "1"
+	}
 }
 
 // ActiveProvider returns the configured provider name, defaulting to "coingecko".
@@ -520,7 +565,6 @@ func Save(cfg *Config) error {
 	}
 	return os.Chmod(path, 0o600)
 }
-
 
 func IsValidTier(tier string) bool {
 	t := strings.ToLower(tier)
@@ -565,6 +609,12 @@ func (c *Config) Redacted() *Config {
 			BaseURL:    c.Bitget.BaseURL,
 			Spot:       c.Bitget.Spot,
 			Futures:    c.Bitget.Futures,
+		},
+		WhiteBit: WhiteBitConfig{
+			APIKey:    maskedLong(c.WhiteBit.APIKey),
+			APISecret: maskedLong(c.WhiteBit.APISecret),
+			BaseURL:   c.WhiteBit.BaseURL,
+			Spot:      c.WhiteBit.Spot,
 		},
 	}
 }

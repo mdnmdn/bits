@@ -12,6 +12,7 @@ import (
 	"github.com/mdnmdn/bits/internal/provider/binance"
 	"github.com/mdnmdn/bits/internal/provider/bitget"
 	"github.com/mdnmdn/bits/internal/provider/coingecko"
+	"github.com/mdnmdn/bits/internal/provider/whitebit"
 )
 
 // NewProvider constructs a provider by name using the given config.
@@ -23,6 +24,8 @@ func NewProvider(name string, cfg *config.Config) (provider.Provider, error) {
 		return binance.NewClient(cfg.Binance), nil
 	case "bitget":
 		return bitget.NewClient(cfg.Bitget), nil
+	case "whitebit":
+		return whitebit.NewClient(cfg.WhiteBit), nil
 	default:
 		return nil, fmt.Errorf("unknown provider %q", name)
 	}
@@ -30,5 +33,5 @@ func NewProvider(name string, cfg *config.Config) (provider.Provider, error) {
 
 // AllProviderIDs returns the IDs of all registered providers.
 func AllProviderIDs() []string {
-	return []string{"coingecko", "binance", "bitget"}
+	return []string{"coingecko", "binance", "bitget", "whitebit"}
 }

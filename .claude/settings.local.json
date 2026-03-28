@@ -26,7 +26,10 @@
       "Bash(echo \"Exit code: $?\")",
       "Bash(./bits info:*)",
       "Bash(./bits markets:*)",
-      "Bash(./bits book:*)"
+      "Bash(./bits book:*)",
+      "Bash(gofmt -l .)",
+      "Bash(gofmt:*)",
+      "Bash(/tmp/bits capabilities:*)"
     ]
   }
 }
