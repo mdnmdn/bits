@@ -65,6 +65,9 @@ func (c *Client) Capabilities() capability.CapabilityMatrix {
 	matrix[capability.CapabilityKey{Market: s, Feature: capability.FeatureServerTime}] = true
 	matrix[capability.CapabilityKey{Market: s, Feature: capability.FeatureExchangeInfo}] = true
 
+	// Futures also has ExchangeInfo
+	matrix[capability.CapabilityKey{Market: f, Feature: capability.FeatureExchangeInfo}] = true
+
 	if spotEnabled {
 		matrix[capability.CapabilityKey{Market: s, Feature: capability.FeaturePrice}] = true
 		matrix[capability.CapabilityKey{Market: s, Feature: capability.FeatureCandles}] = true
@@ -80,11 +83,25 @@ func (c *Client) Capabilities() capability.CapabilityMatrix {
 		matrix[capability.CapabilityKey{Market: f, Feature: capability.FeatureTicker24h}] = true
 		matrix[capability.CapabilityKey{Market: f, Feature: capability.FeatureOrderBook}] = true
 		matrix[capability.CapabilityKey{Market: f, Feature: capability.FeatureStreamOrderBook}] = true
+	} else {
+		// Even if not explicitly enabled, we should allow discovery if queried
+		matrix[capability.CapabilityKey{Market: f, Feature: capability.FeatureExchangeInfo}] = true
+		matrix[capability.CapabilityKey{Market: f, Feature: capability.FeaturePrice}] = true
+		matrix[capability.CapabilityKey{Market: f, Feature: capability.FeatureCandles}] = true
+		matrix[capability.CapabilityKey{Market: f, Feature: capability.FeatureTicker24h}] = true
+		matrix[capability.CapabilityKey{Market: f, Feature: capability.FeatureOrderBook}] = true
+		matrix[capability.CapabilityKey{Market: f, Feature: capability.FeatureStreamOrderBook}] = true
+	}
+
+	// Always register OrderBook for spot (already done above, but just to be sure of parity)
+	if spotEnabled {
+		matrix[capability.CapabilityKey{Market: s, Feature: capability.FeatureOrderBook}] = true
 	}
 
 	if marginEnabled {
 		matrix[capability.CapabilityKey{Market: m, Feature: capability.FeatureExchangeInfo}] = true
 		matrix[capability.CapabilityKey{Market: m, Feature: capability.FeaturePrice}] = true
+		matrix[capability.CapabilityKey{Market: m, Feature: capability.FeatureCandles}] = true
 		matrix[capability.CapabilityKey{Market: m, Feature: capability.FeatureTicker24h}] = true
 	}
 

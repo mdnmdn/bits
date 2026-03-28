@@ -11,6 +11,7 @@ The goal is to achieve parity across supported exchanges where API support exist
 |--------------------|---------|-----------|---------|--------|----------|
 | server_time        | spot    | -         | ✓       | ✓      | ✓        |
 | exchange_info      | spot    | -         | ✓       | ✓      | ✓        |
+| exchange_info      | futures | -         | ✓       | ✓      | ✓        |
 | price              | spot    | ✓         | ✓       | ✓      | ✓        |
 | price              | futures | -         | ✓       | ✓      | ✓        |
 | price              | margin  | -         | ✓       | ✓      | -        |
