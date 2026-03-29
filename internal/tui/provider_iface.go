@@ -3,9 +3,9 @@ package tui
 import (
 	"context"
 
-	"github.com/mdnmdn/bits/internal/capability"
-	"github.com/mdnmdn/bits/internal/model"
-	"github.com/mdnmdn/bits/internal/provider"
+	"github.com/mdnmdn/bits/pkg/capability"
+	"github.com/mdnmdn/bits/pkg/model"
+	"github.com/mdnmdn/bits/pkg/provider"
 )
 
 type ProviderWrapper interface {

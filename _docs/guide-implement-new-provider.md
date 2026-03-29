@@ -21,17 +21,17 @@ Reference implementations:
 
 | Provider | Location | Notable features |
 |----------|----------|-----------------|
-| Bitget | `internal/provider/bitget/` | Raw HTTP, HMAC auth, spot + futures + margin |
-| WhiteBit | `internal/provider/whitebit/` | Raw HTTP, no auth for public, streaming |
-| Binance | `internal/provider/binance/` | Go SDK wrapper, spot + futures, streaming |
-| CoinGecko | `internal/provider/coingecko/` | Aggregator, paid/demo tiers, streaming |
-| Crypto.com | `internal/provider/cryptocom/` | Raw HTTP, spot only, no candles yet |
+| Bitget | `pkg/provider/bitget/` | Raw HTTP, HMAC auth, spot + futures + margin |
+| WhiteBit | `pkg/provider/whitebit/` | Raw HTTP, no auth for public, streaming |
+| Binance | `pkg/provider/binance/` | Go SDK wrapper, spot + futures, streaming |
+| CoinGecko | `pkg/provider/coingecko/` | Aggregator, paid/demo tiers, streaming |
+| Crypto.com | `pkg/provider/cryptocom/` | Raw HTTP, spot only, no candles yet |
 
 ---
 
 ## Checklist
 
-### 1. Config — `internal/config/config.go`
+### 1. Config — `pkg/config/config.go`
 
 ```
 □ Add MyExchangeConfig struct with mapstructure tags
@@ -64,7 +64,7 @@ func (c MyExchangeConfig) IsSpotEnabled() bool { return c.Spot.Enabled }
 
 ---
 
-### 2. Provider Directory — `internal/provider/myexchange/`
+### 2. Provider Directory — `pkg/provider/myexchange/`
 
 Create the directory and the following files:
 
@@ -155,9 +155,8 @@ Implement if the exchange supports `bits time` and `bits info`:
 Implement if the exchange supports WebSocket data:
 
 ```
-□ Use ws.NewManager(url, handler) from internal/ws/
-□ Implement ws.Handler interface: Handle(), OnCommand(), OnPing()
-□ Stream() method that bridges cmdChan → ws.Manager.Commands()
+□ Use ws.BaseClient from internal/ws/base_client.go
+□ Implement OnConnect (subscriptions) and OnMessage (parsing)
 □ WatchPrices() — implements provider.PriceStreamProvider
 □ WatchOrderBook() — implements provider.OrderBookStreamProvider
 □ Always use ws.BaseClient (NOT ws.Client which is CoinGecko-specific)
@@ -165,10 +164,10 @@ Implement if the exchange supports WebSocket data:
 
 ---
 
-### 3. Registry — `internal/registry/registry.go`
+### 3. Registry — `pkg/provider/registry/registry.go`
 
 ```
-□ Add import: "github.com/mdnmdn/bits/internal/provider/myexchange"
+□ Add import: "github.com/mdnmdn/bits/pkg/provider/myexchange"
 □ Add aliases to providerAliases map (e.g., "me": "myexchange")
 □ Add case to NewProvider switch: case "myexchange": return myexchange.NewClient(cfg.MyExchange), nil
 □ Add "myexchange" to AllProviderIDs() slice
@@ -197,7 +196,7 @@ go build ./...
 go test -race ./...
 
 # Check formatting
-gofmt -l ./internal/provider/myexchange/
+gofmt -l ./pkg/provider/myexchange/
 
 # Sanity-check the provider appears
 go run . providers
@@ -230,14 +229,14 @@ go run . book BTC_USDT -p myexchange
 ## File Summary
 
 ```
-internal/config/config.go              ← MyExchangeConfig + Config wiring
-internal/provider/myexchange/
+pkg/config/config.go                   ← MyExchangeConfig + Config wiring
+pkg/provider/myexchange/
   client.go                            ← Client, NewClient, ID, Capabilities, doRequest
   types.go                             ← Private JSON structs
   market.go                            ← Price / Ticker / Candles / OrderBook
   exchange.go                          ← ServerTime + ExchangeInfo (optional)
   stream.go                            ← WatchPrices / WatchOrderBook (optional)
   client_test.go                       ← Unit tests with httptest mocks
-internal/registry/registry.go          ← NewProvider case + AllProviderIDs
+pkg/provider/registry/registry.go      ← NewProvider case + AllProviderIDs
 _docs/myexchange-provider-wip.md       ← Progress tracker
 ```

@@ -89,6 +89,43 @@ Or download a binary from [Releases](https://github.com/mdnmdn/bits/releases).
 
 ---
 
+## Usage as a Library
+
+`bits` can be used as a Go library to build your own crypto tools. Its core components (models, providers, and registry) are available in the `pkg/` directory.
+
+### Quick Start
+
+```go
+import (
+	"context"
+	"fmt"
+	"github.com/mdnmdn/bits/pkg/bits"
+	"github.com/mdnmdn/bits/pkg/config"
+)
+
+func main() {
+	// Initialize with spot enabled for Binance
+	cfg := &config.Config{
+		Binance: config.BinanceConfig{
+			Spot: config.MarketConfig{Enabled: true},
+		},
+	}
+	client := bits.NewClient(cfg)
+
+	// Fetch price from Binance
+	res, _ := client.GetPrice(context.Background(), "BTCUSDT", "binance")
+	fmt.Printf("BTC Price: %.2f\n", res.Data.Price)
+}
+```
+
+Check the `examples/` directory for more detailed use cases, including concurrent price comparison across multiple exchanges. To run an example, use:
+
+```sh
+go run ./examples/basic_usage
+```
+
+---
+
 ## Setup
 
 Config file: `~/Library/Application Support/bits-cli/config.yaml` (macOS) or `~/.config/bits/config.yaml` (Linux).

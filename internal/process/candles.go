@@ -1,6 +1,6 @@
 package process
 
-import "github.com/mdnmdn/bits/internal/model"
+import "github.com/mdnmdn/bits/pkg/model"
 
 // CandleStats computes VWAP, typical price, and body/wick ratios into each Candle.Extra.
 func CandleStats(res model.Response[[]model.Candle]) model.Response[[]model.Candle] {

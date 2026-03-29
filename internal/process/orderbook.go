@@ -1,6 +1,6 @@
 package process
 
-import "github.com/mdnmdn/bits/internal/model"
+import "github.com/mdnmdn/bits/pkg/model"
 
 // SpreadCalculator adds bid-ask spread and mid price to OrderBook.Extra.
 func SpreadCalculator(res model.Response[model.OrderBook]) model.Response[model.OrderBook] {

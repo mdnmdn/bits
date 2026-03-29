@@ -5,7 +5,7 @@ import (
 	"io"
 	"text/tabwriter"
 
-	"github.com/mdnmdn/bits/internal/model"
+	"github.com/mdnmdn/bits/pkg/model"
 )
 
 func RenderPrices(w io.Writer, res model.Response[[]model.CoinPrice]) error {

@@ -5,13 +5,13 @@ import (
 	"os"
 	"time"
 
-	"github.com/mdnmdn/bits/internal/capability"
-	"github.com/mdnmdn/bits/internal/model"
+	"github.com/mdnmdn/bits/pkg/capability"
+	"github.com/mdnmdn/bits/pkg/model"
 	rendertable "github.com/mdnmdn/bits/internal/render/table"
-	"github.com/mdnmdn/bits/internal/resolve"
+	"github.com/mdnmdn/bits/pkg/resolve"
 	"github.com/spf13/cobra"
 
-	"github.com/mdnmdn/bits/internal/provider"
+	"github.com/mdnmdn/bits/pkg/provider"
 )
 
 var candlesCmd = &cobra.Command{
