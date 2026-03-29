@@ -49,6 +49,8 @@ func (c *Client) Price(_ context.Context, ids []string, currency string) (model.
 
 // Ticker24h fetches 24-hour rolling ticker statistics for the given symbol.
 // Only spot market is supported; the market parameter is accepted for interface compatibility.
+// Note: the Crypto.com v2 ticker endpoint (public/get-ticker) does not return bid/ask prices,
+// so Ticker24h.BidPrice and AskPrice are always nil for this provider.
 func (c *Client) Ticker24h(_ context.Context, symbol string, market model.MarketType) (model.Response[model.Ticker24h], error) {
 	data, err := c.fetchTicker(symbol)
 	if err != nil {
