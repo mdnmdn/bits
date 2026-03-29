@@ -78,6 +78,7 @@ func (c *Client) Capabilities() capability.CapabilityMatrix {
 		matrix[capability.CapabilityKey{Market: f, Feature: capability.FeatureCandles}] = true
 		matrix[capability.CapabilityKey{Market: f, Feature: capability.FeatureTicker24h}] = true
 		matrix[capability.CapabilityKey{Market: f, Feature: capability.FeatureOrderBook}] = true
+		matrix[capability.CapabilityKey{Market: f, Feature: capability.FeatureStreamPrice}] = true
 		matrix[capability.CapabilityKey{Market: f, Feature: capability.FeatureStreamOrderBook}] = true
 	}
 

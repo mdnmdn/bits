@@ -76,11 +76,13 @@ type bitgetOrderBookResponse struct {
 
 // Price fetches current prices for the given symbols.
 // ids are trading symbols (e.g. "BTCUSDT"). currency is used as metadata only.
-func (c *Client) Price(_ context.Context, ids []string, currency string) (model.Response[[]model.CoinPrice], error) {
+func (c *Client) Price(ctx context.Context, ids []string, currency string) (model.Response[[]model.CoinPrice], error) {
 	prices := make([]model.CoinPrice, 0, len(ids))
 	var itemErrors []model.ItemError
 
 	for _, symbol := range ids {
+		// Price command usually doesn't pass market, so we try to find the best fit.
+		// For Bitget, we'll try spot first.
 		entry, err := c.fetchTicker(symbol, model.MarketSpot)
 		if err != nil {
 			itemErrors = append(itemErrors, model.ItemError{Symbol: symbol, Err: err})
