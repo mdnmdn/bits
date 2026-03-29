@@ -118,7 +118,11 @@ func main() {
 }
 ```
 
-Check the `examples/` directory for more detailed use cases, including concurrent price comparison across multiple exchanges.
+Check the `examples/` directory for more detailed use cases, including concurrent price comparison across multiple exchanges. To run an example, use:
+
+```sh
+go run ./examples/basic_usage
+```
 
 ---
 
