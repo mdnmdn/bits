@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/signal"
@@ -9,7 +8,10 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mdnmdn/bits/internal/capability"
+	"github.com/mdnmdn/bits/internal/model"
 	"github.com/mdnmdn/bits/internal/render"
+	renderjson "github.com/mdnmdn/bits/internal/render/json"
+	rendertoon "github.com/mdnmdn/bits/internal/render/toon"
 	"github.com/mdnmdn/bits/internal/resolve"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
@@ -73,34 +75,47 @@ func runStreamBook(cmd *cobra.Command, args []string) error {
 			continue
 		}
 
+		res := model.Response[model.OrderBook]{
+			Kind:     model.KindOrderBook,
+			Provider: p.ID(),
+			Market:   market,
+			Data:     *update,
+		}
+
 		switch format {
 		case render.FormatJSON:
-			// JSONL: one compact JSON object per line
-			b, _ := json.Marshal(update)
-			fmt.Fprintf(os.Stdout, "%s\n", b)
+			_ = renderjson.Render(os.Stdout, res)
 
 		case render.FormatYAML:
-			// one YAML document per update
 			enc := yaml.NewEncoder(os.Stdout)
 			enc.SetIndent(2)
-			_ = enc.Encode(update)
+			_ = enc.Encode(res)
 			_ = enc.Close()
 
 		case render.FormatMarkdown:
-			// compact markdown line
 			fmt.Fprintf(os.Stdout, "- **%s/%s** bids:%d asks:%d\n",
 				update.Symbol, update.Market, len(update.Bids), len(update.Asks))
 
 		case render.FormatToon:
-			// compact colored line
-			fmt.Fprintf(os.Stdout, "%s  bids:%s  asks:%s\n",
-				streamBookSymbol.Render(fmt.Sprintf("%s/%s", update.Symbol, update.Market)),
-				streamBookBids.Render(fmt.Sprintf("%d", len(update.Bids))),
-				streamBookAsks.Render(fmt.Sprintf("%d", len(update.Asks))))
+			_ = rendertoon.RenderOrderBook(os.Stdout, res)
 
 		default:
-			fmt.Fprintf(os.Stdout, "[%s/%s] bids:%d asks:%d\n",
-				update.Symbol, update.Market, len(update.Bids), len(update.Asks))
+			// Default: show top of book with actual values
+			fmt.Fprintf(os.Stdout, "[%s]\n", streamBookSymbol.Render(fmt.Sprintf("%s/%s", update.Symbol, update.Market)))
+			if len(update.Bids) > 0 {
+				bid := update.Bids[0]
+				fmt.Fprintf(os.Stdout, "  %sbids:  %s @ %s\n",
+					streamBookBids.Render(""),
+					streamBookBids.Render(fmt.Sprintf("%.4f", bid.Quantity)),
+					streamBookBids.Render(fmt.Sprintf("%.2f", bid.Price)))
+			}
+			if len(update.Asks) > 0 {
+				ask := update.Asks[0]
+				fmt.Fprintf(os.Stdout, "  %sasks:  %s @ %s\n",
+					streamBookAsks.Render(""),
+					streamBookAsks.Render(fmt.Sprintf("%.4f", ask.Quantity)),
+					streamBookAsks.Render(fmt.Sprintf("%.2f", ask.Price)))
+			}
 		}
 	}
 	return nil

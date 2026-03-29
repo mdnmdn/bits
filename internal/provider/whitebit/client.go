@@ -40,9 +40,9 @@ func (c *Client) ID() string { return providerID }
 func (c *Client) SetUserAgent(ua string) { c.userAgent = ua }
 
 // Capabilities returns the capability matrix for WhiteBit.
-// WhiteBit supports spot market features only.
 func (c *Client) Capabilities() capability.CapabilityMatrix {
 	s := capability.MarketSpot
+	f := capability.MarketFutures
 
 	matrix := capability.CapabilityMatrix{}
 
@@ -53,6 +53,17 @@ func (c *Client) Capabilities() capability.CapabilityMatrix {
 	matrix[capability.CapabilityKey{Market: s, Feature: capability.FeatureCandles}] = true
 	matrix[capability.CapabilityKey{Market: s, Feature: capability.FeatureTicker24h}] = true
 	matrix[capability.CapabilityKey{Market: s, Feature: capability.FeatureOrderBook}] = true
+
+	// Register futures features (Time and Info are shared)
+	matrix[capability.CapabilityKey{Market: f, Feature: capability.FeatureExchangeInfo}] = true
+	matrix[capability.CapabilityKey{Market: f, Feature: capability.FeatureCandles}] = true
+	matrix[capability.CapabilityKey{Market: f, Feature: capability.FeatureTicker24h}] = true
+	matrix[capability.CapabilityKey{Market: f, Feature: capability.FeatureOrderBook}] = true
+
+	// Register streaming features (Spot and Futures)
+	matrix[capability.CapabilityKey{Market: s, Feature: capability.FeatureStreamPrice}] = true
+	matrix[capability.CapabilityKey{Market: s, Feature: capability.FeatureStreamOrderBook}] = true
+	matrix[capability.CapabilityKey{Market: f, Feature: capability.FeatureStreamOrderBook}] = true
 
 	return matrix
 }

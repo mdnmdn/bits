@@ -22,6 +22,12 @@ type whitebitMarket struct {
 	TradesEnabled bool   `json:"tradesEnabled"`
 }
 
+type whitebitFuturesMarket struct {
+	TickerID      string `json:"ticker_id"`
+	StockCurrency string `json:"stock_currency"`
+	MoneyCurrency string `json:"money_currency"`
+}
+
 // ServerTime fetches the server time from the WhiteBit API.
 func (c *Client) ServerTime(_ context.Context) (model.Response[model.ServerTime], error) {
 	body, err := c.doRequest("/api/v4/public/time")
@@ -47,6 +53,10 @@ func (c *Client) ServerTime(_ context.Context) (model.Response[model.ServerTime]
 
 // ExchangeInfo fetches exchange symbol information for the specified market.
 func (c *Client) ExchangeInfo(_ context.Context, market model.MarketType) (model.Response[model.ExchangeInfo], error) {
+	if market == model.MarketFutures {
+		return c.futuresExchangeInfo(market)
+	}
+
 	body, err := c.doRequest("/api/v4/public/markets")
 	if err != nil {
 		return model.Response[model.ExchangeInfo]{}, err
@@ -69,17 +79,54 @@ func (c *Client) ExchangeInfo(_ context.Context, market model.MarketType) (model
 			BaseAsset:  m.Stock,
 			QuoteAsset: m.Money,
 			Status:     status,
-			Market:     model.MarketSpot,
+			Market:     market,
 		})
 	}
 
 	return model.Response[model.ExchangeInfo]{
 		Kind:     model.KindExchangeInfo,
 		Provider: providerID,
-		Market:   model.MarketSpot,
+		Market:   market,
 		Data: model.ExchangeInfo{
 			ExchangeID: providerID,
-			Market:     model.MarketSpot,
+			Market:     market,
+			Symbols:    symbols,
+		},
+	}, nil
+}
+
+func (c *Client) futuresExchangeInfo(market model.MarketType) (model.Response[model.ExchangeInfo], error) {
+	body, err := c.doRequest("/api/v4/public/futures")
+	if err != nil {
+		return model.Response[model.ExchangeInfo]{}, err
+	}
+
+	var resp struct {
+		Success bool                    `json:"success"`
+		Result  []whitebitFuturesMarket `json:"result"`
+	}
+	if err := json.Unmarshal(body, &resp); err != nil {
+		return model.Response[model.ExchangeInfo]{}, fmt.Errorf("failed to parse futures response: %w", err)
+	}
+
+	symbols := make([]model.Symbol, 0, len(resp.Result))
+	for _, m := range resp.Result {
+		symbols = append(symbols, model.Symbol{
+			Symbol:     m.TickerID,
+			BaseAsset:  m.StockCurrency,
+			QuoteAsset: m.MoneyCurrency,
+			Status:     model.SymbolStatusTrading,
+			Market:     market,
+		})
+	}
+
+	return model.Response[model.ExchangeInfo]{
+		Kind:     model.KindExchangeInfo,
+		Provider: providerID,
+		Market:   market,
+		Data: model.ExchangeInfo{
+			ExchangeID: providerID,
+			Market:     market,
 			Symbols:    symbols,
 		},
 	}, nil

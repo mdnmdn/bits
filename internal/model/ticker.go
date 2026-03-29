@@ -10,7 +10,7 @@ type Ticker24h struct {
 	PriceChangePercent *float64       `json:"chg_pct,omitempty" yaml:"chg_pct,omitempty" toon:"chg_pct,omitempty"`
 	HighPrice          *float64       `json:"h,omitempty"       yaml:"h,omitempty"       toon:"h,omitempty"`
 	LowPrice           *float64       `json:"l,omitempty"       yaml:"l,omitempty"       toon:"l,omitempty"`
-	Volume             *float64       `json:"vol,omitempty"     yaml:"vol,omitempty"     toon:"vol,omitempty"`     // base asset volume
+	Volume             *float64       `json:"vol,omitempty"     yaml:"vol,omitempty"     toon:"vol,omitempty"` // base asset volume
 	QuoteVolume        *float64       `json:"qvol,omitempty"    yaml:"qvol,omitempty"    toon:"qvol,omitempty"`
 	OpenPrice          *float64       `json:"o,omitempty"       yaml:"o,omitempty"       toon:"o,omitempty"`
 	WeightedAvgPrice   *float64       `json:"vwap,omitempty"    yaml:"vwap,omitempty"    toon:"vwap,omitempty"`

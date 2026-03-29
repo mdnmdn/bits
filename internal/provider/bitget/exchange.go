@@ -49,6 +49,19 @@ type bitgetFuturesContractsResponse struct {
 	Data []bitgetFuturesContract `json:"data"`
 }
 
+type bitgetMarginSymbol struct {
+	Symbol    string `json:"symbol"`
+	BaseCoin  string `json:"baseCoin"`
+	QuoteCoin string `json:"quoteCoin"`
+	Status    string `json:"status"`
+}
+
+type bitgetMarginSymbolsResponse struct {
+	Code string               `json:"code"`
+	Msg  string               `json:"msg"`
+	Data []bitgetMarginSymbol `json:"data"`
+}
+
 // ServerTime fetches the server time from the Bitget API.
 func (c *Client) ServerTime(_ context.Context) (model.Response[model.ServerTime], error) {
 	body, err := c.doRequest("GET", "/api/v2/public/time", "")
@@ -84,9 +97,53 @@ func (c *Client) ExchangeInfo(_ context.Context, market model.MarketType) (model
 	switch market {
 	case model.MarketFutures:
 		return c.futuresExchangeInfo(market)
+	case model.MarketMargin:
+		return c.marginExchangeInfo(market)
 	default:
 		return c.spotExchangeInfo(market)
 	}
+}
+
+func (c *Client) marginExchangeInfo(market model.MarketType) (model.Response[model.ExchangeInfo], error) {
+	body, err := c.doRequest("GET", "/api/v2/margin/currencies", "")
+	if err != nil {
+		return model.Response[model.ExchangeInfo]{}, err
+	}
+
+	var resp bitgetMarginSymbolsResponse
+	if err := json.Unmarshal(body, &resp); err != nil {
+		return model.Response[model.ExchangeInfo]{}, fmt.Errorf("failed to parse margin symbols response: %w", err)
+	}
+	if resp.Code != "00000" {
+		return model.Response[model.ExchangeInfo]{}, fmt.Errorf("API error: %s", resp.Msg)
+	}
+
+	symbols := make([]model.Symbol, 0, len(resp.Data))
+	for _, s := range resp.Data {
+		status := model.SymbolStatusTrading
+		if s.Status == "offline" {
+			status = model.SymbolStatusBreak
+		}
+
+		symbols = append(symbols, model.Symbol{
+			Symbol:     s.Symbol,
+			BaseAsset:  s.BaseCoin,
+			QuoteAsset: s.QuoteCoin,
+			Status:     status,
+			Market:     market,
+		})
+	}
+
+	return model.Response[model.ExchangeInfo]{
+		Kind:     model.KindExchangeInfo,
+		Provider: providerID,
+		Market:   market,
+		Data: model.ExchangeInfo{
+			ExchangeID: providerID,
+			Market:     market,
+			Symbols:    symbols,
+		},
+	}, nil
 }
 
 func (c *Client) spotExchangeInfo(market model.MarketType) (model.Response[model.ExchangeInfo], error) {

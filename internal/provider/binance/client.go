@@ -82,6 +82,7 @@ func (c *Client) Capabilities() capability.CapabilityMatrix {
 	keys = append(keys,
 		capability.CapabilityKey{Market: s, Feature: capability.FeatureServerTime},
 		capability.CapabilityKey{Market: s, Feature: capability.FeatureExchangeInfo},
+		capability.CapabilityKey{Market: f, Feature: capability.FeatureExchangeInfo},
 	)
 
 	if spotEnabled {
@@ -90,6 +91,7 @@ func (c *Client) Capabilities() capability.CapabilityMatrix {
 			capability.CapabilityKey{Market: s, Feature: capability.FeatureCandles},
 			capability.CapabilityKey{Market: s, Feature: capability.FeatureTicker24h},
 			capability.CapabilityKey{Market: s, Feature: capability.FeatureOrderBook},
+			capability.CapabilityKey{Market: s, Feature: capability.FeatureStreamPrice},
 			capability.CapabilityKey{Market: s, Feature: capability.FeatureStreamOrderBook},
 		)
 	}
