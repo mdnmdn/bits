@@ -103,6 +103,16 @@ type WhiteBitConfig struct {
 	Spot      MarketConfig `mapstructure:"spot"`
 }
 
+// CryptoComConfig holds Crypto.com Exchange API credentials.
+type CryptoComConfig struct {
+	APIKey    string       `mapstructure:"api_key"`
+	APISecret string       `mapstructure:"api_secret"`
+	BaseURL   string       `mapstructure:"base_url"`
+	Spot      MarketConfig `mapstructure:"spot"`
+}
+
+func (c CryptoComConfig) IsSpotEnabled() bool { return c.Spot.Enabled }
+
 // SymbolConfig holds symbol resolution settings.
 type SymbolConfig struct {
 	CacheTTL time.Duration `mapstructure:"cache_ttl"`
@@ -141,6 +151,7 @@ type Config struct {
 	Binance   BinanceConfig   `mapstructure:"binance"`
 	Bitget    BitgetConfig    `mapstructure:"bitget"`
 	WhiteBit  WhiteBitConfig  `mapstructure:"whitebit"`
+	CryptoCom CryptoComConfig `mapstructure:"cryptocom"`
 	Symbol    SymbolConfig    `mapstructure:"symbol"`
 }
 
@@ -304,6 +315,15 @@ api_secret = ""
 # base_url = "https://whitebit.com"
 
 [whitebit.spot]
+enabled = false
+
+# Crypto.com Exchange configuration
+[cryptocom]
+api_key = ""
+api_secret = ""
+# base_url = "https://api.crypto.com/v2"
+
+[cryptocom.spot]
 enabled = false
 
 # Symbol resolution cache settings
@@ -480,6 +500,18 @@ func applyEnvMap(envVars map[string]string, cfg *Config) {
 	if v, ok := envVars["whitebit.spot.enabled"]; ok {
 		cfg.WhiteBit.Spot.Enabled = v == "true" || v == "1"
 	}
+	if v, ok := envVars["cryptocom.api_key"]; ok {
+		cfg.CryptoCom.APIKey = v
+	}
+	if v, ok := envVars["cryptocom.api_secret"]; ok {
+		cfg.CryptoCom.APISecret = v
+	}
+	if v, ok := envVars["cryptocom.base_url"]; ok {
+		cfg.CryptoCom.BaseURL = v
+	}
+	if v, ok := envVars["cryptocom.spot.enabled"]; ok {
+		cfg.CryptoCom.Spot.Enabled = v == "true" || v == "1"
+	}
 	// Symbol config
 	if v, ok := envVars["symbol.cache_ttl"]; ok {
 		if d, err := time.ParseDuration(v); err == nil {
@@ -568,6 +600,19 @@ func applyEnvOverrides(cfg *Config) {
 	}
 	if v := os.Getenv("BITS_WHITEBIT_SPOT_ENABLED"); v != "" {
 		cfg.WhiteBit.Spot.Enabled = v == "true" || v == "1"
+	}
+	// Crypto.com
+	if v := os.Getenv("BITS_CRYPTOCOM_API_KEY"); v != "" {
+		cfg.CryptoCom.APIKey = v
+	}
+	if v := os.Getenv("BITS_CRYPTOCOM_API_SECRET"); v != "" {
+		cfg.CryptoCom.APISecret = v
+	}
+	if v := os.Getenv("BITS_CRYPTOCOM_BASE_URL"); v != "" {
+		cfg.CryptoCom.BaseURL = v
+	}
+	if v := os.Getenv("BITS_CRYPTOCOM_SPOT_ENABLED"); v != "" {
+		cfg.CryptoCom.Spot.Enabled = v == "true" || v == "1"
 	}
 	// Symbol resolution cache
 	if v := os.Getenv("BITS_SYMBOL_CACHE_TTL"); v != "" {
@@ -671,6 +716,12 @@ func (c *Config) Redacted() *Config {
 			APISecret: maskedLong(c.WhiteBit.APISecret),
 			BaseURL:   c.WhiteBit.BaseURL,
 			Spot:      c.WhiteBit.Spot,
+		},
+		CryptoCom: CryptoComConfig{
+			APIKey:    maskedLong(c.CryptoCom.APIKey),
+			APISecret: maskedLong(c.CryptoCom.APISecret),
+			BaseURL:   c.CryptoCom.BaseURL,
+			Spot:      c.CryptoCom.Spot,
 		},
 		Symbol: SymbolConfig{
 			CacheTTL: c.Symbol.CacheTTL,
