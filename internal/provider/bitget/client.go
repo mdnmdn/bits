@@ -75,7 +75,6 @@ func (c *Client) Capabilities() capability.CapabilityMatrix {
 
 	if futuresEnabled {
 		matrix[capability.CapabilityKey{Market: f, Feature: capability.FeatureExchangeInfo}] = true
-		matrix[capability.CapabilityKey{Market: f, Feature: capability.FeaturePrice}] = true
 		matrix[capability.CapabilityKey{Market: f, Feature: capability.FeatureCandles}] = true
 		matrix[capability.CapabilityKey{Market: f, Feature: capability.FeatureTicker24h}] = true
 		matrix[capability.CapabilityKey{Market: f, Feature: capability.FeatureOrderBook}] = true
@@ -84,8 +83,6 @@ func (c *Client) Capabilities() capability.CapabilityMatrix {
 
 	if marginEnabled {
 		matrix[capability.CapabilityKey{Market: m, Feature: capability.FeatureExchangeInfo}] = true
-		matrix[capability.CapabilityKey{Market: m, Feature: capability.FeaturePrice}] = true
-		matrix[capability.CapabilityKey{Market: m, Feature: capability.FeatureCandles}] = true
 		matrix[capability.CapabilityKey{Market: m, Feature: capability.FeatureTicker24h}] = true
 	}
 

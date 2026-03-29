@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/mdnmdn/bits/internal/logger"
 	"github.com/mdnmdn/bits/internal/model"
 	"github.com/mdnmdn/bits/internal/ws"
 )
@@ -78,7 +79,7 @@ func (h *bitgetHandler) Handle(ctx context.Context, raw []byte) (any, error) {
 		}, nil
 	}
 
-	if msg.Arg.Channel == "depth" || msg.Arg.Channel == "depth5" || msg.Arg.Channel == "depth15" {
+	if msg.Arg.Channel == "books" || msg.Arg.Channel == "books5" || msg.Arg.Channel == "books15" || msg.Arg.Channel == "book1" {
 		var data []bitgetWSDepthData
 		if err := json.Unmarshal(msg.Data, &data); err != nil {
 			return nil, nil
@@ -124,6 +125,7 @@ func (h *bitgetHandler) Handle(ctx context.Context, raw []byte) (any, error) {
 }
 
 func (h *bitgetHandler) OnCommand(ctx context.Context, cmd ws.Command, client *ws.BaseClient) error {
+	logger.Default.Debug("bitget: sending command", "kind", cmd.Kind, "params", cmd.Params)
 	switch cmd.Kind {
 	case ws.CommandSubscribe:
 		args, ok := cmd.Params.([]map[string]string)
@@ -208,12 +210,14 @@ func (c *Client) WatchOrderBook(ctx context.Context, symbol string, market model
 		instType = "USDT-FUTURES"
 	}
 
-	channel := "depth"
-	if depth > 0 && depth <= 15 {
+	channel := "books5"
+	if depth > 0 {
 		if depth <= 5 {
-			channel = "depth5"
+			channel = "books5"
+		} else if depth <= 15 {
+			channel = "books15"
 		} else {
-			channel = "depth15"
+			channel = "books"
 		}
 	}
 
@@ -239,6 +243,7 @@ func (c *Client) WatchOrderBook(ctx context.Context, symbol string, market model
 				continue
 			}
 			if resp, ok := res.Response.(*model.Response[model.OrderBook]); ok {
+				resp.Data.Market = market
 				books <- &resp.Data
 			}
 		}

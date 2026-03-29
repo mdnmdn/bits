@@ -6,6 +6,7 @@ package registry
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/mdnmdn/bits/internal/config"
 	"github.com/mdnmdn/bits/internal/provider"
@@ -28,11 +29,13 @@ var providerAliases = map[string]string{
 
 // ResolveProvider resolves an alias to the canonical provider name.
 // If the name is already canonical or unknown, it is returned as-is.
+// Case-insensitive.
 func ResolveProvider(name string) string {
-	if canonical, ok := providerAliases[name]; ok {
+	lower := strings.ToLower(name)
+	if canonical, ok := providerAliases[lower]; ok {
 		return canonical
 	}
-	return name
+	return lower
 }
 
 // NewProvider constructs a provider by name using the given config.

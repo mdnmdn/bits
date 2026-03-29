@@ -102,3 +102,64 @@ The goal is to achieve parity across supported exchanges where API support exist
 - Refined Bitget `Capabilities()` to strictly match configuration.
 - Verified Bitget Margin market data fetching.
 - Removed unsupported capabilities (WhiteBit futures candles/price) to maintain parity with API reality.
+
+---
+
+## Verification Results (2026-03-29)
+
+Verified implementation status of declared capabilities for Bitget and WhiteBit against CLI command wiring.
+
+### Bitget
+
+| Feature            | Market  | Declared | Implemented | Notes |
+|--------------------|---------|----------|-------------|-------|
+| server_time        | spot    | ✓        | ✓           | `exchange.go:ServerTime` |
+| exchange_info      | spot    | ✓        | ✓           | `exchange.go:spotExchangeInfo` |
+| exchange_info      | futures | ✓        | ✓           | `exchange.go:futuresExchangeInfo` |
+| exchange_info      | margin  | ✓        | ✓           | `exchange.go:marginExchangeInfo` |
+| price              | spot    | ✓        | ✓           | `market.go:Price()` |
+| price              | futures | ✓        | ✗           | Declared but `market.go:Price()` hardcodes `MarketSpot` |
+| price              | margin  | ✓        | ✗           | Declared but `market.go:Price()` hardcodes `MarketSpot` |
+| candles            | spot    | ✓        | ✓           | `market.go:Candles()` |
+| candles            | futures | ✓        | ✓           | `market.go:Candles()` |
+| candles            | margin  | ✓        | ✗           | Not implemented (only spot/futures in `Candles()`) |
+| ticker_24h         | spot    | ✓        | ✓           | `market.go:Ticker24h()` |
+| ticker_24h         | futures | ✓        | ✓           | `market.go:Ticker24h()` |
+| ticker_24h         | margin  | ✓        | ✓           | `market.go:Ticker24h()` via `fetchMarginTicker()` |
+| order_book         | spot    | ✓        | ✓           | `market.go:OrderBook()` |
+| order_book         | futures | ✓        | ✓           | `market.go:OrderBook()` |
+| stream_price       | spot    | ✓        | ✓           | `stream.go:WatchPrices()` |
+| stream_order_book  | spot    | ✓        | ✓           | `stream.go:WatchOrderBook()` |
+| stream_order_book  | futures | ✓        | ✓           | `stream.go:WatchOrderBook()` |
+
+**Issues Found:**
+- `Price()` method ignores market parameter and always fetches spot data - needs update to support futures/margin or remove those capabilities from `Capabilities()` matrix
+- Margin candles not implemented despite being declared
+
+### WhiteBit
+
+| Feature            | Market  | Declared | Implemented | Notes |
+|--------------------|---------|----------|-------------|-------|
+| server_time        | spot    | ✓        | ✓           | `exchange.go:ServerTime` |
+| exchange_info      | spot    | ✓        | ✓           | `exchange.go:ExchangeInfo()` |
+| exchange_info      | futures | ✓        | ✓           | `exchange.go:futuresExchangeInfo()` |
+| price              | spot    | ✓        | ✓           | `market.go:Price()` |
+| price              | futures | -        | -           | Correctly not declared |
+| candles            | spot    | ✓        | ✓           | `market.go:Candles()` |
+| candles            | futures | -        | -           | Correctly not declared |
+| ticker_24h         | spot    | ✓        | ✓           | `market.go:Ticker24h()` |
+| ticker_24h         | futures | ✓        | ✓           | `market.go:futuresTicker24h()` |
+| order_book         | spot    | ✓        | ✓           | `market.go:OrderBook()` |
+| order_book         | futures | ✓        | ✓           | `market.go:OrderBook()` |
+| stream_price       | spot    | ✓        | ✓           | `stream.go:WatchPrices()` |
+| stream_order_book  | spot    | ✓        | ✓           | `stream.go:WatchOrderBook()` |
+| stream_order_book  | futures | ✓        | ✓           | `stream.go:WatchOrderBook()` |
+
+**Status:** All declared capabilities are correctly implemented.
+
+---
+
+**Summary:**
+- Bitget has 3 discrepancies: Price(futures), Price(margin), and Margin candles are declared in `Capabilities()` but not actually implemented in the respective methods
+- WhiteBit is fully aligned - all declared capabilities are implemented
+- Both providers are wired to CLI commands via the resolver pattern in `cmd/price.go`, `cmd/ticker.go`, `cmd/book.go`, `cmd/candles.go`, etc.

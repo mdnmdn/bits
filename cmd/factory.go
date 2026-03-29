@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"strings"
+
 	"github.com/mdnmdn/bits/internal/config"
 	"github.com/mdnmdn/bits/internal/model"
 	"github.com/mdnmdn/bits/internal/provider"
@@ -30,8 +32,18 @@ func resolveOpts(cmd *cobra.Command) resolve.ResolutionOpts {
 	allowFallback, _ := cmd.Root().PersistentFlags().GetBool("allow-fallback")
 	return resolve.ResolutionOpts{
 		Provider:   registry.ResolveProvider(provider),
-		Market:     model.MarketType(market),
+		Market:     normalizeMarket(market),
 		NoFallback: provider != "" && !allowFallback,
+	}
+}
+
+func normalizeMarket(m string) model.MarketType {
+	lower := strings.ToLower(m)
+	switch lower {
+	case "future":
+		return model.MarketFutures
+	default:
+		return model.MarketType(lower)
 	}
 }
 
