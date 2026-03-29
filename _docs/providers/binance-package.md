@@ -261,15 +261,37 @@ func keepAliveWithPong(ctx context.Context, c *websocket.Conn, timeout time.Dura
 func WsGetReadWriteConnection(cfg *WsConfig) (*websocket.Conn, error)
 ```
 
-### Variables
+### Margin Support
+
+Binance Margin uses the same base client but with different services.
 
 ```go
-var WebsocketKeepalive bool
-var WebsocketTimeout time.Duration
-var WebsocketPingTimeout time.Duration
-var WebsocketPongTimeout time.Duration
-var wsServeWithConnHandler func(cfg *WsConfig, handler WsHandler, errHandler ErrHandler, connHandler ConnHandler) (doneC, stopC chan struct{}, error)
+// NewMarginOrderService
+type MarginOrderService struct {
+    c                *Client
+    symbol           string
+    side             SideType
+    type             OrderType
+    quantity         *string
+    price            *string
+    newClientOrderID *string
+    stopPrice        *string
+    icebergQty       *string
+    newOrderRespType *NewOrderRespType
+    sideEffectType   *SideEffectType
+    timeInForce      *TimeInForceType
+    isIsolated       *bool
+}
 ```
+
+### WebSocket Streams (Unified)
+
+Binance supports a unified stream endpoint: `wss://stream.binance.com:9443/stream?streams=<streamName1>/<streamName2>`
+
+Individual streams:
+- `<symbol>@ticker` - 24hr rolling window ticker statistics
+- `<symbol>@depth<levels>` - Top bids/asks
+- `<symbol>@kline_<interval>` - Candlestick data
 
 ## Utility Functions
 

@@ -199,3 +199,137 @@ func (c *BaseClient) WriteJSON(v interface{}) error {
 	}
 	return c.conn.WriteJSON(v)
 }
+
+// Manager defines the stateful WebSocket manager that wraps a BaseClient.
+type Manager struct {
+	client      *BaseClient
+	cmdChan     chan Command
+	outChan     chan StreamResponse[any]
+	handler     MessageHandler
+	pingTicker  *time.Ticker
+	pingTimeout time.Duration
+
+	mu           sync.RWMutex
+	subs         map[string]Command
+}
+
+type CommandKind string
+
+const (
+	CommandStop        CommandKind = "stop"
+	CommandSubscribe   CommandKind = "subscribe"
+	CommandUnsubscribe CommandKind = "unsubscribe"
+)
+
+type Command struct {
+	Kind    CommandKind
+	Method  string // optional: e.g. "depth" vs "ticker"
+	Params  any
+	Context context.Context
+}
+
+type StreamResponse[T any] struct {
+	Response T
+	Error    error
+}
+
+type MessageHandler interface {
+	Handle(ctx context.Context, raw []byte) (any, error)
+	OnCommand(ctx context.Context, cmd Command, client *BaseClient) error
+	OnPing(ctx context.Context, client *BaseClient) error
+}
+
+// NewManager creates a new WebSocket manager with the given URL and handler.
+func NewManager(url string, handler MessageHandler) *Manager {
+	return &Manager{
+		client:      NewBaseClient(url),
+		cmdChan:     make(chan Command, 10),
+		outChan:     make(chan StreamResponse[any], 100),
+		handler:     handler,
+		pingTimeout: 30 * time.Second,
+		subs:        make(map[string]Command),
+	}
+}
+
+// Start initiates the message loop and returns the data channel.
+func (m *Manager) Start(ctx context.Context) (<-chan StreamResponse[any], error) {
+	m.client.OnConnect = func(ctx context.Context, conn *websocket.Conn) error {
+		m.mu.RLock()
+		defer m.mu.RUnlock()
+		for _, cmd := range m.subs {
+			if err := m.handler.OnCommand(ctx, cmd, m.client); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
+	m.client.OnMessage = func(ctx context.Context, raw []byte) error {
+		res, err := m.handler.Handle(ctx, raw)
+		if err != nil {
+			m.outChan <- StreamResponse[any]{Error: err}
+			return err
+		}
+		if res != nil {
+			m.outChan <- StreamResponse[any]{Response: res}
+		}
+		return nil
+	}
+
+	if err := m.client.Connect(ctx); err != nil {
+		return nil, err
+	}
+
+	m.pingTicker = time.NewTicker(m.pingTimeout)
+
+	go func() {
+		defer m.pingTicker.Stop()
+		defer close(m.outChan)
+		defer m.client.Close()
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case cmd := <-m.cmdChan:
+				if cmd.Kind == CommandStop {
+					return
+				}
+
+				// Basic subscription tracking for reconnection
+				if cmd.Kind == CommandSubscribe {
+					m.mu.Lock()
+					key := string(cmd.Kind)
+					if cmd.Method != "" {
+						key += ":" + cmd.Method
+					}
+					m.subs[key] = cmd
+					m.mu.Unlock()
+				} else if cmd.Kind == CommandUnsubscribe {
+					m.mu.Lock()
+					key := string(CommandSubscribe)
+					if cmd.Method != "" {
+						key += ":" + cmd.Method
+					}
+					delete(m.subs, key)
+					m.mu.Unlock()
+				}
+
+				if err := m.handler.OnCommand(ctx, cmd, m.client); err != nil {
+					m.outChan <- StreamResponse[any]{Error: err}
+				}
+			case <-m.pingTicker.C:
+				if err := m.handler.OnPing(ctx, m.client); err != nil {
+					// Logging or recovery could go here
+				}
+			}
+		}
+	}()
+
+	return m.outChan, nil
+}
+
+// Commands returns the command channel for the manager.
+func (m *Manager) Commands() chan<- Command {
+	return m.cmdChan
+}
