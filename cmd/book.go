@@ -3,12 +3,12 @@ package cmd
 import (
 	"os"
 
-	"github.com/mdnmdn/bits/internal/capability"
+	"github.com/mdnmdn/bits/pkg/capability"
 	rendertable "github.com/mdnmdn/bits/internal/render/table"
-	"github.com/mdnmdn/bits/internal/resolve"
+	"github.com/mdnmdn/bits/pkg/resolve"
 	"github.com/spf13/cobra"
 
-	"github.com/mdnmdn/bits/internal/provider"
+	"github.com/mdnmdn/bits/pkg/provider"
 )
 
 var bookCmd = &cobra.Command{

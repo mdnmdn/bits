@@ -3,7 +3,7 @@ package cmd
 import (
 	"io"
 
-	"github.com/mdnmdn/bits/internal/model"
+	"github.com/mdnmdn/bits/pkg/model"
 	"github.com/mdnmdn/bits/internal/render"
 	renderjson "github.com/mdnmdn/bits/internal/render/json"
 	rendermd "github.com/mdnmdn/bits/internal/render/markdown"

@@ -3,7 +3,7 @@ package rendertoon
 import (
 	"io"
 
-	"github.com/mdnmdn/bits/internal/model"
+	"github.com/mdnmdn/bits/pkg/model"
 )
 
 func RenderOrderBook(w io.Writer, res model.Response[model.OrderBook]) error {

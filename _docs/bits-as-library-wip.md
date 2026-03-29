@@ -157,16 +157,16 @@ func main() {
 
 ## Implementation Roadmap
 
-1. **Phase 1: Foundation (Current)**:
+1. **Phase 1: Foundation (Completed)**:
    - Finalize the analysis and get community feedback.
    - Audit all current `internal/` packages for library readiness.
 
-2. **Phase 2: Refactoring**:
+2. **Phase 2: Refactoring (Completed)**:
    - Move `model`, `capability`, and `provider` to `pkg/`.
    - Implement the consolidated `pkg/config`.
    - Update existing CLI commands to use the new `pkg/` structure.
 
-3. **Phase 3: Ergonomics**:
+3. **Phase 3: Ergonomics (Current)**:
    - Implement the high-level `pkg/bits` facade.
    - Add functional options and refine error handling.
    - Provide comprehensive documentation and examples.

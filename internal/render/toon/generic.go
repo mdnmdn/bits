@@ -3,7 +3,7 @@ package rendertoon
 import (
 	"io"
 
-	"github.com/mdnmdn/bits/internal/model"
+	"github.com/mdnmdn/bits/pkg/model"
 	toon "github.com/toon-format/toon-go"
 )
 

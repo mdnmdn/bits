@@ -5,7 +5,7 @@ import (
 	"os"
 	"text/tabwriter"
 
-	"github.com/mdnmdn/bits/internal/registry"
+	"github.com/mdnmdn/bits/pkg/provider/registry"
 	"github.com/spf13/cobra"
 )
 

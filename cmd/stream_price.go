@@ -8,13 +8,13 @@ import (
 	"syscall"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/mdnmdn/bits/internal/capability"
+	"github.com/mdnmdn/bits/pkg/capability"
 	"github.com/mdnmdn/bits/internal/render"
-	"github.com/mdnmdn/bits/internal/resolve"
+	"github.com/mdnmdn/bits/pkg/resolve"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 
-	"github.com/mdnmdn/bits/internal/provider"
+	"github.com/mdnmdn/bits/pkg/provider"
 )
 
 var streamPriceCmd = &cobra.Command{
