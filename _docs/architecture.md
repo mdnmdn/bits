@@ -11,7 +11,7 @@ All provider responses are wrapped in a typed `Response[T]` envelope carrying pr
 ### Interface Hierarchy
 
 ```
-internal/provider/
+pkg/provider/
 ├── Provider (base)          → ID, SetUserAgent, Capabilities
 ├── ExchangeProvider         → Provider + ServerTime, ExchangeInfo
 ├── AggregatorProvider       → Provider + CoinMarkets
@@ -27,16 +27,16 @@ All market-sensitive calls carry a `model.MarketType` parameter (`"spot"` | `"fu
 
 ### Provider Capabilities
 
-| Interface              | CoinGecko | Binance spot | Binance futures | Bitget spot | Bitget futures |
-|------------------------|:---------:|:------------:|:---------------:|:-----------:|:--------------:|
-| `ExchangeProvider`     | —         | Yes          | Yes             | Yes         | Yes            |
-| `AggregatorProvider`   | Yes       | —            | —               | —           | —              |
-| `PriceProvider`        | Yes       | Yes          | Yes             | Yes         | Yes            |
-| `CandleProvider`       | Yes       | Yes          | Yes             | Yes         | Yes            |
-| `TickerProvider`       | —         | Yes          | Yes             | Yes         | Yes            |
-| `OrderBookProvider`    | —         | Yes          | Yes             | —           | —              |
-| `PriceStreamProvider`  | Yes       | —            | —               | —           | —              |
-| `OrderBookStreamProvider` | —      | Yes          | —               | —           | —              |
+| Interface              | CoinGecko | Binance spot | Binance futures | Bitget spot | Bitget futures | WhiteBit spot | Crypto.com spot |
+|------------------------|:---------:|:------------:|:---------------:|:-----------:|:--------------:|:-------------:|:---------------:|
+| `ExchangeProvider`     | —         | Yes          | Yes             | Yes         | Yes            | Yes           | Yes             |
+| `AggregatorProvider`   | Yes       | —            | —               | —           | —              | —             | —               |
+| `PriceProvider`        | Yes       | Yes          | Yes             | Yes         | Yes            | Yes           | Yes             |
+| `CandleProvider`       | Yes       | Yes          | Yes             | Yes         | Yes            | Yes           | —               |
+| `TickerProvider`       | —         | Yes          | Yes             | Yes         | Yes            | Yes           | Yes             |
+| `OrderBookProvider`    | —         | Yes          | Yes             | —           | —              | —             | —               |
+| `PriceStreamProvider`  | Yes       | —            | —               | —           | —              | Yes           | Yes             |
+| `OrderBookStreamProvider` | —      | Yes          | —               | —           | —              | Yes           | Yes             |
 
 Use `bits capabilities` or `bits caps -p <provider>` to inspect the matrix at runtime.
 
@@ -58,9 +58,9 @@ type Response[T any] struct {
 
 Renderers use provenance to display footnotes (table), top-level keys (JSON/YAML), or annotations (markdown).
 
-## Data Model (`internal/model/`)
+## Data Model (`pkg/model/`)
 
-All providers return types from `internal/model/`. Key types:
+All providers return types from `pkg/model/`. Key types:
 
 - `Response[T]` — generic envelope with provenance fields
 - `MarketType` — type alias for `capability.MarketType` (`"spot"` | `"futures"` | `"margin"`)
@@ -75,7 +75,7 @@ All providers return types from `internal/model/`. Key types:
 
 Optional values use pointer types (`*float64`, `*time.Time`, `*int`). Provider-specific data is preserved in `Extra map[string]any`.
 
-## Resolution Layer (`internal/resolve/`)
+## Resolution Layer (`pkg/resolve/`)
 
 The resolver selects the best provider+market for a requested feature, with optional fallback:
 
@@ -123,31 +123,39 @@ Available processors: `TimeEnricher` (latency + clock skew), `SpreadCalculator` 
 
 ## Provider Implementations
 
-### CoinGecko (`internal/provider/coingecko/`)
+### CoinGecko (`pkg/provider/coingecko/`)
 - Raw HTTP client; uses `config.CoinGeckoConfig` for base URL and auth header
 - Supports demo and paid API tiers
 - Implements: `AggregatorProvider`, `PriceProvider`, `CandleProvider`, `PriceStreamProvider`
 - Stream via `internal/ws/` (WebSocket, ActionCable protocol, paid plan required)
 
-### Binance (`internal/provider/binance/`)
+### Binance (`pkg/provider/binance/`)
 - Uses `go-binance/v2` library for spot/futures HTTP; gorilla/websocket for streaming
 - Market routing by method parameter (not state); spot+futures clients held per instance
 - Implements: `ExchangeProvider`, `PriceProvider`, `CandleProvider`, `TickerProvider`, `OrderBookProvider`, `OrderBookStreamProvider`
 
-### Bitget (`internal/provider/bitget/`)
+### Bitget (`pkg/provider/bitget/`)
 - Raw HTTP client; 3-part auth (key + secret + passphrase) via `internal/auth/`
 - Implements: `ExchangeProvider`, `PriceProvider`, `CandleProvider`, `TickerProvider`
 
-## Registry (`internal/registry/`)
+### WhiteBit (`pkg/provider/whitebit/`)
+- Raw HTTP client; public endpoints require no auth
+- Implements: `ExchangeProvider`, `PriceProvider`, `CandleProvider`, `TickerProvider`, `PriceStreamProvider`, `OrderBookStreamProvider`
+
+### Crypto.com (`pkg/provider/cryptocom/`)
+- Raw HTTP client; spot only
+- Implements: `ExchangeProvider`, `PriceProvider`, `TickerProvider`, `PriceStreamProvider`, `OrderBookStreamProvider`
+
+## Registry (`pkg/provider/registry/`)
 
 Lives in its own package to avoid import cycles (providers must not import the registry that imports them):
 
 ```go
 func NewProvider(name string, cfg *config.Config) (provider.Provider, error)
-func AllProviderIDs() []string  // ["coingecko", "binance", "bitget"]
+func AllProviderIDs() []string  // ["coingecko", "binance", "bitget", "whitebit", "cryptocom"]
 ```
 
-## Configuration (`internal/config/`)
+## Configuration (`pkg/config/`)
 
 Config file: platform-specific path (e.g. `~/Library/Application Support/bits-cli/config.yaml` on macOS, `~/.config/bits/config.yaml` on Linux).
 
@@ -198,12 +206,12 @@ bits ticker BTCUSDT -p coingecko -f             # coingecko lacks ticker → fal
 
 ## Adding a New Provider
 
-1. Create `internal/provider/<name>/` with `client.go`, market files
+1. Create `pkg/provider/<name>/` with `client.go`, market files
 2. Implement `Provider` base interface (`ID`, `SetUserAgent`, `Capabilities`)
 3. Implement applicable capability interfaces; all methods return `model.Response[T]`
 4. Register capabilities in `Capabilities()` using `capability.NewCapabilityMatrix(...)`
-5. Add a config struct to `internal/config/config.go` and wire env overrides
-6. Register in `internal/registry/registry.go` — one new case in `NewProvider`
+5. Add a config struct to `pkg/config/config.go` and wire env overrides
+6. Register in `pkg/provider/registry/registry.go` — one new case in `NewProvider`
 
 ## Project Structure
 
@@ -225,9 +233,8 @@ bits/
 │   ├── stream.go            # bits stream (group)
 │   ├── stream_price.go      # bits stream price <id>...
 │   └── stream_book.go       # bits stream book <symbol>
-├── internal/
-│   ├── auth/
-│   │   └── signature.go     # HMAC-SHA256 helpers (used by Bitget)
+├── pkg/                     # Public library packages (importable by external tools)
+│   ├── bits/                # High-level facade: Client, GetPrice, ComparePrices
 │   ├── capability/
 │   │   └── capability.go    # MarketType, Feature, CapabilityKey, CapabilityMatrix
 │   ├── config/
@@ -242,7 +249,7 @@ bits/
 │   │   ├── price.go         # CoinPrice
 │   │   ├── coin.go          # CoinMarket, MarketOpts
 │   │   └── errors.go        # ErrUnsupportedMarket, ErrUnsupportedFeature
-│   ├── provider/            # Provider interfaces
+│   ├── provider/            # Provider interfaces + implementations
 │   │   ├── provider.go      # Provider base interface
 │   │   ├── exchange.go      # ExchangeProvider
 │   │   ├── aggregator.go    # AggregatorProvider
@@ -250,13 +257,19 @@ bits/
 │   │   ├── stream.go        # PriceStreamProvider, OrderBookStreamProvider
 │   │   ├── binance/         # Binance implementation
 │   │   ├── bitget/          # Bitget implementation
-│   │   └── coingecko/       # CoinGecko implementation
-│   ├── registry/
-│   │   └── registry.go      # NewProvider factory (avoids import cycle)
-│   ├── resolve/
-│   │   ├── resolver.go      # Resolver, ResolutionOpts, Resolve()
-│   │   ├── require.go       # Require[T] type assertion helper
-│   │   └── fanout.go        # FanOut[T] parallel multi-symbol helper
+│   │   ├── coingecko/       # CoinGecko implementation
+│   │   ├── whitebit/        # WhiteBit implementation
+│   │   ├── cryptocom/       # Crypto.com implementation
+│   │   └── registry/
+│   │       └── registry.go  # NewProvider factory (avoids import cycle)
+│   └── resolve/
+│       ├── resolver.go      # Resolver, ResolutionOpts, Resolve()
+│       ├── require.go       # Require[T] type assertion helper
+│       ├── fanout.go        # FanOut[T] parallel multi-symbol helper
+│       └── symbol/          # Symbol resolution + normalization
+├── internal/                # CLI-only internals (not importable by external tools)
+│   ├── auth/
+│   │   └── signature.go     # HMAC-SHA256 helpers (used by Bitget)
 │   ├── render/
 │   │   ├── renderer.go      # Format type + ParseFormat
 │   │   ├── provenance.go    # FallbackFootnote, ProviderLabel
@@ -270,6 +283,9 @@ bits/
 │   └── ws/
 │       ├── base_client.go   # Generic WebSocket client (reconnect, backoff)
 │       └── client.go        # CoinGecko WebSocket client (ActionCable)
+├── examples/
+│   ├── basic_usage/         # Fetch price from a single provider
+│   └── price_comparison/    # Compare prices across multiple exchanges
 ├── Makefile
 ├── .goreleaser.yml
 ├── install.sh

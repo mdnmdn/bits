@@ -10,12 +10,12 @@ This guide explains how the multi-provider architecture works and how to add a n
 cmd/                         ← command handlers
   └── factory.go             ← loadConfig(), newResolver(), flag helpers
         ↓
-internal/resolve/
+pkg/resolve/
   ├── resolver.go            ← Resolve() — selects provider+market, handles fallback
   ├── require.go             ← Require[T] — type-asserts to a capability interface
   └── fanout.go              ← FanOut[T] — parallel multi-symbol calls
         ↓
-internal/provider/           ← capability interfaces only (no implementations)
+pkg/provider/                ← capability interfaces + implementations
   ├── provider.go            ← Provider base interface
   ├── exchange.go            ← ExchangeProvider
   ├── aggregator.go          ← AggregatorProvider
@@ -23,14 +23,15 @@ internal/provider/           ← capability interfaces only (no implementations)
   ├── stream.go              ← PriceStreamProvider, OrderBookStreamProvider
   ├── binance/               ← exchange provider (spot + futures)
   ├── bitget/                ← exchange provider (spot + futures)
-  └── coingecko/             ← aggregator + streaming provider
+  ├── coingecko/             ← aggregator + streaming provider
+  ├── whitebit/              ← exchange provider (spot, streaming)
+  ├── cryptocom/             ← exchange provider (spot, streaming)
+  └── registry/
+        └── registry.go      ← NewProvider() factory — separate pkg to avoid import cycle
         ↓
-internal/registry/
-  └── registry.go            ← NewProvider() factory — separate pkg to avoid import cycle
-        ↓
-internal/model/              ← provider-agnostic data types
-internal/capability/         ← MarketType / Feature matrix types (no project imports)
-internal/ws/
+pkg/model/                   ← provider-agnostic data types
+pkg/capability/              ← MarketType / Feature matrix types (no project imports)
+internal/ws/                 ← WebSocket infrastructure (CLI-only internal)
   ├── base_client.go         ← reusable WebSocket client (reconnect + backoff)
   └── client.go              ← CoinGecko-specific streaming client (ActionCable protocol)
 ```
@@ -43,7 +44,7 @@ from `newResolver(cfg).Resolve(...)`, then type-assert to a capability interface
 
 ## Interface Hierarchy
 
-All interfaces live in `internal/provider/`.
+All interfaces live in `pkg/provider/`.
 
 ### Base — every provider must implement
 
@@ -125,10 +126,10 @@ func (c *Client) Capabilities() capability.CapabilityMatrix {
 
 ## Package Layout
 
-A provider lives in `internal/provider/<name>/`. Follow this file-per-concern convention:
+A provider lives in `pkg/provider/<name>/`. Follow this file-per-concern convention:
 
 ```
-internal/provider/<name>/
+pkg/provider/<name>/
 ├── client.go          — Client struct, NewClient(), ID(), SetUserAgent(), Capabilities()
 ├── market.go          — PriceProvider, CandleProvider, TickerProvider, OrderBookProvider methods
 ├── exchange.go        — (optional) ExchangeProvider methods (ServerTime, ExchangeInfo)
@@ -145,7 +146,7 @@ construction, identity, and capabilities; keep API logic in `market.go` / `excha
 
 ### 1. Config
 
-Add a config struct in `internal/config/config.go`:
+Add a config struct in `pkg/config/config.go`:
 
 ```go
 type MyExchangeConfig struct {
@@ -168,8 +169,8 @@ cfg.MyExchange.APISecret = getEnv("BITS_MYEXCHANGE_API_SECRET", cfg.MyExchange.A
 package myexchange
 
 import (
-    "github.com/mdnmdn/bits/internal/capability"
-    "github.com/mdnmdn/bits/internal/config"
+    "github.com/mdnmdn/bits/pkg/capability"
+    "github.com/mdnmdn/bits/pkg/config"
 )
 
 const providerID = "myexchange"
@@ -252,7 +253,7 @@ import (
     "context"
     "encoding/json"
 
-    "github.com/mdnmdn/bits/internal/model"
+    "github.com/mdnmdn/bits/pkg/model"
     "github.com/mdnmdn/bits/internal/ws"
 )
 
@@ -307,7 +308,7 @@ func (c *Client) WatchOrderBook(ctx context.Context, symbol string, market model
 
 ### 6. Register the provider
 
-In `internal/registry/registry.go`, add a case to `NewProvider` and `AllProviderIDs`:
+In `pkg/provider/registry/registry.go`, add a case to `NewProvider` and `AllProviderIDs`:
 
 ```go
 func NewProvider(name string, cfg *config.Config) (provider.Provider, error) {
@@ -334,7 +335,7 @@ func AllProviderIDs() []string {
 
 ## Data Model
 
-All public method signatures use types from `internal/model/`:
+All public method signatures use types from `pkg/model/`:
 
 | Type | Description |
 |------|-------------|
@@ -355,7 +356,7 @@ Store provider-specific fields that don't map to model types in `Extra map[strin
 
 ## Testing Patterns
 
-Look at `internal/provider/binance/client_test.go` and `internal/provider/coingecko/client_test.go`
+Look at `pkg/provider/binance/client_test.go` and `pkg/provider/coingecko/client_test.go`
 for the established pattern:
 
 - Use `net/http/httptest.NewServer` to mock HTTP responses.
@@ -371,14 +372,14 @@ without spinning up a real WebSocket server.
 ## Quick Checklist
 
 ```
-□ internal/config/config.go            — add MyExchangeConfig, wire env vars
-□ internal/provider/myexchange/
+□ pkg/config/config.go                 — add MyExchangeConfig, wire env vars
+□ pkg/provider/myexchange/
   □ client.go                          — Client struct, NewClient, ID, SetUserAgent, Capabilities
   □ types.go                           — internal JSON response structs
   □ market.go                          — PriceProvider, CandleProvider, TickerProvider, etc.
   □ exchange.go                        — (optional) ExchangeProvider (ServerTime, ExchangeInfo)
   □ stream.go                          — (optional) streaming via ws.NewBaseClient
-□ internal/registry/registry.go        — add case to NewProvider and AllProviderIDs
+□ pkg/provider/registry/registry.go    — add case to NewProvider and AllProviderIDs
 □ _docs/architecture.md                — update capability table
 □ _docs/features.md                    — note new provider in relevant commands
 ```

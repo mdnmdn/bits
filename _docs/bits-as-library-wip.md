@@ -50,36 +50,28 @@ Introduce a new `pkg/bits` package that acts as a facade for the entire library.
 - **Consistent Context**: Ensure every network-facing method accepts `context.Context` for cancellation and timeouts.
 - **Graceful Error Handling**: Return structured errors (e.g., `model.ItemError`) more consistently to help library users diagnose partial failures.
 
-## Proposed `pkg/bits` API
+## `pkg/bits` API
 
-The `pkg/bits` package will provide a high-level API to interact with various crypto providers.
+The `pkg/bits` package provides a high-level API to interact with various crypto providers.
+It is implemented in this PR — see `pkg/bits/` and `examples/` for working code.
 
-### The `Client` Interface
+### The `Client` struct
 
-The `Client` struct acts as a manager for multiple providers. It simplifies the process of interacting with different exchanges by handling provider initialization and selection.
+The `Client` struct acts as a manager for multiple providers. It simplifies the process of
+interacting with different exchanges by handling provider initialization and selection.
 
 ```go
 type Client struct {
     Config *config.Config
 }
 
-func NewClient(cfg *config.Config) *Client {
-    return &Client{Config: cfg}
-}
+func NewClient(cfg *config.Config) *Client
 
 // GetPrice retrieves the price for a symbol from a specific provider.
-func (c *Client) GetPrice(ctx context.Context, symbol string, providerID string) (model.Response[model.CoinPrice], error) {
-    // 1. Get provider from registry
-    // 2. Fetch price
-    // 3. Return result
-}
+func (c *Client) GetPrice(ctx context.Context, symbol string, providerID string) (model.Response[model.CoinPrice], error)
 
-// ComparePrices retrieves the price for a symbol from multiple providers.
-func (c *Client) ComparePrices(ctx context.Context, symbol string, providerIDs []string) ([]model.Response[model.CoinPrice], error) {
-    // 1. Concurrently fetch prices from each provider
-    // 2. Aggregate results
-    // 3. Return comparison
-}
+// ComparePrices retrieves the price for a symbol from multiple providers concurrently.
+func (c *Client) ComparePrices(ctx context.Context, symbol string, providerIDs []string) ([]model.Response[model.CoinPrice], error)
 ```
 
 ## Use Case: Multi-Exchange Quote Comparison
@@ -89,17 +81,21 @@ An external tool that compares quotes from different exchanges would need to:
 2. Fetch prices for the same symbol from each.
 3. Normalize and compare the results.
 
-### Current (Impossible) Code:
+### Previous (Impossible) Code:
 ```go
+// pseudo-code — this failed because internal/ cannot be imported by external packages
+package main
+
 import (
-    "github.com/mdnmdn/bits/internal/registry"
-    "github.com/mdnmdn/bits/internal/config"
+    "github.com/mdnmdn/bits/internal/registry"  // ← compile error: use of internal package
+    "github.com/mdnmdn/bits/internal/config"    // ← compile error: use of internal package
 )
 
-// This fails because internal/ cannot be imported
-cfg := &config.Config{...}
-binance, _ := registry.NewProvider("binance", cfg)
-bitget, _ := registry.NewProvider("bitget", cfg)
+func main() {
+    cfg := &config.Config{}
+    binance, _ := registry.NewProvider("binance", cfg)
+    bitget, _ := registry.NewProvider("bitget", cfg)
+}
 ```
 
 ### Proposed Ergonomics:
@@ -152,7 +148,7 @@ func main() {
 
 - **Wider Adoption**: Developers can use `bits` as a building block for their own trading bots, dashboards, and research tools.
 - **Code Reuse**: The logic for interacting with multiple exchanges (REST, WebSockets, normalization) is centralized and maintained once.
-- **Improved Maintainability**: Clear separation between core logic (`pkg/`) and CLI-specific presentation (`cmd/` and `internal/tui/`).
+- **Improved Maintainability**: Clear separation between core logic (`pkg/`) and CLI-specific presentation (`cmd/` and `internal/render/`).
 - **Standardized Crypto API**: A common set of interfaces and data models for diverse providers.
 
 ## Implementation Roadmap
@@ -174,3 +170,12 @@ func main() {
 4. **Phase 4: Community & Ecosystem**:
    - Encourage third-party provider contributions.
    - Build a showcase of tools (like the Quote Comparator) built on top of `bits`.
+
+## Next Steps
+
+The following design questions are deferred to a future iteration:
+
+- **`ComparePrices` error handling**: The current signature returns a top-level `error` alongside per-entry `res.Errors`. For a multi-provider call where individual providers may succeed or fail independently, it is worth deciding whether:
+  - The top-level error should be removed entirely (all failures encoded per-entry in `res.Errors`), or
+  - It is reserved only for unrecoverable setup failures (e.g. invalid config), with provider call failures always surfaced per-entry.
+  This affects library ergonomics and should be resolved before `pkg/bits` is considered stable.
