@@ -13,6 +13,7 @@ import (
 	"github.com/mdnmdn/bits/internal/provider/binance"
 	"github.com/mdnmdn/bits/internal/provider/bitget"
 	"github.com/mdnmdn/bits/internal/provider/coingecko"
+	"github.com/mdnmdn/bits/internal/provider/cryptocom"
 	"github.com/mdnmdn/bits/internal/provider/whitebit"
 )
 
@@ -25,6 +26,9 @@ var providerAliases = map[string]string{
 	"bg": "bitget",
 	// whitebit aliases
 	"wb": "whitebit",
+	// cryptocom aliases
+	"cdc": "cryptocom",
+	"cro": "cryptocom",
 }
 
 // ResolveProvider resolves an alias to the canonical provider name.
@@ -52,6 +56,8 @@ func NewProvider(name string, cfg *config.Config) (provider.Provider, error) {
 		return bitget.NewClient(cfg.Bitget), nil
 	case "whitebit":
 		return whitebit.NewClient(cfg.WhiteBit), nil
+	case "cryptocom":
+		return cryptocom.NewClient(cfg.CryptoCom), nil
 	default:
 		return nil, fmt.Errorf("unknown provider %q", name)
 	}
@@ -59,7 +65,7 @@ func NewProvider(name string, cfg *config.Config) (provider.Provider, error) {
 
 // AllProviderIDs returns the IDs of all registered providers.
 func AllProviderIDs() []string {
-	return []string{"coingecko", "binance", "bitget", "whitebit"}
+	return []string{"coingecko", "binance", "bitget", "whitebit", "cryptocom"}
 }
 
 // AllProviderIDsWithAliases returns all provider IDs including aliases.
@@ -69,5 +75,6 @@ func AllProviderIDsWithAliases() []string {
 		"binance", "bn",
 		"bitget", "bg",
 		"whitebit", "wb",
+		"cryptocom", "cdc", "cro",
 	}
 }
