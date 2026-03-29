@@ -20,6 +20,8 @@ var _ provider.ExchangeProvider = (*Client)(nil)
 var _ provider.PriceProvider = (*Client)(nil)
 var _ provider.TickerProvider = (*Client)(nil)
 var _ provider.OrderBookProvider = (*Client)(nil)
+var _ provider.PriceStreamProvider = (*Client)(nil)
+var _ provider.OrderBookStreamProvider = (*Client)(nil)
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -402,8 +404,8 @@ func TestCapabilities(t *testing.T) {
 	c := NewClient(config.CryptoComConfig{})
 	caps := c.Capabilities()
 
-	if len(caps) < 5 {
-		t.Errorf("expected at least 5 capabilities, got %d", len(caps))
+	if len(caps) < 7 {
+		t.Errorf("expected at least 7 capabilities, got %d", len(caps))
 	}
 
 	expected := []capability.CapabilityKey{
@@ -412,6 +414,8 @@ func TestCapabilities(t *testing.T) {
 		{Market: capability.MarketSpot, Feature: capability.FeaturePrice},
 		{Market: capability.MarketSpot, Feature: capability.FeatureTicker24h},
 		{Market: capability.MarketSpot, Feature: capability.FeatureOrderBook},
+		{Market: capability.MarketSpot, Feature: capability.FeatureStreamPrice},
+		{Market: capability.MarketSpot, Feature: capability.FeatureStreamOrderBook},
 	}
 	for _, key := range expected {
 		if !caps[key] {

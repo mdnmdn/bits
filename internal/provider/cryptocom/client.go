@@ -41,7 +41,7 @@ func (c *Client) ID() string { return providerID }
 func (c *Client) SetUserAgent(ua string) { c.userAgent = ua }
 
 // Capabilities returns the capability matrix for Crypto.com.
-// Only spot market is supported via the v2 REST API.
+// REST and WebSocket streaming are supported for the spot market.
 func (c *Client) Capabilities() capability.CapabilityMatrix {
 	s := capability.MarketSpot
 	return capability.NewCapabilityMatrix(
@@ -50,6 +50,8 @@ func (c *Client) Capabilities() capability.CapabilityMatrix {
 		capability.CapabilityKey{Market: s, Feature: capability.FeaturePrice},
 		capability.CapabilityKey{Market: s, Feature: capability.FeatureTicker24h},
 		capability.CapabilityKey{Market: s, Feature: capability.FeatureOrderBook},
+		capability.CapabilityKey{Market: s, Feature: capability.FeatureStreamPrice},
+		capability.CapabilityKey{Market: s, Feature: capability.FeatureStreamOrderBook},
 	)
 }
 

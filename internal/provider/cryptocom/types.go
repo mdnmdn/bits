@@ -62,3 +62,44 @@ type apiBookRow struct {
 	Asks [][]float64 `json:"asks"`
 	T    int64       `json:"t"` // snapshot timestamp (ms); may be absent
 }
+
+// ── WebSocket types ───────────────────────────────────────────────────────────
+
+// wsEnvelope is the common envelope for all Crypto.com v2 WebSocket messages.
+type wsEnvelope struct {
+	ID     int64           `json:"id"`
+	Method string          `json:"method"`
+	Code   int             `json:"code"`
+	Result json.RawMessage `json:"result"`
+}
+
+// wsResult is the result payload for subscription data messages.
+// The same envelope is used for both subscription confirmations and data pushes.
+type wsResult struct {
+	Subscription   string          `json:"subscription"`
+	Channel        string          `json:"channel"`
+	InstrumentName string          `json:"instrument_name"`
+	Data           json.RawMessage `json:"data"`
+}
+
+// wsTickerData is a single ticker update from the WebSocket "ticker" channel.
+// IMPORTANT: unlike the REST ticker where t = trade count, here t = timestamp (ms).
+type wsTickerData struct {
+	I string  `json:"i"` // instrument name
+	B float64 `json:"b"` // best bid price
+	K float64 `json:"k"` // best ask price
+	A float64 `json:"a"` // latest trade price
+	T int64   `json:"t"` // timestamp (ms)
+	V float64 `json:"v"` // volume 24h (base)
+	H float64 `json:"h"` // high 24h
+	L float64 `json:"l"` // low 24h
+	C float64 `json:"c"` // last / close price
+}
+
+// wsBookData is a single order book snapshot from the WebSocket "book" channel.
+// Each bid/ask entry is [price, qty, num_orders]; num_orders is optional.
+type wsBookData struct {
+	Bids [][]float64 `json:"bids"`
+	Asks [][]float64 `json:"asks"`
+	T    int64       `json:"t"` // snapshot timestamp (ms)
+}
