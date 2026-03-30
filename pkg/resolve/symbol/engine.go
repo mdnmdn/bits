@@ -1,3 +1,12 @@
+// Package symbol provides symbol resolution and normalization.
+//
+// There are two entry points:
+//
+// 1. SymbolEngine (engine.go) - Newer, used by pkg/bits library, has disk caching
+// 2. SymbolResolver (resolver.go) - Older, used by CLI commands, in-memory only
+//
+// The SymbolEngine is the recommended entry point for library users.
+// SymbolResolver is kept for CLI compatibility.
 package symbol
 
 import (
@@ -17,7 +26,7 @@ type SymbolEngine struct {
 	providers   map[string]provider.Provider
 	lookups     map[string]*lookupTable
 	translators map[string]translators.SymbolTranslator
-	cfg         config.SymbolConfig
+	cfg         *config.Config
 	cache       *diskCache
 }
 
@@ -26,13 +35,14 @@ type lookupKey struct {
 	market   model.MarketType
 }
 
-func NewSymbolEngine(cfg config.SymbolConfig) *SymbolEngine {
+func NewSymbolEngine(cfg *config.Config) *SymbolEngine {
+	symbolCfg := cfg.Symbol
 	return &SymbolEngine{
 		providers:   make(map[string]provider.Provider),
 		lookups:     make(map[string]*lookupTable),
 		translators: make(map[string]translators.SymbolTranslator),
 		cfg:         cfg,
-		cache:       newDiskCache(cfg.GetCacheDir(), cfg.GetCacheTTL()),
+		cache:       newDiskCache(symbolCfg.GetCacheDir(), symbolCfg.GetCacheTTL()),
 	}
 }
 
@@ -52,7 +62,7 @@ func (e *SymbolEngine) getProvider(id string) (provider.Provider, error) {
 		return p, nil
 	}
 
-	p, err := registry.NewProvider(id, &config.Config{})
+	p, err := registry.NewProvider(id, e.cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -142,8 +152,8 @@ func (e *SymbolEngine) ResolveToModel(ctx context.Context, providerID string, in
 	}
 
 	translator := e.getTranslator(providerID)
-	base, quote := translator.NormalizeInput(input)
-	if base == "" || quote == "" {
+	base, quote, err := translator.NormalizeInput(input)
+	if err != nil || base == "" || quote == "" {
 		return nil, nil
 	}
 

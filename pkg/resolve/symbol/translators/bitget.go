@@ -22,17 +22,13 @@ func (t *BitgetTranslator) ToNormalized(providerSymbol string, market model.Mark
 		symbol = strings.TrimSuffix(symbol, "_UMCBL")
 		symbol = strings.TrimSuffix(symbol, "_PERP")
 	}
-	base, quote := normalizeInput(symbol)
+	base, quote, _ := normalizeInput(symbol)
 	if base == "" {
 		return providerSymbol
 	}
 	return base + "-" + quote
 }
 
-func (t *BitgetTranslator) NormalizeInput(input string) (string, string) {
+func (t *BitgetTranslator) NormalizeInput(input string) (string, string, error) {
 	return normalizeInput(input)
-}
-
-func (t *BitgetTranslator) MatchesPattern(symbol string, market model.MarketType) bool {
-	return true
 }

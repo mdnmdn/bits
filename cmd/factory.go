@@ -20,7 +20,7 @@ func newResolver(cfg *config.Config) *resolve.Resolver {
 }
 
 func newSymbolEngine(cfg *config.Config) *symbol.SymbolEngine {
-	return symbol.NewSymbolEngine(cfg.Symbol)
+	return symbol.NewSymbolEngine(cfg)
 }
 
 func resolveOpts(cmd *cobra.Command) resolve.ResolutionOpts {

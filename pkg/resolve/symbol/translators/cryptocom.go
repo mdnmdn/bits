@@ -21,17 +21,13 @@ func (t *CryptoComTranslator) ToNormalized(providerSymbol string, market model.M
 	if market == model.MarketFutures {
 		symbol = strings.TrimSuffix(symbol, "-PERP")
 	}
-	base, quote := normalizeInput(symbol)
+	base, quote, _ := normalizeInput(symbol)
 	if base == "" {
 		return providerSymbol
 	}
 	return base + "-" + quote
 }
 
-func (t *CryptoComTranslator) NormalizeInput(input string) (string, string) {
+func (t *CryptoComTranslator) NormalizeInput(input string) (string, string, error) {
 	return normalizeInput(input)
-}
-
-func (t *CryptoComTranslator) MatchesPattern(symbol string, market model.MarketType) bool {
-	return true
 }

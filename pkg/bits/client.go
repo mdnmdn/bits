@@ -53,11 +53,23 @@ type Client struct {
 // Option is a functional option for configuring a Client.
 type Option func(*Client)
 
-// WithSymbolEngine enables the symbol resolution engine with caching.
+// WithSymbolEngine enables the symbol resolution engine with disk caching.
 // This is recommended for applications that process multiple symbols.
+//
+// # Cache Behavior
+//
+// The engine caches exchange symbol lists to disk to reduce API calls:
+//   - Default TTL: 5 minutes (configurable via config)
+//   - First call: fetches from exchange API (~200-500ms)
+//   - Subsequent calls: reads from disk cache (~1-5ms)
+//
+// Use InvalidateSymbolCache() to force-refresh the cache:
+//
+//	client.InvalidateSymbolCache("binance", "spot") // refresh single market
+//	client.InvalidateAllSymbolCache()            // refresh all markets
 func WithSymbolEngine() Option {
 	return func(c *Client) {
-		c.symbolEngine = symbol.NewSymbolEngine(c.Config.Symbol)
+		c.symbolEngine = symbol.NewSymbolEngine(c.Config)
 	}
 }
 
@@ -130,7 +142,7 @@ func (c *Client) getSymbolEngine() *symbol.SymbolEngine {
 	if c.symbolEngine != nil {
 		return c.symbolEngine
 	}
-	return symbol.NewSymbolEngine(c.Config.Symbol)
+	return symbol.NewSymbolEngine(c.Config)
 }
 
 // GetPrice retrieves the price for a symbol from a specific provider.

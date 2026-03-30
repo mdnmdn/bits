@@ -17,7 +17,7 @@ func (t *WhiteBitTranslator) ProviderID() string {
 }
 
 func (t *WhiteBitTranslator) ToNormalized(providerSymbol string, market model.MarketType) string {
-	base, quote := normalizeInput(providerSymbol)
+	base, quote, _ := normalizeInput(providerSymbol)
 	if base == "" {
 		return providerSymbol
 	}
@@ -27,10 +27,6 @@ func (t *WhiteBitTranslator) ToNormalized(providerSymbol string, market model.Ma
 	return base + "-" + quote
 }
 
-func (t *WhiteBitTranslator) NormalizeInput(input string) (string, string) {
+func (t *WhiteBitTranslator) NormalizeInput(input string) (string, string, error) {
 	return normalizeInput(input)
-}
-
-func (t *WhiteBitTranslator) MatchesPattern(symbol string, market model.MarketType) bool {
-	return true
 }

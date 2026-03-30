@@ -42,7 +42,8 @@
       "Bash(go get:*)",
       "Bash(gh repo:*)",
       "Bash(brew list:*)",
-      "Bash(/opt/homebrew/Cellar/gh/2.64.0_1/bin/gh repo:*)"
+      "Bash(/opt/homebrew/Cellar/gh/2.64.0_1/bin/gh repo:*)",
+      "Bash(go mod:*)"
     ]
   }
 }

@@ -7,13 +7,12 @@ import (
 
 	"github.com/mdnmdn/bits/pkg/bits"
 	"github.com/mdnmdn/bits/pkg/config"
+	"github.com/mdnmdn/bits/pkg/model"
 )
 
 func main() {
 	ctx := context.Background()
 
-	// Initialize the library with a manual configuration.
-	// We enable spot markets for Binance and Bitget.
 	cfg := &config.Config{
 		Binance: config.BinanceConfig{
 			Spot: config.MarketConfig{Enabled: true},
@@ -26,18 +25,17 @@ func main() {
 		},
 	}
 
-	client := bits.NewClient(cfg)
+	// Use WithSymbolEngine() to enable automatic symbol resolution
+	// This handles different symbol formats automatically
+	client := bits.NewClient(cfg, bits.WithSymbolEngine())
 
-	// Compare BTC prices across multiple exchanges concurrently.
-	// Note: Different exchanges use different symbol formats:
-	// - Binance/Bitget: BTCUSDT
-	// - WhiteBit: BTC_USDT
-	// The library expects you to use the correct format for each provider.
-	symbol := "BTCUSDT"
-	exchanges := []string{"binance", "bitget"}
+	// Compare BTC prices across multiple exchanges
+	// With the engine, we can use normalized symbol format for all exchanges
+	normalizedSymbol := "BTC-USDT"
+	exchanges := []string{"binance", "bitget", "whitebit"}
 
-	fmt.Printf("Comparing prices for %s on Binance and Bitget...\n\n", symbol)
-	results, err := client.ComparePrices(ctx, symbol, exchanges)
+	fmt.Printf("Comparing prices for %s across exchanges...\n\n", normalizedSymbol)
+	results, err := client.ComparePricesWithResolution(ctx, normalizedSymbol, exchanges, model.MarketSpot)
 	if err != nil {
 		log.Fatalf("Critical error during comparison: %v", err)
 	}

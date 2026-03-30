@@ -21,17 +21,13 @@ func (t *MEXCTranslator) ToNormalized(providerSymbol string, market model.Market
 	if market == model.MarketFutures && strings.HasPrefix(symbol, "CCM") {
 		symbol = strings.TrimPrefix(symbol, "CCM")
 	}
-	base, quote := normalizeInput(symbol)
+	base, quote, _ := normalizeInput(symbol)
 	if base == "" {
 		return providerSymbol
 	}
 	return base + "-" + quote
 }
 
-func (t *MEXCTranslator) NormalizeInput(input string) (string, string) {
+func (t *MEXCTranslator) NormalizeInput(input string) (string, string, error) {
 	return normalizeInput(input)
-}
-
-func (t *MEXCTranslator) MatchesPattern(symbol string, market model.MarketType) bool {
-	return true
 }

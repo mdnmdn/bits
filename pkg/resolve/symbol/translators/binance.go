@@ -15,17 +15,13 @@ func (t *BinanceTranslator) ProviderID() string {
 }
 
 func (t *BinanceTranslator) ToNormalized(providerSymbol string, market model.MarketType) string {
-	base, quote := normalizeInput(providerSymbol)
+	base, quote, _ := normalizeInput(providerSymbol)
 	if base == "" {
 		return providerSymbol
 	}
 	return base + "-" + quote
 }
 
-func (t *BinanceTranslator) NormalizeInput(input string) (string, string) {
+func (t *BinanceTranslator) NormalizeInput(input string) (string, string, error) {
 	return normalizeInput(input)
-}
-
-func (t *BinanceTranslator) MatchesPattern(symbol string, market model.MarketType) bool {
-	return true
 }
