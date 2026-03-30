@@ -6,7 +6,6 @@ import (
 	rendertable "github.com/mdnmdn/bits/internal/render/table"
 	"github.com/mdnmdn/bits/pkg/capability"
 	"github.com/mdnmdn/bits/pkg/resolve"
-	"github.com/mdnmdn/bits/pkg/resolve/symbol"
 	"github.com/spf13/cobra"
 
 	"github.com/mdnmdn/bits/pkg/provider"
@@ -49,11 +48,12 @@ func runPrice(cmd *cobra.Command, args []string) error {
 		return rerr
 	}
 
-	sr := symbol.New(p)
+	symEngine := newSymbolEngine(cfg)
+	providerID := p.ID()
 	resolvedArgs := make([]string, len(args))
 	for i, arg := range args {
-		resolved, err := sr.Resolve(cmd.Context(), arg, market)
-		if err != nil {
+		resolved, err := symEngine.Resolve(cmd.Context(), providerID, arg, market)
+		if err != nil || resolved == "" {
 			resolvedArgs[i] = arg
 		} else {
 			resolvedArgs[i] = resolved

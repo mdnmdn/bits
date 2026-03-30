@@ -72,6 +72,11 @@ func (e *SymbolEngine) getLookup(ctx context.Context, providerID string, market 
 		return lk, nil
 	}
 
+	p, err := e.getProvider(providerID)
+	if err != nil {
+		return nil, err
+	}
+
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
@@ -79,7 +84,7 @@ func (e *SymbolEngine) getLookup(ctx context.Context, providerID string, market 
 		return lk, nil
 	}
 
-	symbols, err := e.loadSymbols(ctx, providerID, market)
+	symbols, err := e.loadSymbolsFromProvider(ctx, p, providerID, market)
 	if err != nil {
 		return nil, err
 	}
@@ -90,15 +95,10 @@ func (e *SymbolEngine) getLookup(ctx context.Context, providerID string, market 
 	return lk, nil
 }
 
-func (e *SymbolEngine) loadSymbols(ctx context.Context, providerID string, market model.MarketType) ([]model.Symbol, error) {
+func (e *SymbolEngine) loadSymbolsFromProvider(ctx context.Context, p provider.Provider, providerID string, market model.MarketType) ([]model.Symbol, error) {
 	symbols, found, err := e.cache.get(providerID, string(market))
 	if err == nil && found {
 		return symbols, nil
-	}
-
-	p, err := e.getProvider(providerID)
-	if err != nil {
-		return nil, err
 	}
 
 	ep, ok := p.(provider.ExchangeProvider)

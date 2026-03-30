@@ -48,9 +48,10 @@ func runBook(cmd *cobra.Command, args []string) error {
 		return rerr
 	}
 
-	symResolver := newSymbolResolver(p)
+	symEngine := newSymbolEngine(cfg)
+	providerID := p.ID()
 	symbol := args[0]
-	resolved, err := symResolver.Resolve(cmd.Context(), symbol, market)
+	resolved, err := symEngine.Resolve(cmd.Context(), providerID, symbol, market)
 	if err == nil && resolved != "" {
 		symbol = resolved
 	}

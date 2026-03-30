@@ -4,7 +4,6 @@ import (
 	"github.com/mdnmdn/bits/internal/render"
 	"github.com/mdnmdn/bits/pkg/config"
 	"github.com/mdnmdn/bits/pkg/model"
-	"github.com/mdnmdn/bits/pkg/provider"
 	"github.com/mdnmdn/bits/pkg/provider/registry"
 	"github.com/mdnmdn/bits/pkg/resolve"
 	"github.com/mdnmdn/bits/pkg/resolve/symbol"
@@ -20,8 +19,8 @@ func newResolver(cfg *config.Config) *resolve.Resolver {
 	return resolve.New(cfg, registry.NewProvider, registry.AllProviderIDs)
 }
 
-func newSymbolResolver(p provider.Provider) *symbol.SymbolResolver {
-	return symbol.New(p)
+func newSymbolEngine(cfg *config.Config) *symbol.SymbolEngine {
+	return symbol.NewSymbolEngine(cfg.Symbol)
 }
 
 func resolveOpts(cmd *cobra.Command) resolve.ResolutionOpts {

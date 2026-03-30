@@ -227,7 +227,7 @@ func Load() (*Config, string, error) {
 	v.SetDefault("provider", "coingecko")
 	v.SetDefault("binance.spot.enabled", true)
 	v.SetDefault("symbol.cache_ttl", "5m")
-	v.SetDefault("symbol.cache_dir", "/tmp/bits")
+	v.SetDefault("symbol.cache_dir", filepath.Join(os.TempDir(), "bits"))
 
 	if err := v.ReadInConfig(); err != nil {
 		// Ignore "config file not found" errors - use defaults
@@ -348,7 +348,7 @@ enabled = false
 # Symbol resolution cache settings
 [symbol]
 # cache_ttl = "5m"       # TTL for symbol cache (e.g., 5m, 10m, 1h)
-# cache_dir = "/tmp/bits"  # Cache directory for symbol data
+# cache_dir = ""  # Cache directory (default: system temp/bits)
 `
 
 func defaultSaveDir() string {

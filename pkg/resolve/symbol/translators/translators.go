@@ -39,7 +39,7 @@ func normalizeInput(input string) (base, quote string) {
 		}
 	}
 
-	for i := len(input) - 1; i >= 1; i++ {
+	for i := len(input) - 1; i > 0; i-- {
 		possibleQuote := input[i:]
 		if commonQuoteAssets[possibleQuote] {
 			base = input[:i]
