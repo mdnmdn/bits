@@ -29,10 +29,14 @@ func main() {
 	client := bits.NewClient(cfg)
 
 	// Compare BTC prices across multiple exchanges concurrently.
+	// Note: Different exchanges use different symbol formats:
+	// - Binance/Bitget: BTCUSDT
+	// - WhiteBit: BTC_USDT
+	// The library expects you to use the correct format for each provider.
 	symbol := "BTCUSDT"
-	exchanges := []string{"binance", "bitget", "whitebit"}
+	exchanges := []string{"binance", "bitget"}
 
-	fmt.Printf("Comparing prices for %s...\n\n", symbol)
+	fmt.Printf("Comparing prices for %s on Binance and Bitget...\n\n", symbol)
 	results, err := client.ComparePrices(ctx, symbol, exchanges)
 	if err != nil {
 		log.Fatalf("Critical error during comparison: %v", err)

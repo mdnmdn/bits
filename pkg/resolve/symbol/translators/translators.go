@@ -20,6 +20,33 @@ type SymbolTranslator interface {
 	MatchesPattern(symbol string, market model.MarketType) bool
 }
 
+func NormalizeSymbol(symbol string) string {
+	if symbol == "" {
+		return symbol
+	}
+
+	symbol = strings.ToUpper(symbol)
+
+	for _, sep := range separators {
+		parts := strings.Split(symbol, string(sep))
+		if len(parts) == 2 && parts[0] != "" && parts[1] != "" {
+			return parts[0] + "-" + parts[1]
+		}
+	}
+
+	for i := len(symbol) - 1; i > 0; i-- {
+		possibleQuote := symbol[i:]
+		if commonQuoteAssets[possibleQuote] {
+			base := symbol[:i]
+			if base != "" {
+				return base + "-" + possibleQuote
+			}
+		}
+	}
+
+	return symbol
+}
+
 func normalizeInput(input string) (base, quote string) {
 	input = strings.TrimSpace(input)
 	if input == "" {

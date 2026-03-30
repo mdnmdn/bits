@@ -216,19 +216,19 @@ func keyString(k lookupKey) string {
 	return k.provider + "_" + string(k.market)
 }
 
+var translatorRegistry = make(map[string]translators.SymbolTranslator)
+
 func getTranslator(providerID string) translators.SymbolTranslator {
-	switch providerID {
-	case "binance":
-		return translators.NewBinanceTranslator()
-	case "whitebit":
-		return translators.NewWhiteBitTranslator()
-	case "cryptocom":
-		return translators.NewCryptoComTranslator()
-	case "mexc":
-		return translators.NewMEXCTranslator()
-	case "bitget":
-		return translators.NewBitgetTranslator()
-	default:
-		return translators.NewDefaultTranslator()
+	if t, ok := translatorRegistry[providerID]; ok {
+		return t
 	}
+	return translators.NewDefaultTranslator()
+}
+
+func init() {
+	translatorRegistry["binance"] = translators.NewBinanceTranslator()
+	translatorRegistry["whitebit"] = translators.NewWhiteBitTranslator()
+	translatorRegistry["cryptocom"] = translators.NewCryptoComTranslator()
+	translatorRegistry["mexc"] = translators.NewMEXCTranslator()
+	translatorRegistry["bitget"] = translators.NewBitgetTranslator()
 }
