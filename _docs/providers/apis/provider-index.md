@@ -9,22 +9,28 @@ _docs/providers/apis/
 ├── provider-index.md          # This file
 ├── binance/
 │   ├── binance-general.md     # Base URL, rate limits, auth, exchange info APIs
-│   └── binance-market.md      # Prices, orderbooks, candles, tickers, streams
+│   ├── binance-market.md      # Prices, orderbooks, candles, tickers, streams
+│   └── binance-market-ws.md   # WebSocket spot market streams
 ├── bitget/
 │   ├── bitget-general.md
-│   └── bitget-market.md
+│   ├── bitget-market.md
+│   └── bitget-market-ws.md    # WebSocket spot market streams (pending)
 ├── coingecko/
 │   ├── coingecko-general.md
-│   └── coingecko-market.md
+│   ├── coingecko-market.md
+│   └── coingecko-market-ws.md # WebSocket spot market streams
 ├── whitebit/
 │   ├── whitebit-general.md
-│   └── whitebit-market.md
+│   ├── whitebit-market.md
+│   └── whitebit-market-ws.md  # WebSocket spot market streams
 ├── cryptocom/
 │   ├── cryptocom-general.md
-│   └── cryptocom-market.md
+│   ├── cryptocom-market.md
+│   └── cryptocom-market-ws.md # WebSocket spot market streams
 └── mexc/
     ├── mexc-general.md
-    └── mexc-market.md
+    ├── mexc-market.md
+    └── mexc-market-ws.md      # WebSocket spot market streams
 ```
 
 ## Document Template
@@ -59,6 +65,8 @@ APIs covered:
 
 ## Progress
 
+### REST API Documentation
+
 | Provider | General Doc | Market Doc | Status |
 |----------|-------------|------------|--------|
 | Binance  | [x] | [x] | done |
@@ -67,6 +75,17 @@ APIs covered:
 | WhiteBit | [x] | [x] | done |
 | Crypto.com | [x] | [x] | done |
 | MEXC     | [x] | [x] | done |
+
+### WebSocket Documentation (Spot Markets)
+
+| Provider | WS Market Doc | Status | Notes |
+|----------|---------------|--------|-------|
+| Binance  | [x] | done | Raw WS, combined streams, 8 stream types |
+| Bitget   | [x] | done | V2 endpoint, 6 channels, CRC32 checksum for books |
+| CoinGecko | [x] | done | ActionCable protocol, Beta, paid-only (Analyst+) |
+| WhiteBit | [x] | done | JSON-RPC, 6 stream types |
+| Crypto.com | [x] | done | JSON-RPC 2.0, 4 stream types |
+| MEXC     | [x] | done | Protobuf format, 7 stream types, 30 subs/connection |
 
 ## Provider Capability Summary
 
