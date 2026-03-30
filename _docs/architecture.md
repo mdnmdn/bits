@@ -266,7 +266,7 @@ bits/
 │       ├── resolver.go      # Resolver, ResolutionOpts, Resolve()
 │       ├── require.go       # Require[T] type assertion helper
 │       ├── fanout.go        # FanOut[T] parallel multi-symbol helper
-│       └── symbol/          # Symbol resolution + normalization
+│       └── symbol/          # Symbol resolution + normalization (see _docs/symbol-engine.md)
 ├── internal/                # CLI-only internals (not importable by external tools)
 │   ├── auth/
 │   │   └── signature.go     # HMAC-SHA256 helpers (used by Bitget)

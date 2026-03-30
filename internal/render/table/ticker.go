@@ -18,7 +18,7 @@ func RenderTickers(w io.Writer, res model.Response[[]model.Ticker24h]) error {
 		lo := fmtOptF(t.LowPrice, "%.2f")
 		vol := fmtOptF(t.Volume, "%.2f")
 		_, _ = fmt.Fprintf(tw, "%s\t%s\t%.2f\t%s\t%s\t%s\t%s\n",
-			t.Symbol, t.Market, t.LastPrice, chg, hi, lo, vol)
+			NormalizeSymbol(t.Symbol), t.Market, t.LastPrice, chg, hi, lo, vol)
 	}
 	_ = tw.Flush()
 	printFooter(w, res)

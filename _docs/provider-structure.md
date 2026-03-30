@@ -10,6 +10,7 @@ Work through the steps in order; run `go build ./...` after each file to catch i
 | Document | Purpose |
 |----------|---------|
 | `_docs/architecture.md` | High-level architecture, interface hierarchy, fallback policy |
+| `_docs/symbol-engine.md` | Symbol resolution, normalization, disk caching |
 | `_docs/data-model.md` | All model types (`Response[T]`, `Ticker24h`, `OrderBook`, …) |
 | `_docs/config.md` | Config file format, env var conventions, viper setup |
 | `_docs/ws-handling.md` | WebSocket infrastructure (`ws.Manager`, `ws.BaseClient`) |
