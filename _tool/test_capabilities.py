@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import subprocess
 import json
-import time
 import argparse
 import sys
 import os
@@ -28,6 +27,9 @@ FEATURE_COMMANDS = {
     "stream_price": ["stream", "price", "%s"],
     "stream_order_book": ["stream", "book", "%s"],
 }
+
+# Features that don't strictly require a market context in the CLI
+MARKET_AGNOSTIC_FEATURES = ["server_time", "markets_list", "coin_info", "search", "trending"]
 
 def run_bits(args, timeout=None, format_json=True):
     cmd = ["./bits"] + args
@@ -75,6 +77,9 @@ def parse_capabilities():
     matrix = {p: [] for p in providers}
 
     for line in lines[1:]:
+        line = line.strip()
+        if not line or line.startswith('-'):
+            continue
         parts = line.split()
         if len(parts) < 3:
             continue
@@ -102,7 +107,9 @@ def test_capability(provider, feat, market):
         else:
             cmd_args.append(arg)
 
-    bits_args = cmd_args + ["-p", provider, "-m", market]
+    bits_args = cmd_args + ["-p", provider]
+    if feat not in MARKET_AGNOSTIC_FEATURES:
+        bits_args += ["-m", market]
 
     is_stream = feat.startswith("stream_")
     timeout = 5 if is_stream else 15
@@ -112,48 +119,76 @@ def test_capability(provider, feat, market):
     if code != 0:
         # Check if it's a known error like "restricted location" or "API key not configured"
         error_msg = stderr.strip().splitlines()[0] if stderr.strip() else "Unknown error"
-        if any(msg in error_msg for msg in ["restricted location", "API key not configured", "not configured", "bad handshake", "plan restricted"]):
+
+        skip_patterns = [
+            "restricted location",
+            "API key not configured",
+            "binance: futures client not configured",
+            "websocket: bad handshake",
+            "plan restricted"
+        ]
+
+        if any(pattern in error_msg for pattern in skip_patterns):
             return False, f"SKIPPED ({error_msg})"
         return False, stderr.strip() or "Unknown error"
 
     if is_stream:
         # For streams, we check if we got at least some JSON data
-        if not stdout.strip():
+        content = stdout.strip()
+        if not content:
             return False, "No stream data received"
 
-        # Some streams might output pretty-printed JSON (multi-line)
-        # or JSONL (one object per line).
-        # Let's try a more robust way to check for valid JSON.
+        # Try to parse at least one valid JSON object from the output.
+        # It could be JSONL (one object per line) or multiple pretty-printed objects.
 
-        # Try to find JSON objects in the output
-        try:
-            # First attempt: check if any line is valid JSON (JSONL style)
-            found_valid = False
-            for line in stdout.strip().split('\n'):
-                if line.strip():
-                    try:
-                        json.loads(line)
-                        found_valid = True
-                        break
-                    except json.JSONDecodeError:
-                        continue
+        # Strategy: Search for JSON objects by finding matching braces
+        # A simple but effective way for bits output:
 
-            if found_valid:
-                return True, "OK (Stream)"
+        def find_json_objects(text):
+            objs = []
+            stack = 0
+            start = -1
+            for i, char in enumerate(text):
+                if char == '{':
+                    if stack == 0:
+                        start = i
+                    stack += 1
+                elif char == '}':
+                    stack -= 1
+                    if stack == 0 and start != -1:
+                        objs.append(text[start:i+1])
+                        start = -1
+            return objs
 
-            # Second attempt: try to see if it's a single pretty-printed JSON object
-            # or multiple pretty-printed JSON objects separated by something (or nothing)
-            # A simple way: check if it starts with { and has a } somewhere
-            if '{' in stdout and '}' in stdout:
-                 # Just looking for basic JSON structure to validate it got something
-                 return True, "OK (Stream)"
+        found_valid = False
+        potential_objs = find_json_objects(content)
 
-            # Third attempt: try to see if it's multiple objects not separated by newlines
-            # but this is unlikely with bits.
+        for obj_str in potential_objs:
+            try:
+                json.loads(obj_str)
+                found_valid = True
+                break
+            except json.JSONDecodeError:
+                continue
 
-            return False, f"Could not find valid JSON in stream output (first 100 chars): {stdout[:100]}"
-        except Exception as e:
-            return False, f"Error parsing stream output: {str(e)}"
+        if found_valid:
+            return True, "OK (Stream)"
+
+        # Fallback to line-by-line just in case
+        for line in content.splitlines():
+            line = line.strip()
+            if line:
+                try:
+                    json.loads(line)
+                    found_valid = True
+                    break
+                except json.JSONDecodeError:
+                    continue
+
+        if found_valid:
+            return True, "OK (Stream)"
+
+        return False, f"Could not find valid JSON in stream output (first 100 chars): {content[:100]}"
 
     try:
         data = json.loads(stdout)
@@ -166,7 +201,12 @@ def test_capability(provider, feat, market):
                 if "restricted location" in stdout or "API key not configured" in stdout:
                      return False, f"SKIPPED (Restricted/No Key in JSON)"
                 return False, "Empty data in response"
-            if isinstance(res_data, list) and len(res_data) == 0:
+
+            # Feature-specific deep checks
+            if feat == "exchange_info":
+                if not res_data.get("symbols"):
+                    return False, "No symbols in exchange_info"
+            elif isinstance(res_data, list) and len(res_data) == 0:
                 return False, "Empty data list in response"
 
         return True, "OK"
@@ -234,6 +274,9 @@ def main():
 
     print("-" * 40)
     print(f"{'TOTAL':15} | OK: {total_ok:2} | FAILED: {total_failed:2} | SKIPPED: {total_skipped:2}")
+
+    if total_failed > 0:
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
