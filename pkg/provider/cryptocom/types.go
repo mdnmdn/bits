@@ -1,14 +1,35 @@
 package cryptocom
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"strconv"
+)
 
 // apiEnvelope is the common response envelope for all Crypto.com v2 REST API responses.
 // code 0 = success; non-zero = error.
+// Code can be either int or string depending on the endpoint.
+// Error responses include "msg" field.
 type apiEnvelope struct {
 	ID     int64           `json:"id"`
 	Method string          `json:"method"`
-	Code   int             `json:"code"`
+	Code   json.RawMessage `json:"code"`
+	Msg    string          `json:"msg"`
 	Result json.RawMessage `json:"result"`
+}
+
+func (e *apiEnvelope) GetCode() (int, error) {
+	if len(e.Code) == 0 {
+		return 0, nil
+	}
+	var codeInt int
+	if err := json.Unmarshal(e.Code, &codeInt); err != nil {
+		var codeStr string
+		if err := json.Unmarshal(e.Code, &codeStr); err != nil {
+			return 0, err
+		}
+		return strconv.Atoi(codeStr)
+	}
+	return codeInt, nil
 }
 
 // apiInstrumentsResult is the result payload for public/get-instruments.
@@ -36,15 +57,17 @@ type apiTickerResult struct {
 // apiTickerData holds the 24h rolling statistics for a single instrument.
 // Field names follow the Crypto.com v2 API single-letter convention.
 type apiTickerData struct {
-	I  string  `json:"i"`  // instrument name
-	V  float64 `json:"v"`  // volume 24h (base currency)
-	VV float64 `json:"vv"` // volume value 24h (quote currency)
-	L  float64 `json:"l"`  // lowest price 24h
-	H  float64 `json:"h"`  // highest price 24h
-	O  float64 `json:"o"`  // open price
-	C  float64 `json:"c"`  // last / close price
-	P  float64 `json:"p"`  // price change (absolute: c - o)
-	T  int64   `json:"t"`  // trade count 24h
+	I  string `json:"i"`  // instrument name
+	A  string `json:"a"`  // last price (ask)
+	B  string `json:"b"`  // best bid price
+	V  string `json:"v"`  // volume 24h (base currency)
+	VV string `json:"vv"` // volume value 24h (quote currency)
+	L  string `json:"l"`  // lowest price 24h
+	H  string `json:"h"`  // highest price 24h
+	O  string `json:"o"`  // open price
+	C  string `json:"c"`  // price change (ratio, e.g., 0.0163 = 1.63%)
+	P  string `json:"p"`  // price change (absolute: a - o)
+	T  int64  `json:"t"`  // timestamp (ms)
 }
 
 // apiBookResult is the result payload for public/get-book.
@@ -57,10 +80,11 @@ type apiBookResult struct {
 
 // apiBookRow holds one snapshot of bids and asks.
 // Each entry is [price, quantity, num_orders] where num_orders may be absent.
+// Price and quantity are returned as strings.
 type apiBookRow struct {
-	Bids [][]float64 `json:"bids"`
-	Asks [][]float64 `json:"asks"`
-	T    int64       `json:"t"` // snapshot timestamp (ms); may be absent
+	Bids [][]string `json:"bids"`
+	Asks [][]string `json:"asks"`
+	T    int64      `json:"t"` // snapshot timestamp (ms); may be absent
 }
 
 // ── WebSocket types ───────────────────────────────────────────────────────────

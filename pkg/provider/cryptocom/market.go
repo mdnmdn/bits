@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/mdnmdn/bits/pkg/model"
@@ -23,9 +24,12 @@ func (c *Client) Price(_ context.Context, ids []string, currency string) (model.
 			continue
 		}
 
+		price, _ := strconv.ParseFloat(data.A, 64)
+		changePctStr, _ := strconv.ParseFloat(data.C, 64)
+
 		var changePct *float64
-		if data.O != 0 {
-			v := data.P / data.O * 100
+		if changePctStr != 0 {
+			v := changePctStr * 100
 			changePct = &v
 		}
 
@@ -33,7 +37,7 @@ func (c *Client) Price(_ context.Context, ids []string, currency string) (model.
 			ID:        symbol,
 			Symbol:    symbol,
 			Currency:  currency,
-			Price:     data.C,
+			Price:     price,
 			Change24h: changePct,
 		})
 	}
@@ -49,30 +53,39 @@ func (c *Client) Price(_ context.Context, ids []string, currency string) (model.
 
 // Ticker24h fetches 24-hour rolling ticker statistics for the given symbol.
 // Only spot market is supported; the market parameter is accepted for interface compatibility.
-// Note: the Crypto.com v2 ticker endpoint (public/get-ticker) does not return bid/ask prices,
-// so Ticker24h.BidPrice and AskPrice are always nil for this provider.
 func (c *Client) Ticker24h(_ context.Context, symbol string, market model.MarketType) (model.Response[model.Ticker24h], error) {
 	data, err := c.fetchTicker(symbol)
 	if err != nil {
 		return model.Response[model.Ticker24h]{}, err
 	}
 
-	priceChange := data.P
+	lastPrice, _ := strconv.ParseFloat(data.A, 64)
+	bidPrice, _ := strconv.ParseFloat(data.B, 64)
+	openPrice, _ := strconv.ParseFloat(data.O, 64)
+	highPrice, _ := strconv.ParseFloat(data.H, 64)
+	lowPrice, _ := strconv.ParseFloat(data.L, 64)
+	volume, _ := strconv.ParseFloat(data.V, 64)
+	quoteVolume, _ := strconv.ParseFloat(data.VV, 64)
+	priceChange, _ := strconv.ParseFloat(data.P, 64)
+	priceChangePctStr, _ := strconv.ParseFloat(data.C, 64)
+
 	var priceChangePct *float64
-	if data.O != 0 {
-		v := data.P / data.O * 100
+	if priceChangePctStr != 0 {
+		v := priceChangePctStr * 100
 		priceChangePct = &v
 	}
 
 	ticker := model.Ticker24h{
 		Symbol:             symbol,
 		Market:             market,
-		LastPrice:          data.C,
-		OpenPrice:          &data.O,
-		HighPrice:          &data.H,
-		LowPrice:           &data.L,
-		Volume:             &data.V,
-		QuoteVolume:        &data.VV,
+		LastPrice:          lastPrice,
+		BidPrice:           &bidPrice,
+		AskPrice:           &lastPrice,
+		OpenPrice:          &openPrice,
+		HighPrice:          &highPrice,
+		LowPrice:           &lowPrice,
+		Volume:             &volume,
+		QuoteVolume:        &quoteVolume,
 		PriceChange:        &priceChange,
 		PriceChangePercent: priceChangePct,
 	}
@@ -102,8 +115,12 @@ func (c *Client) OrderBook(_ context.Context, symbol string, market model.Market
 	if err := json.Unmarshal(body, &env); err != nil {
 		return model.Response[model.OrderBook]{}, fmt.Errorf("failed to parse book response: %w", err)
 	}
-	if env.Code != 0 {
-		return model.Response[model.OrderBook]{}, fmt.Errorf("API error (code %d)", env.Code)
+	code, err := env.GetCode()
+	if err != nil {
+		return model.Response[model.OrderBook]{}, fmt.Errorf("failed to parse code: %w", err)
+	}
+	if code != 0 {
+		return model.Response[model.OrderBook]{}, fmt.Errorf("API error (code %d): %s", code, env.Msg)
 	}
 
 	var result apiBookResult
@@ -111,17 +128,19 @@ func (c *Client) OrderBook(_ context.Context, symbol string, market model.Market
 		return model.Response[model.OrderBook]{}, fmt.Errorf("failed to parse book result: %w", err)
 	}
 
-	parseEntries := func(raw [][]float64) []model.OrderBookEntry {
+	parseEntries := func(raw [][]string) []model.OrderBookEntry {
 		entries := make([]model.OrderBookEntry, 0, len(raw))
 		for _, e := range raw {
 			if len(e) >= 2 {
-				entries = append(entries, model.OrderBookEntry{Price: e[0], Quantity: e[1]})
+				price, _ := strconv.ParseFloat(e[0], 64)
+				qty, _ := strconv.ParseFloat(e[1], 64)
+				entries = append(entries, model.OrderBookEntry{Price: price, Quantity: qty})
 			}
 		}
 		return entries
 	}
 
-	var bids, asks [][]float64
+	var bids, asks [][]string
 	var snapshotTime *time.Time
 
 	if len(result.Data) > 0 {
@@ -166,8 +185,12 @@ func (c *Client) fetchTicker(symbol string) (*apiTickerData, error) {
 	if err := json.Unmarshal(body, &env); err != nil {
 		return nil, fmt.Errorf("failed to parse ticker response: %w", err)
 	}
-	if env.Code != 0 {
-		return nil, fmt.Errorf("API error (code %d)", env.Code)
+	code, err := env.GetCode()
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse code: %w", err)
+	}
+	if code != 0 {
+		return nil, fmt.Errorf("API error (code %d): %s", code, env.Msg)
 	}
 
 	var result apiTickerResult

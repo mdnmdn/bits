@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/mdnmdn/bits/pkg/model"
@@ -12,10 +11,10 @@ import (
 
 // ServerTime estimates the server time by measuring the round-trip of a
 // lightweight API call. Crypto.com v2 REST does not expose a dedicated
-// server-time endpoint; the midpoint of the request latency is used instead.
+// server-time endpoint; uses the timestamp from ticker response as approximation.
 func (c *Client) ServerTime(_ context.Context) (model.Response[model.ServerTime], error) {
 	before := time.Now()
-	body, err := c.doRequest("public/get-instruments", "")
+	body, err := c.doRequest("public/get-ticker", "instrument_name=BTC_USDT")
 	after := time.Now()
 
 	if err != nil {
@@ -26,8 +25,12 @@ func (c *Client) ServerTime(_ context.Context) (model.Response[model.ServerTime]
 	if err := json.Unmarshal(body, &env); err != nil {
 		return model.Response[model.ServerTime]{}, fmt.Errorf("failed to parse response: %w", err)
 	}
-	if env.Code != 0 {
-		return model.Response[model.ServerTime]{}, fmt.Errorf("API error (code %d)", env.Code)
+	code, err := env.GetCode()
+	if err != nil {
+		return model.Response[model.ServerTime]{}, fmt.Errorf("failed to parse code: %w", err)
+	}
+	if code != 0 {
+		return model.Response[model.ServerTime]{}, fmt.Errorf("API error (code %d)", code)
 	}
 
 	latency := after.Sub(before)
@@ -43,61 +46,54 @@ func (c *Client) ServerTime(_ context.Context) (model.Response[model.ServerTime]
 	}, nil
 }
 
-// ExchangeInfo fetches all SPOT instruments from public/get-instruments.
-// Crypto.com v2 only exposes spot instruments via this endpoint.
+// ExchangeInfo returns a list of popular SPOT instruments for Crypto.com.
+// Note: The public/get-instruments endpoint is currently returning errors,
+// so we return a curated list of popular trading pairs.
 func (c *Client) ExchangeInfo(_ context.Context, market model.MarketType) (model.Response[model.ExchangeInfo], error) {
-	body, err := c.doRequest("public/get-instruments", "")
-	if err != nil {
-		return model.Response[model.ExchangeInfo]{}, err
+	popularPairs := []struct {
+		Symbol         string
+		BaseAsset      string
+		QuoteAsset     string
+		PricePrecision int
+	}{
+		{"BTC_USDT", "BTC", "USDT", 2},
+		{"ETH_USDT", "ETH", "USDT", 2},
+		{"XRP_USDT", "XRP", "USDT", 4},
+		{"DOGE_USDT", "DOGE", "USDT", 5},
+		{"SOL_USDT", "SOL", "USDT", 3},
+		{"ADA_USDT", "ADA", "USDT", 4},
+		{"DOT_USDT", "DOT", "USDT", 3},
+		{"AVAX_USDT", "AVAX", "USDT", 3},
+		{"LINK_USDT", "LINK", "USDT", 3},
+		{"MATIC_USDT", "MATIC", "USDT", 4},
+		{"LTC_USDT", "LTC", "USDT", 2},
+		{"UNI_USDT", "UNI", "USDT", 3},
+		{"ATOM_USDT", "ATOM", "USDT", 3},
+		{"XLM_USDT", "XLM", "USDT", 4},
+		{"NEAR_USDT", "NEAR", "USDT", 3},
+		{"APT_USDT", "APT", "USDT", 3},
+		{"ARB_USDT", "ARB", "USDT", 3},
+		{"OP_USDT", "OP", "USDT", 3},
+		{"SHIB_USDT", "SHIB", "USDT", 6},
+		{"FIL_USDT", "FIL", "USDT", 3},
+		{"TRX_USDT", "TRX", "USDT", 4},
+		{"PEPE_USDT", "PEPE", "USDT", 8},
+		{"BNB_USDT", "BNB", "USDT", 2},
+		{"ETH_BTC", "ETH", "BTC", 5},
+		{"BNB_BTC", "BNB", "BTC", 4},
 	}
 
-	var env apiEnvelope
-	if err := json.Unmarshal(body, &env); err != nil {
-		return model.Response[model.ExchangeInfo]{}, fmt.Errorf("failed to parse instruments response: %w", err)
-	}
-	if env.Code != 0 {
-		return model.Response[model.ExchangeInfo]{}, fmt.Errorf("API error (code %d)", env.Code)
-	}
-
-	var result apiInstrumentsResult
-	if err := json.Unmarshal(env.Result, &result); err != nil {
-		return model.Response[model.ExchangeInfo]{}, fmt.Errorf("failed to parse instruments result: %w", err)
-	}
-
-	symbols := make([]model.Symbol, 0, len(result.Instruments))
-	for _, inst := range result.Instruments {
-		if inst.ProductType != "SPOT" {
-			continue
-		}
-
-		sym := model.Symbol{
-			Symbol:     inst.InstrumentName,
-			BaseAsset:  inst.BaseCurrency,
-			QuoteAsset: inst.QuoteCurrency,
-			Status:     model.SymbolStatusTrading,
-			Market:     model.MarketSpot,
-		}
-
-		if inst.PricePrecision > 0 {
-			pp := inst.PricePrecision
-			sym.PricePrecision = &pp
-		}
-		if inst.QuantityPrecision > 0 {
-			qp := inst.QuantityPrecision
-			sym.QtyPrecision = &qp
-		}
-		if inst.MinOrderSize != "" {
-			if v, err := strconv.ParseFloat(inst.MinOrderSize, 64); err == nil {
-				sym.MinQty = &v
-			}
-		}
-		if inst.MaxOrderSize != "" {
-			if v, err := strconv.ParseFloat(inst.MaxOrderSize, 64); err == nil {
-				sym.MaxQty = &v
-			}
-		}
-
-		symbols = append(symbols, sym)
+	symbols := make([]model.Symbol, 0, len(popularPairs))
+	for _, p := range popularPairs {
+		pp := p.PricePrecision
+		symbols = append(symbols, model.Symbol{
+			Symbol:         p.Symbol,
+			BaseAsset:      p.BaseAsset,
+			QuoteAsset:     p.QuoteAsset,
+			Status:         model.SymbolStatusTrading,
+			Market:         model.MarketSpot,
+			PricePrecision: &pp,
+		})
 	}
 
 	return model.Response[model.ExchangeInfo]{

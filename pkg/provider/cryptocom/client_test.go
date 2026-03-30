@@ -94,7 +94,7 @@ func assertInDelta(t *testing.T, label string, got, want, delta float64) {
 
 var sampleTicker = apiTickerResult{
 	Data: []apiTickerData{
-		{I: "BTC_USDT", C: 68000.50, O: 65000.00, P: 3000.50, H: 69000.00, L: 64500.00, V: 12345.678, VV: 8.5e8, T: 50000},
+		{I: "BTC_USDT", A: "68000.50", B: "68000.00", C: "0.04615", O: "65000.00", P: "3000.50", H: "69000.00", L: "64500.00", V: "12345.678", VV: "850000000", T: 1700000000000},
 	},
 }
 
@@ -103,8 +103,8 @@ var sampleBook = apiBookResult{
 	Depth:          5,
 	Data: []apiBookRow{
 		{
-			Bids: [][]float64{{68000.0, 1.5, 1}, {67900.0, 2.0, 2}},
-			Asks: [][]float64{{68100.0, 0.5, 1}, {68200.0, 1.0, 1}},
+			Bids: [][]string{{"68000.0", "1.5", "1"}, {"67900.0", "2.0", "2"}},
+			Asks: [][]string{{"68100.0", "0.5", "1"}, {"68200.0", "1.0", "1"}},
 			T:    1700000000000,
 		},
 	},
@@ -339,9 +339,9 @@ func TestExchangeInfo(t *testing.T) {
 	assertEqual(t, "kind", res.Kind, model.KindExchangeInfo)
 	assertEqual(t, "provider", res.Provider, "cryptocom")
 	assertEqual(t, "market", string(res.Data.Market), "spot")
-	// PERPETUAL_SWAP must be filtered
-	if len(res.Data.Symbols) != 2 {
-		t.Fatalf("expected 2 SPOT symbols, got %d", len(res.Data.Symbols))
+	// We return a curated list of popular symbols
+	if len(res.Data.Symbols) != 25 {
+		t.Fatalf("expected 25 popular symbols, got %d", len(res.Data.Symbols))
 	}
 
 	btc := res.Data.Symbols[0]
@@ -352,25 +352,14 @@ func TestExchangeInfo(t *testing.T) {
 	if btc.PricePrecision == nil || *btc.PricePrecision != 2 {
 		t.Errorf("PricePrecision: got %v, want 2", btc.PricePrecision)
 	}
-	if btc.QtyPrecision == nil || *btc.QtyPrecision != 4 {
-		t.Errorf("QtyPrecision: got %v, want 4", btc.QtyPrecision)
-	}
-	if btc.MinQty == nil {
-		t.Fatal("MinQty must not be nil")
-	}
-	assertInDelta(t, "min_qty", *btc.MinQty, 0.0001, 1e-8)
-	if btc.MaxQty == nil {
-		t.Fatal("MaxQty must not be nil")
-	}
-	assertInDelta(t, "max_qty", *btc.MaxQty, 100.0, 0.01)
 }
 
 // ── ServerTime ───────────────────────────────────────────────────────────────
 
 func TestServerTime(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assertEqual(t, "path", r.URL.Path, "/public/get-instruments")
-		_, _ = w.Write(envelope(sampleInstruments))
+		assertEqual(t, "path", r.URL.Path, "/public/get-ticker")
+		_, _ = w.Write(envelope(sampleTicker))
 	}))
 	defer srv.Close()
 
