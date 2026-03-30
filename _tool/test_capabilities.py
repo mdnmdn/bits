@@ -149,23 +149,27 @@ def test_capability(provider, feat, market):
         # Try to parse at least one valid JSON object from the output.
         # It could be JSONL (one object per line) or multiple pretty-printed objects.
 
-        # Strategy: Search for JSON objects by finding matching braces
-        # A simple but effective way for bits output:
+        # Strategy: Use JSONDecoder.raw_decode to robustly find JSON objects in the stream.
+        # This handles braces inside strings, escaped characters, etc.
 
         def find_json_objects(text):
             objs = []
-            stack = 0
-            start = -1
-            for i, char in enumerate(text):
-                if char == '{':
-                    if stack == 0:
-                        start = i
-                    stack += 1
-                elif char == '}':
-                    stack -= 1
-                    if stack == 0 and start != -1:
-                        objs.append(text[start:i+1])
-                        start = -1
+            decoder = json.JSONDecoder()
+            pos = 0
+            while pos < len(text):
+                # Skip whitespace and other non-JSON start characters
+                while pos < len(text) and text[pos] not in '{[':
+                    pos += 1
+
+                if pos >= len(text):
+                    break
+
+                try:
+                    obj, end_pos = decoder.raw_decode(text[pos:])
+                    objs.append(json.dumps(obj)) # Re-serialize to keep consistent with previous logic
+                    pos += end_pos
+                except json.JSONDecodeError:
+                    pos += 1
             return objs
 
         found_valid = False
