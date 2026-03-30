@@ -37,6 +37,34 @@ type apiInstrumentsResult struct {
 	Instruments []apiInstrument `json:"instruments"`
 }
 
+// apiInstrumentsV1Response is the response for v1 public/get-instruments.
+type apiInstrumentsV1Response struct {
+	ID     int64                `json:"id"`
+	Method string               `json:"method"`
+	Code   int                  `json:"code"`
+	Result apiInstrumentsV1Data `json:"result"`
+}
+
+// apiInstrumentsV1Data contains the instruments data.
+type apiInstrumentsV1Data struct {
+	Data []apiInstrumentV1 `json:"data"`
+}
+
+// apiInstrumentV1 represents a single trading instrument in v1 API.
+type apiInstrumentV1 struct {
+	Symbol            string `json:"symbol"`
+	InstType          string `json:"inst_type"`
+	BaseCcy           string `json:"base_ccy"`
+	QuoteCcy          string `json:"quote_ccy"`
+	QuoteDecimals     int    `json:"quote_decimals"`
+	QuantityDecimals  int    `json:"quantity_decimals"`
+	PriceTickSize     string `json:"price_tick_size"`
+	QtyTickSize       string `json:"qty_tick_size"`
+	Tradable          bool   `json:"tradable"`
+	MarginBuyEnabled  bool   `json:"margin_buy_enabled"`
+	MarginSellEnabled bool   `json:"margin_sell_enabled"`
+}
+
 // apiInstrument represents a single trading instrument.
 type apiInstrument struct {
 	InstrumentName    string `json:"instrument_name"`

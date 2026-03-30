@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/mdnmdn/bits/pkg/model"
@@ -19,13 +20,22 @@ type whitebitMarket struct {
 	Name          string `json:"name"`
 	Stock         string `json:"stock"`
 	Money         string `json:"money"`
+	StockPrec     string `json:"stockPrec"`
+	MoneyPrec     string `json:"moneyPrec"`
+	MinAmount     string `json:"minAmount"`
+	MinTotal      string `json:"minTotal"`
+	MaxTotal      string `json:"maxTotal"`
+	MakerFee      string `json:"makerFee"`
+	TakerFee      string `json:"takerFee"`
 	TradesEnabled bool   `json:"tradesEnabled"`
 }
 
 type whitebitFuturesMarket struct {
-	TickerID      string `json:"ticker_id"`
-	StockCurrency string `json:"stock_currency"`
-	MoneyCurrency string `json:"money_currency"`
+	TickerID      string         `json:"ticker_id"`
+	StockCurrency string         `json:"stock_currency"`
+	MoneyCurrency string         `json:"money_currency"`
+	Brackets      map[string]int `json:"brackets"`
+	MaxLeverage   int            `json:"max_leverage"`
 }
 
 // ServerTime fetches the server time from the WhiteBit API.
@@ -74,12 +84,29 @@ func (c *Client) ExchangeInfo(_ context.Context, market model.MarketType) (model
 			status = model.SymbolStatusTrading
 		}
 
+		qp, _ := strconv.Atoi(m.StockPrec)
+		pp, _ := strconv.Atoi(m.MoneyPrec)
+		minQty, _ := strconv.ParseFloat(m.MinAmount, 64)
+		minPrice, _ := strconv.ParseFloat(m.MinTotal, 64)
+		maxPrice, _ := strconv.ParseFloat(m.MaxTotal, 64)
+		maxQty := maxPrice
+		makerFee, _ := strconv.ParseFloat(m.MakerFee, 64)
+		takerFee, _ := strconv.ParseFloat(m.TakerFee, 64)
+
 		symbols = append(symbols, model.Symbol{
-			Symbol:     m.Name,
-			BaseAsset:  m.Stock,
-			QuoteAsset: m.Money,
-			Status:     status,
-			Market:     market,
+			Symbol:         m.Name,
+			BaseAsset:      m.Stock,
+			QuoteAsset:     m.Money,
+			Status:         status,
+			Market:         market,
+			QtyPrecision:   &qp,
+			PricePrecision: &pp,
+			MinQty:         &minQty,
+			MinPrice:       &minPrice,
+			MaxPrice:       &maxPrice,
+			MaxQty:         &maxQty,
+			MakerFee:       &makerFee,
+			TakerFee:       &takerFee,
 		})
 	}
 
@@ -111,12 +138,27 @@ func (c *Client) futuresExchangeInfo(market model.MarketType) (model.Response[mo
 
 	symbols := make([]model.Symbol, 0, len(resp.Result))
 	for _, m := range resp.Result {
+		minQty := 0.0
+		if v, ok := m.Brackets["1"]; ok && v > 0 {
+			minQty = float64(v)
+		}
+		maxQty := 0.0
+		if v, ok := m.Brackets["50"]; ok && v > 0 {
+			maxQty = float64(v)
+		} else if v, ok := m.Brackets["20"]; ok && v > 0 {
+			maxQty = float64(v)
+		} else if v, ok := m.Brackets["10"]; ok && v > 0 {
+			maxQty = float64(v)
+		}
+
 		symbols = append(symbols, model.Symbol{
 			Symbol:     m.TickerID,
 			BaseAsset:  m.StockCurrency,
 			QuoteAsset: m.MoneyCurrency,
 			Status:     model.SymbolStatusTrading,
 			Market:     market,
+			MinQty:     &minQty,
+			MaxQty:     &maxQty,
 		})
 	}
 

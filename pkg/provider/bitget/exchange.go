@@ -21,10 +21,14 @@ type bitgetServerTimeResponse struct {
 
 // bitgetSpotSymbol is a single symbol from the spot symbols endpoint.
 type bitgetSpotSymbol struct {
-	Symbol    string `json:"symbol"`
-	BaseCoin  string `json:"baseCoin"`
-	QuoteCoin string `json:"quoteCoin"`
-	Status    string `json:"status"`
+	Symbol            string `json:"symbol"`
+	BaseCoin          string `json:"baseCoin"`
+	QuoteCoin         string `json:"quoteCoin"`
+	Status            string `json:"status"`
+	PricePrecision    string `json:"pricePrecision"`
+	QuantityPrecision string `json:"quantityPrecision"`
+	MinTradeAmount    string `json:"minTradeAmount"`
+	MaxTradeAmount    string `json:"maxTradeAmount"`
 }
 
 // bitgetSpotSymbolsResponse is the API response for /api/v2/spot/public/symbols.
@@ -39,7 +43,11 @@ type bitgetFuturesContract struct {
 	Symbol         string `json:"symbol"`
 	BaseCoin       string `json:"baseCoin"`
 	QuoteCoin      string `json:"quoteCoin"`
-	ContractStatus string `json:"contractStatus"`
+	ContractStatus string `json:"symbolStatus"`
+	PricePlace     string `json:"pricePlace"`
+	VolumePlace    string `json:"volumePlace"`
+	MinTradeNum    string `json:"minTradeNum"`
+	MaxOrderQty    string `json:"maxOrderQty"`
 }
 
 // bitgetFuturesContractsResponse is the API response for /api/v2/mix/market/contracts.
@@ -49,11 +57,18 @@ type bitgetFuturesContractsResponse struct {
 	Data []bitgetFuturesContract `json:"data"`
 }
 
+// Bitget margin API - see https://bitgetlimited.github.io/apidoc/en/margin/
 type bitgetMarginSymbol struct {
-	Symbol    string `json:"symbol"`
-	BaseCoin  string `json:"baseCoin"`
-	QuoteCoin string `json:"quoteCoin"`
-	Status    string `json:"status"`
+	Symbol            string `json:"symbol"`
+	BaseCoin          string `json:"baseCoin"`
+	QuoteCoin         string `json:"quoteCoin"`
+	Status            string `json:"status"`
+	PricePrecision    string `json:"pricePrecision"`
+	QuantityPrecision string `json:"quantityPrecision"`
+	MinTradeUSDT      string `json:"minTradeUSDT"`
+	MakerFeeRate      string `json:"makerFeeRate"`
+	TakerFeeRate      string `json:"takerFeeRate"`
+	IsBorrowable      bool   `json:"isBorrowable"`
 }
 
 type bitgetMarginSymbolsResponse struct {
@@ -120,17 +135,32 @@ func (c *Client) marginExchangeInfo(market model.MarketType) (model.Response[mod
 
 	symbols := make([]model.Symbol, 0, len(resp.Data))
 	for _, s := range resp.Data {
+		if !s.IsBorrowable {
+			continue
+		}
+
 		status := model.SymbolStatusTrading
 		if s.Status == "offline" {
 			status = model.SymbolStatusBreak
 		}
 
+		pp, _ := strconv.Atoi(s.PricePrecision)
+		qp, _ := strconv.Atoi(s.QuantityPrecision)
+		minPrice, _ := strconv.ParseFloat(s.MinTradeUSDT, 64)
+		makerFee, _ := strconv.ParseFloat(s.MakerFeeRate, 64)
+		takerFee, _ := strconv.ParseFloat(s.TakerFeeRate, 64)
+
 		symbols = append(symbols, model.Symbol{
-			Symbol:     s.Symbol,
-			BaseAsset:  s.BaseCoin,
-			QuoteAsset: s.QuoteCoin,
-			Status:     status,
-			Market:     market,
+			Symbol:         s.Symbol,
+			BaseAsset:      s.BaseCoin,
+			QuoteAsset:     s.QuoteCoin,
+			Status:         status,
+			Market:         market,
+			PricePrecision: &pp,
+			QtyPrecision:   &qp,
+			MinPrice:       &minPrice,
+			MakerFee:       &makerFee,
+			TakerFee:       &takerFee,
 		})
 	}
 
@@ -162,12 +192,21 @@ func (c *Client) spotExchangeInfo(market model.MarketType) (model.Response[model
 
 	symbols := make([]model.Symbol, 0, len(resp.Data))
 	for _, s := range resp.Data {
+		pp, _ := strconv.Atoi(s.PricePrecision)
+		qp, _ := strconv.Atoi(s.QuantityPrecision)
+		minQty, _ := strconv.ParseFloat(s.MinTradeAmount, 64)
+		maxQty, _ := strconv.ParseFloat(s.MaxTradeAmount, 64)
+
 		symbols = append(symbols, model.Symbol{
-			Symbol:     s.Symbol,
-			BaseAsset:  s.BaseCoin,
-			QuoteAsset: s.QuoteCoin,
-			Status:     convertSpotStatus(s.Status),
-			Market:     market,
+			Symbol:         s.Symbol,
+			BaseAsset:      s.BaseCoin,
+			QuoteAsset:     s.QuoteCoin,
+			Status:         convertSpotStatus(s.Status),
+			Market:         market,
+			PricePrecision: &pp,
+			QtyPrecision:   &qp,
+			MinQty:         &minQty,
+			MaxQty:         &maxQty,
 		})
 	}
 
@@ -199,12 +238,21 @@ func (c *Client) futuresExchangeInfo(market model.MarketType) (model.Response[mo
 
 	symbols := make([]model.Symbol, 0, len(resp.Data))
 	for _, s := range resp.Data {
+		pp, _ := strconv.Atoi(s.PricePlace)
+		qp, _ := strconv.Atoi(s.VolumePlace)
+		minQty, _ := strconv.ParseFloat(s.MinTradeNum, 64)
+		maxQty, _ := strconv.ParseFloat(s.MaxOrderQty, 64)
+
 		symbols = append(symbols, model.Symbol{
-			Symbol:     s.Symbol,
-			BaseAsset:  s.BaseCoin,
-			QuoteAsset: s.QuoteCoin,
-			Status:     convertFuturesStatus(s.ContractStatus),
-			Market:     market,
+			Symbol:         s.Symbol,
+			BaseAsset:      s.BaseCoin,
+			QuoteAsset:     s.QuoteCoin,
+			Status:         convertFuturesStatus(s.ContractStatus),
+			Market:         market,
+			PricePrecision: &pp,
+			QtyPrecision:   &qp,
+			MinQty:         &minQty,
+			MaxQty:         &maxQty,
 		})
 	}
 

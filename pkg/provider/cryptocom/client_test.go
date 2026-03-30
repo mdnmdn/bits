@@ -111,31 +111,33 @@ var sampleBook = apiBookResult{
 	},
 }
 
-var sampleInstruments = apiInstrumentsResult{
-	Instruments: []apiInstrument{
-		{
-			InstrumentName:    "BTC_USDT",
-			ProductType:       "SPOT",
-			BaseCurrency:      "BTC",
-			QuoteCurrency:     "USDT",
-			MinOrderSize:      "0.0001",
-			MaxOrderSize:      "100",
-			PricePrecision:    2,
-			QuantityPrecision: 4,
-		},
-		{
-			InstrumentName: "ETH_USDT",
-			ProductType:    "SPOT",
-			BaseCurrency:   "ETH",
-			QuoteCurrency:  "USDT",
-			MinOrderSize:   "0.001",
-			MaxOrderSize:   "1000",
-		},
-		{
-			InstrumentName: "BTC_PERP",
-			ProductType:    "PERPETUAL_SWAP", // non-SPOT; must be filtered
-			BaseCurrency:   "BTC",
-			QuoteCurrency:  "USD",
+var sampleInstruments = apiInstrumentsV1Response{
+	Code: 0,
+	Result: apiInstrumentsV1Data{
+		Data: []apiInstrumentV1{
+			{
+				Symbol:           "BTC_USDT",
+				InstType:         "CCY_PAIR",
+				BaseCcy:          "BTC",
+				QuoteCcy:         "USDT",
+				QuoteDecimals:    2,
+				QuantityDecimals: 6,
+				PriceTickSize:    "0.01",
+				QtyTickSize:      "0.00001",
+				Tradable:         true,
+			},
+			{
+				Symbol:   "ETH_USDT",
+				InstType: "CCY_PAIR",
+				BaseCcy:  "ETH",
+				QuoteCcy: "USDT",
+			},
+			{
+				Symbol:   "BTC_PERP",
+				InstType: "PERPETUAL_SWAP", // non-CCY_PAIR; must be filtered
+				BaseCcy:  "BTC",
+				QuoteCcy: "USD",
+			},
 		},
 	},
 }
@@ -329,7 +331,15 @@ func TestOrderBook_NoDepthParam(t *testing.T) {
 func TestExchangeInfo(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assertEqual(t, "path", r.URL.Path, "/public/get-instruments")
-		_, _ = w.Write(envelope(sampleInstruments))
+		data, _ := json.Marshal(sampleInstruments.Result.Data)
+		resp := map[string]any{
+			"id":     -1,
+			"method": "public/get-instruments",
+			"code":   0,
+			"result": map[string]any{"data": json.RawMessage(data)},
+		}
+		out, _ := json.Marshal(resp)
+		_, _ = w.Write(out)
 	}))
 	defer srv.Close()
 
@@ -340,9 +350,9 @@ func TestExchangeInfo(t *testing.T) {
 	assertEqual(t, "kind", res.Kind, model.KindExchangeInfo)
 	assertEqual(t, "provider", res.Provider, "cryptocom")
 	assertEqual(t, "market", string(res.Data.Market), "spot")
-	// We return a curated list of popular symbols
-	if len(res.Data.Symbols) != 25 {
-		t.Fatalf("expected 25 popular symbols, got %d", len(res.Data.Symbols))
+	// We return only CCY_PAIR symbols
+	if len(res.Data.Symbols) != 2 {
+		t.Fatalf("expected 2 CCY_PAIR symbols, got %d", len(res.Data.Symbols))
 	}
 
 	btc := res.Data.Symbols[0]
