@@ -11,7 +11,7 @@ import (
 // ServerTime implements provider.ExchangeProvider.
 func (c *Client) ServerTime(ctx context.Context) (model.Response[model.ServerTime], error) {
 	start := time.Now()
-	data, err := c.doRequest(model.MarketSpot, "/time", "")
+	data, err := c.doRequest(ctx, model.MarketSpot, "/time", "")
 	latency := time.Since(start)
 
 	resp := model.Response[model.ServerTime]{
@@ -20,16 +20,14 @@ func (c *Client) ServerTime(ctx context.Context) (model.Response[model.ServerTim
 		Kind:     model.KindServerTime,
 	}
 	if err != nil {
-		resp.Data = model.ServerTime{Time: time.Now(), Latency: &latency}
-		return resp, nil
+		return resp, err
 	}
 
 	var t struct {
 		ServerTime int64 `json:"serverTime"`
 	}
 	if err := json.Unmarshal(data, &t); err != nil {
-		resp.Data = model.ServerTime{Time: time.Now(), Latency: &latency}
-		return resp, nil
+		return resp, err
 	}
 
 	resp.Data = model.ServerTime{
@@ -48,7 +46,7 @@ func (c *Client) ExchangeInfo(ctx context.Context, market model.MarketType) (mod
 	}
 
 	if market == model.MarketFutures {
-		data, err := c.doRequest(market, "/detail", "")
+		data, err := c.doRequest(ctx, market, "/detail", "")
 		if err != nil {
 			return resp, err
 		}
@@ -80,7 +78,7 @@ func (c *Client) ExchangeInfo(ctx context.Context, market model.MarketType) (mod
 	}
 
 	// Spot / Margin
-	data, err := c.doRequest(market, "/exchangeInfo", "")
+	data, err := c.doRequest(ctx, market, "/exchangeInfo", "")
 	if err != nil {
 		return resp, err
 	}

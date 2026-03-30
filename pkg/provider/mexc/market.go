@@ -15,12 +15,22 @@ import (
 func (c *Client) Price(ctx context.Context, symbols []string, currency string) (model.Response[[]model.CoinPrice], error) {
 	resp := model.Response[[]model.CoinPrice]{
 		Provider: providerID,
-		Market:   model.MarketSpot,
 		Kind:     model.KindPrice,
 	}
 
 	if len(symbols) == 0 {
+		resp.Market = model.MarketSpot
 		return resp, nil
+	}
+
+	// Heuristic: if any requested symbol contains an underscore, it's likely a futures request.
+	// This aligns with how bits routes internal requests.
+	resp.Market = model.MarketSpot
+	for _, s := range symbols {
+		if strings.Contains(s, "_") {
+			resp.Market = model.MarketFutures
+			break
+		}
 	}
 
 	var prices []model.CoinPrice
@@ -44,7 +54,7 @@ func (c *Client) Price(ctx context.Context, symbols []string, currency string) (
 
 func (c *Client) fetchPrice(ctx context.Context, symbol string, market model.MarketType) (model.CoinPrice, error) {
 	if market == model.MarketFutures {
-		data, err := c.doRequest(market, "/ticker", "symbol="+symbol)
+		data, err := c.doRequest(ctx, market, "/ticker", "symbol="+symbol)
 		if err != nil {
 			return model.CoinPrice{}, err
 		}
@@ -61,7 +71,7 @@ func (c *Client) fetchPrice(ctx context.Context, symbol string, market model.Mar
 	}
 
 	// Spot / Margin
-	data, err := c.doRequest(market, "/ticker/price", "symbol="+symbol)
+	data, err := c.doRequest(ctx, market, "/ticker/price", "symbol="+symbol)
 	if err != nil {
 		return model.CoinPrice{}, err
 	}
@@ -87,7 +97,7 @@ func (c *Client) Ticker24h(ctx context.Context, symbol string, market model.Mark
 	}
 
 	if market == model.MarketFutures {
-		data, err := c.doRequest(market, "/ticker", "symbol="+symbol)
+		data, err := c.doRequest(ctx, market, "/ticker", "symbol="+symbol)
 		if err != nil {
 			return resp, err
 		}
@@ -113,7 +123,7 @@ func (c *Client) Ticker24h(ctx context.Context, symbol string, market model.Mark
 	}
 
 	// Spot / Margin
-	data, err := c.doRequest(market, "/ticker/24hr", "symbol="+symbol)
+	data, err := c.doRequest(ctx, market, "/ticker/24hr", "symbol="+symbol)
 	if err != nil {
 		return resp, err
 	}
@@ -167,7 +177,7 @@ func (c *Client) Candles(ctx context.Context, symbol string, market model.Market
 			query += fmt.Sprintf("&end=%d", opts.To.Unix())
 		}
 
-		data, err := c.doRequest(market, "/kline/"+symbol, query)
+		data, err := c.doRequest(ctx, market, "/kline/"+symbol, query)
 		if err != nil {
 			return resp, err
 		}
@@ -179,7 +189,14 @@ func (c *Client) Candles(ctx context.Context, symbol string, market model.Market
 
 		var candles []model.Candle
 		d := candlesResp.Data
-		for i := range d.Time {
+		n := len(d.Time)
+		// MEXC Futures return parallel slices; ensure they all have the same length
+		// before indexing into them.
+		if len(d.Open) < n || len(d.High) < n || len(d.Low) < n || len(d.Close) < n || len(d.Vol) < n {
+			return resp, fmt.Errorf("invalid futures kline response: inconsistent slice lengths")
+		}
+
+		for i := 0; i < n; i++ {
 			v := d.Vol[i]
 			candles = append(candles, model.Candle{
 				OpenTime: time.Unix(d.Time[i], 0),
@@ -207,7 +224,7 @@ func (c *Client) Candles(ctx context.Context, symbol string, market model.Market
 		query += fmt.Sprintf("&endTime=%d", opts.To.UnixMilli())
 	}
 
-	data, err := c.doRequest(market, "/klines", query)
+	data, err := c.doRequest(ctx, market, "/klines", query)
 	if err != nil {
 		return resp, err
 	}
@@ -256,7 +273,7 @@ func (c *Client) OrderBook(ctx context.Context, symbol string, market model.Mark
 		if depth > 0 {
 			query = fmt.Sprintf("limit=%d", depth)
 		}
-		data, err := c.doRequest(market, "/depth/"+symbol, query)
+		data, err := c.doRequest(ctx, market, "/depth/"+symbol, query)
 		if err != nil {
 			return resp, err
 		}
@@ -279,7 +296,7 @@ func (c *Client) OrderBook(ctx context.Context, symbol string, market model.Mark
 	if depth > 0 {
 		query += fmt.Sprintf("&limit=%d", depth)
 	}
-	data, err := c.doRequest(market, "/depth", query)
+	data, err := c.doRequest(ctx, market, "/depth", query)
 	if err != nil {
 		return resp, err
 	}
@@ -361,13 +378,17 @@ func parseSpotOrders(raw [][]string) []model.OrderBookEntry {
 }
 
 func parseFuturesOrders(raw [][]float64) []model.OrderBookEntry {
-	entries := make([]model.OrderBookEntry, len(raw))
-	for i, r := range raw {
-		if len(r) >= 3 {
-			entries[i] = model.OrderBookEntry{Price: r[0], Quantity: r[2]}
-		} else if len(r) >= 1 {
-			entries[i] = model.OrderBookEntry{Price: r[0]}
+	entries := make([]model.OrderBookEntry, 0, len(raw))
+	for _, r := range raw {
+		// MEXC Futures Depth documentation: [price, orders, quantity]
+		// We need at least price and quantity (index 0 and 2).
+		if len(r) < 3 {
+			continue
 		}
+		entries = append(entries, model.OrderBookEntry{
+			Price:    r[0],
+			Quantity: r[2],
+		})
 	}
 	return entries
 }

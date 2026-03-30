@@ -1,6 +1,7 @@
 package mexc
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -66,7 +67,7 @@ func (c *Client) Capabilities() capability.CapabilityMatrix {
 }
 
 // doRequest performs a GET request to the MEXC API.
-func (c *Client) doRequest(market model.MarketType, path string, query string) ([]byte, error) {
+func (c *Client) doRequest(ctx context.Context, market model.MarketType, path string, query string) ([]byte, error) {
 	var fullURL string
 	if market == model.MarketFutures {
 		fullURL = c.cfg.BaseURL + futuresAPIPath + path
@@ -79,7 +80,7 @@ func (c *Client) doRequest(market model.MarketType, path string, query string) (
 		fullURL += "?" + query
 	}
 
-	req, err := http.NewRequest("GET", fullURL, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", fullURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
