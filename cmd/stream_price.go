@@ -81,7 +81,7 @@ func runStreamPrice(cmd *cobra.Command, args []string) error {
 		case render.FormatJSON:
 			// JSONL: one compact JSON object per line
 			b, _ := json.Marshal(update)
-			fmt.Fprintf(os.Stdout, "%s\n", b)
+			_, _ = fmt.Fprintf(os.Stdout, "%s\n", b)
 
 		case render.FormatYAML:
 			// one YAML document per update, separated by ---
@@ -92,7 +92,7 @@ func runStreamPrice(cmd *cobra.Command, args []string) error {
 
 		case render.FormatMarkdown:
 			// one markdown bullet per update
-			fmt.Fprintf(os.Stdout, "- **%s** %.6f %s  _%s_\n",
+			_, _ = fmt.Fprintf(os.Stdout, "- **%s** %.6f %s  _%s_\n",
 				update.ID, update.Price, update.Currency, change)
 
 		case render.FormatToon:
@@ -107,7 +107,7 @@ func runStreamPrice(cmd *cobra.Command, args []string) error {
 					chgStyle = streamToonDown
 				}
 			}
-			fmt.Fprintf(os.Stdout, "%s  %s %s  %s\n",
+			_, _ = fmt.Fprintf(os.Stdout, "%s  %s %s  %s\n",
 				streamToonID.Render(update.ID),
 				streamToonPrice.Render(fmt.Sprintf("%.6f", update.Price)),
 				update.Currency,
@@ -115,7 +115,7 @@ func runStreamPrice(cmd *cobra.Command, args []string) error {
 
 		default:
 			// table: compact plain line
-			fmt.Fprintf(os.Stdout, "%s  %.6f %s  %s\n",
+			_, _ = fmt.Fprintf(os.Stdout, "%s  %.6f %s  %s\n",
 				update.ID, update.Price, update.Currency, change)
 		}
 	}

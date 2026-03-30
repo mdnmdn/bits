@@ -93,7 +93,7 @@ func runStreamBook(cmd *cobra.Command, args []string) error {
 			_ = enc.Close()
 
 		case render.FormatMarkdown:
-			fmt.Fprintf(os.Stdout, "- **%s/%s** bids:%d asks:%d\n",
+			_, _ = fmt.Fprintf(os.Stdout, "- **%s/%s** bids:%d asks:%d\n",
 				update.Symbol, update.Market, len(update.Bids), len(update.Asks))
 
 		case render.FormatToon:
@@ -101,17 +101,17 @@ func runStreamBook(cmd *cobra.Command, args []string) error {
 
 		default:
 			// Default: show top of book with actual values
-			fmt.Fprintf(os.Stdout, "[%s]\n", streamBookSymbol.Render(fmt.Sprintf("%s/%s", update.Symbol, update.Market)))
+			_, _ = fmt.Fprintf(os.Stdout, "[%s]\n", streamBookSymbol.Render(fmt.Sprintf("%s/%s", update.Symbol, update.Market)))
 			if len(update.Bids) > 0 {
 				bid := update.Bids[0]
-				fmt.Fprintf(os.Stdout, "  %sbids:  %s @ %s\n",
+				_, _ = fmt.Fprintf(os.Stdout, "  %sbids:  %s @ %s\n",
 					streamBookBids.Render(""),
 					streamBookBids.Render(fmt.Sprintf("%.4f", bid.Quantity)),
 					streamBookBids.Render(fmt.Sprintf("%.2f", bid.Price)))
 			}
 			if len(update.Asks) > 0 {
 				ask := update.Asks[0]
-				fmt.Fprintf(os.Stdout, "  %sasks:  %s @ %s\n",
+				_, _ = fmt.Fprintf(os.Stdout, "  %sasks:  %s @ %s\n",
 					streamBookAsks.Render(""),
 					streamBookAsks.Render(fmt.Sprintf("%.4f", ask.Quantity)),
 					streamBookAsks.Render(fmt.Sprintf("%.2f", ask.Price)))

@@ -90,13 +90,6 @@ func assertInDelta(t *testing.T, label string, got, want, delta float64) {
 	}
 }
 
-func assertNotNil(t *testing.T, label string, v any) {
-	t.Helper()
-	if v == nil {
-		t.Errorf("%s: expected non-nil, got nil", label)
-	}
-}
-
 // ── fixtures ─────────────────────────────────────────────────────────────────
 
 var sampleTicker = apiTickerResult{
@@ -156,7 +149,7 @@ func TestTicker24h(t *testing.T) {
 		if sym := r.URL.Query().Get("instrument_name"); sym != "BTC_USDT" {
 			t.Errorf("unexpected instrument_name: %s", sym)
 		}
-		w.Write(envelope(sampleTicker))
+		_, _ = w.Write(envelope(sampleTicker))
 	}))
 	defer srv.Close()
 
@@ -204,7 +197,7 @@ func TestTicker24h(t *testing.T) {
 
 func TestTicker24h_NoData(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write(envelope(apiTickerResult{Data: []apiTickerData{}}))
+		_, _ = w.Write(envelope(apiTickerResult{Data: []apiTickerData{}}))
 	}))
 	defer srv.Close()
 
@@ -215,7 +208,7 @@ func TestTicker24h_NoData(t *testing.T) {
 
 func TestTicker24h_APIError(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write(errorEnvelope(10003))
+		_, _ = w.Write(errorEnvelope(10003))
 	}))
 	defer srv.Close()
 
@@ -228,7 +221,7 @@ func TestTicker24h_APIError(t *testing.T) {
 
 func TestPrice_SingleSymbol(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write(envelope(sampleTicker))
+		_, _ = w.Write(envelope(sampleTicker))
 	}))
 	defer srv.Close()
 
@@ -254,9 +247,9 @@ func TestPrice_MultiSymbol_PartialError(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		calls++
 		if r.URL.Query().Get("instrument_name") == "BTC_USDT" {
-			w.Write(envelope(sampleTicker))
+			_, _ = w.Write(envelope(sampleTicker))
 		} else {
-			w.Write(envelope(apiTickerResult{Data: []apiTickerData{}}))
+			_, _ = w.Write(envelope(apiTickerResult{Data: []apiTickerData{}}))
 		}
 	}))
 	defer srv.Close()
@@ -288,7 +281,7 @@ func TestOrderBook(t *testing.T) {
 		if d := r.URL.Query().Get("depth"); d != "5" {
 			t.Errorf("expected depth=5, got %q", d)
 		}
-		w.Write(envelope(sampleBook))
+		_, _ = w.Write(envelope(sampleBook))
 	}))
 	defer srv.Close()
 
@@ -318,7 +311,7 @@ func TestOrderBook_NoDepthParam(t *testing.T) {
 		if d := r.URL.Query().Get("depth"); d != "" {
 			t.Errorf("expected no depth param, got %q", d)
 		}
-		w.Write(envelope(sampleBook))
+		_, _ = w.Write(envelope(sampleBook))
 	}))
 	defer srv.Close()
 
@@ -335,7 +328,7 @@ func TestOrderBook_NoDepthParam(t *testing.T) {
 func TestExchangeInfo(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assertEqual(t, "path", r.URL.Path, "/public/get-instruments")
-		w.Write(envelope(sampleInstruments))
+		_, _ = w.Write(envelope(sampleInstruments))
 	}))
 	defer srv.Close()
 
@@ -377,7 +370,7 @@ func TestExchangeInfo(t *testing.T) {
 func TestServerTime(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assertEqual(t, "path", r.URL.Path, "/public/get-instruments")
-		w.Write(envelope(sampleInstruments))
+		_, _ = w.Write(envelope(sampleInstruments))
 	}))
 	defer srv.Close()
 
@@ -436,7 +429,7 @@ func TestSetUserAgent(t *testing.T) {
 		if ua := r.Header.Get("User-Agent"); ua != "bits-test/1.0" {
 			t.Errorf("User-Agent: got %q, want %q", ua, "bits-test/1.0")
 		}
-		w.Write(envelope(sampleTicker))
+		_, _ = w.Write(envelope(sampleTicker))
 	}))
 	defer srv.Close()
 

@@ -285,19 +285,17 @@ func (m *Manager) Start(ctx context.Context) (<-chan StreamResponse[any], error)
 	go func() {
 		defer m.pingTicker.Stop()
 		defer close(m.outChan)
-		defer m.client.Close()
+		defer func() { _ = m.client.Close() }()
 
 		for {
 			select {
 			case <-ctx.Done():
 				return
 			case cmd := <-m.cmdChan:
-				if cmd.Kind == CommandStop {
+				switch cmd.Kind {
+				case CommandStop:
 					return
-				}
-
-				// Basic subscription tracking for reconnection
-				if cmd.Kind == CommandSubscribe {
+				case CommandSubscribe:
 					m.mu.Lock()
 					key := string(cmd.Kind)
 					if cmd.Method != "" {
@@ -305,7 +303,7 @@ func (m *Manager) Start(ctx context.Context) (<-chan StreamResponse[any], error)
 					}
 					m.subs[key] = cmd
 					m.mu.Unlock()
-				} else if cmd.Kind == CommandUnsubscribe {
+				case CommandUnsubscribe:
 					m.mu.Lock()
 					key := string(CommandSubscribe)
 					if cmd.Method != "" {
@@ -320,7 +318,7 @@ func (m *Manager) Start(ctx context.Context) (<-chan StreamResponse[any], error)
 				}
 			case <-m.pingTicker.C:
 				if err := m.handler.OnPing(ctx, m.client); err != nil {
-					// Logging or recovery could go here
+					_ = err
 				}
 			}
 		}

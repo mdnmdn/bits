@@ -11,10 +11,10 @@ import (
 func RenderOrderBook(w io.Writer, res model.Response[model.OrderBook]) error {
 	printHeader(w, res)
 	ob := res.Data
-	fmt.Fprintf(w, "Order Book: %s (%s)\n\n", ob.Symbol, ob.Market)
+	_, _ = fmt.Fprintf(w, "Order Book: %s (%s)\n\n", ob.Symbol, ob.Market)
 	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(tw, "BIDS\t\tASKS")
-	fmt.Fprintln(tw, "PRICE\tQTY\tPRICE\tQTY")
+	_, _ = fmt.Fprintln(tw, "BIDS\t\tASKS")
+	_, _ = fmt.Fprintln(tw, "PRICE\tQTY\tPRICE\tQTY")
 	n := len(ob.Bids)
 	if len(ob.Asks) > n {
 		n = len(ob.Asks)
@@ -30,9 +30,9 @@ func RenderOrderBook(w io.Writer, res model.Response[model.OrderBook]) error {
 			askP = fmt.Sprintf("%.6f", ob.Asks[i].Price)
 			askQ = fmt.Sprintf("%.6f", ob.Asks[i].Quantity)
 		}
-		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", bidP, bidQ, askP, askQ)
+		_, _ = fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", bidP, bidQ, askP, askQ)
 	}
-	tw.Flush()
+	_ = tw.Flush()
 	printFooter(w, res)
 	return nil
 }

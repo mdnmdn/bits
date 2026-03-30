@@ -41,9 +41,6 @@ var (
 	subtitleStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#6B7280"))
 
-	helpStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#9CA3AF"))
-
 	sectionStyle = lipgloss.NewStyle().
 			Bold(true).
 			Foreground(lipgloss.Color("#3B82F6"))

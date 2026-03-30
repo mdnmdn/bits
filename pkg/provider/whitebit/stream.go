@@ -32,16 +32,6 @@ type whitebitWSError struct {
 	Message string `json:"message"`
 }
 
-type whitebitWSTickerData struct {
-	Open   string `json:"open"`
-	High   string `json:"high"`
-	Low    string `json:"low"`
-	Last   string `json:"last"`
-	Volume string `json:"volume"`
-	Deal   string `json:"deal"`
-	Change string `json:"change"`
-}
-
 type whitebitWSDepthData struct {
 	Asks [][]string `json:"asks"`
 	Bids [][]string `json:"bids"`

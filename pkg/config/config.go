@@ -215,17 +215,6 @@ func ConfigDirs() []string {
 	return dirs
 }
 
-func configDir() string {
-	dirs := ConfigDirs()
-	if len(dirs) > 1 {
-		return dirs[1]
-	}
-	if len(dirs) > 0 {
-		return dirs[0]
-	}
-	return ""
-}
-
 func Load() (*Config, string, error) {
 	dirs := ConfigDirs()
 

@@ -83,8 +83,8 @@ func (h *cryptocomHandler) handleTicker(result wsResult) (any, error) {
 	var changePct *float64
 	if d.A != 0 { // derive percent change from bid/ask midpoint not available; skip
 		// The WebSocket ticker does not carry an open price — use 0-safe guard.
+		_ = changePct
 	}
-	_ = changePct // explicitly unused; WebSocket ticker omits open price
 
 	return &model.Response[model.CoinPrice]{
 		Kind:     model.KindPrice,

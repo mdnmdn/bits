@@ -1,6 +1,29 @@
 # Provider Implementation Guide
 
 This guide explains how the multi-provider architecture works and how to add a new provider.
+Work through the steps in order; run `go build ./...` after each file to catch issues early.
+
+---
+
+## Reference Documents
+
+| Document | Purpose |
+|----------|---------|
+| `_docs/architecture.md` | High-level architecture, interface hierarchy, fallback policy |
+| `_docs/data-model.md` | All model types (`Response[T]`, `Ticker24h`, `OrderBook`, …) |
+| `_docs/config.md` | Config file format, env var conventions, viper setup |
+| `_docs/ws-handling.md` | WebSocket infrastructure (`ws.Manager`, `ws.BaseClient`) |
+| `_docs/providers/` | Per-provider API docs (endpoints, auth, response formats) |
+
+Reference implementations:
+
+| Provider | Location | Notable features |
+|----------|----------|-----------------|
+| Bitget | `pkg/provider/bitget/` | Raw HTTP, HMAC auth, spot + futures + margin |
+| WhiteBit | `pkg/provider/whitebit/` | Raw HTTP, no auth for public, streaming |
+| Binance | `pkg/provider/binance/` | Go SDK wrapper, spot + futures, streaming |
+| CoinGecko | `pkg/provider/coingecko/` | Aggregator, paid/demo tiers, streaming |
+| Crypto.com | `pkg/provider/cryptocom/` | Raw HTTP, spot only, no candles yet |
 
 ---
 
@@ -130,10 +153,10 @@ A provider lives in `pkg/provider/<name>/`. Follow this file-per-concern convent
 
 ```
 pkg/provider/<name>/
-├── client.go          — Client struct, NewClient(), ID(), SetUserAgent(), Capabilities()
+├── client.go          — Client struct, NewClient(), ID(), SetUserAgent(), Capabilities(), doRequest()
+├── types.go           — provider-specific JSON structs (internal; never exported to model)
 ├── market.go          — PriceProvider, CandleProvider, TickerProvider, OrderBookProvider methods
 ├── exchange.go        — (optional) ExchangeProvider methods (ServerTime, ExchangeInfo)
-├── types.go           — provider-specific JSON structs (internal; never exported to model)
 └── stream.go          — (optional) streaming methods via ws.BaseClient
 ```
 
@@ -144,24 +167,37 @@ construction, identity, and capabilities; keep API logic in `market.go` / `excha
 
 ## Step-by-Step: Adding a New Provider
 
-### 1. Config
+### 1. Config — `pkg/config/config.go`
 
-Add a config struct in `pkg/config/config.go`:
+Add a config struct with `mapstructure` tags. Include `Spot`/`Futures`/`Margin` sub-structs
+as needed, with `IsXxxEnabled()` helpers:
 
 ```go
 type MyExchangeConfig struct {
-    APIKey    string `mapstructure:"api_key"`
-    APISecret string `mapstructure:"api_secret"`
-    BaseURL   string `mapstructure:"base_url"`
+    APIKey    string       `mapstructure:"api_key"`
+    APISecret string       `mapstructure:"api_secret"`
+    BaseURL   string       `mapstructure:"base_url"`
+    Spot      MarketConfig `mapstructure:"spot"`
 }
+
+func (c MyExchangeConfig) IsSpotEnabled() bool { return c.Spot.Enabled }
 ```
 
-Add it to the top-level `Config` struct and wire env overrides in `applyEnvOverrides()`:
+Add to the top-level `Config` struct:
 
 ```go
-cfg.MyExchange.APIKey    = getEnv("BITS_MYEXCHANGE_API_KEY",    cfg.MyExchange.APIKey)
-cfg.MyExchange.APISecret = getEnv("BITS_MYEXCHANGE_API_SECRET", cfg.MyExchange.APISecret)
+MyExchange MyExchangeConfig `mapstructure:"myexchange"`
 ```
+
+Also update:
+- `applyEnvMap()` — handle `"myexchange.*"` keys from `.env` files
+- `applyEnvOverrides()` — handle `BITS_MYEXCHANGE_*` env vars:
+  ```go
+  cfg.MyExchange.APIKey    = getEnv("BITS_MYEXCHANGE_API_KEY",    cfg.MyExchange.APIKey)
+  cfg.MyExchange.APISecret = getEnv("BITS_MYEXCHANGE_API_SECRET", cfg.MyExchange.APISecret)
+  ```
+- `Redacted()` — mask `APIKey` and `APISecret`
+- `ConfigTemplate` — add a commented `[myexchange]` section
 
 ### 2. `client.go` — struct, constructor, identity, capabilities
 
@@ -169,19 +205,30 @@ cfg.MyExchange.APISecret = getEnv("BITS_MYEXCHANGE_API_SECRET", cfg.MyExchange.A
 package myexchange
 
 import (
+    "net/http"
+    "time"
+
     "github.com/mdnmdn/bits/pkg/capability"
     "github.com/mdnmdn/bits/pkg/config"
 )
 
 const providerID = "myexchange"
+const defaultBaseURL = "https://api.myexchange.com"
 
 type Client struct {
-    cfg       config.MyExchangeConfig
-    userAgent string
+    cfg        config.MyExchangeConfig
+    httpClient *http.Client
+    userAgent  string
 }
 
 func NewClient(cfg config.MyExchangeConfig) *Client {
-    return &Client{cfg: cfg}
+    if cfg.BaseURL == "" {
+        cfg.BaseURL = defaultBaseURL
+    }
+    return &Client{
+        cfg:        cfg,
+        httpClient: &http.Client{Timeout: 30 * time.Second},
+    }
 }
 
 func (c *Client) ID() string             { return providerID }
@@ -199,29 +246,61 @@ func (c *Client) Capabilities() capability.CapabilityMatrix {
 }
 ```
 
+Add a `doRequest` helper for all HTTP calls:
+
+```go
+func (c *Client) doRequest(ctx context.Context, path, query string) ([]byte, error) {
+    url := c.cfg.BaseURL + "/" + path
+    if query != "" {
+        url += "?" + query
+    }
+    req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+    if err != nil {
+        return nil, err
+    }
+    req.Header.Set("Content-Type", "application/json")
+    if c.userAgent != "" {
+        req.Header.Set("User-Agent", c.userAgent)
+    }
+    // add auth headers here if needed (see internal/auth/signature.go for HMAC helpers)
+    resp, err := c.httpClient.Do(req)
+    if err != nil {
+        return nil, err
+    }
+    defer resp.Body.Close()
+    return io.ReadAll(resp.Body)
+}
+```
+
 ### 3. `types.go` — internal JSON shapes
 
 Define private structs for deserialising the exchange's API responses. Never expose them
 outside the package; convert to `model.*` types in `market.go`.
 
+- Name structs with a provider prefix: `type myexchangeTickerData struct { … }`
+- Use `string` fields for price/qty if the API returns quoted numbers; `float64` for bare numbers
+- Use exact API field names in `json` tags
+
 ```go
 package myexchange
 
-type apiTickerResponse struct {
+type myexchangeTickerData struct {
     Symbol    string `json:"symbol"`
-    LastPrice string `json:"lastPrice"`
+    LastPrice string `json:"lastPrice"`   // quoted float — parse with strconv.ParseFloat
     // …
 }
 ```
 
 ### 4. `market.go` — implement capability interfaces
 
-All methods return `model.Response[T]` with `Provider` and `Market` populated.
+All methods return `model.Response[T]` with `Provider`, `Market`, and `Kind` populated.
+Collect per-symbol failures in `[]model.ItemError` rather than returning a top-level error.
 
 ```go
 func (c *Client) Price(ctx context.Context, ids []string, currency string) (model.Response[[]model.CoinPrice], error) {
     // call API, parse response, map to []model.CoinPrice
     return model.Response[[]model.CoinPrice]{
+        Kind:     model.KindPrice,
         Data:     prices,
         Provider: providerID,
         Market:   model.MarketSpot,
@@ -231,6 +310,7 @@ func (c *Client) Price(ctx context.Context, ids []string, currency string) (mode
 func (c *Client) Ticker24h(ctx context.Context, symbol string, market model.MarketType) (model.Response[model.Ticker24h], error) {
     // …
     return model.Response[model.Ticker24h]{
+        Kind:     model.KindTicker,
         Data:     ticker,
         Provider: providerID,
         Market:   market,
@@ -238,10 +318,41 @@ func (c *Client) Ticker24h(ctx context.Context, symbol string, market model.Mark
 }
 ```
 
+Rules for all methods:
+- Always set `Response.Provider = providerID`
+- Always set `Response.Market = market` (or `model.MarketSpot` for spot-only)
+- Always set `Response.Kind = model.KindXxx`
+- Use `strconv.ParseFloat(s, 64)` for string-encoded numbers
+- Use `time.UnixMilli(ms)` for millisecond timestamps
+- Map standard intervals (`1m`, `5m`, `1h`, `4h`, `1d`) to the provider's format in `Candles`
+
 Implement only the interfaces the exchange actually supports. Commands check at runtime via
 `resolve.Require[T]`; unsupported interfaces cause a clean error or fallback.
 
-### 5. `stream.go` — streaming (optional)
+### 5. `exchange.go` — ExchangeProvider (optional)
+
+Implement if the exchange supports `bits time` and `bits info`:
+
+```go
+func (c *Client) ServerTime(ctx context.Context) (model.Response[model.ServerTime], error) {
+    // Call dedicated endpoint (e.g. /api/v1/time) or estimate from round-trip.
+    // Set Latency field if measuring the round-trip duration.
+    return model.Response[model.ServerTime]{
+        Kind:     model.KindServerTime,
+        Data:     model.ServerTime{Time: serverTime, Latency: &latency},
+        Provider: providerID,
+        Market:   model.MarketSpot,
+    }, nil
+}
+
+func (c *Client) ExchangeInfo(ctx context.Context, market model.MarketType) (model.Response[model.ExchangeInfo], error) {
+    // Route to spot/futures/margin sub-method based on market.
+    // Map provider status strings to model.SymbolStatus constants.
+    // Set PricePrecision, QtyPrecision, MinQty, MaxQty where available.
+}
+```
+
+### 6. `stream.go` — streaming (optional)
 
 Use `ws.BaseClient` from `internal/ws/base_client.go`. Implement `OnConnect` (subscriptions)
 and `OnMessage` (parsing), then push results onto a channel.
@@ -306,11 +417,17 @@ func (c *Client) WatchOrderBook(ctx context.Context, symbol string, market model
 > **Always use `ws.BaseClient` for new providers.** `ws.Client` is CoinGecko-specific.
 > Implement protocol handshakes in `OnConnect` — it is re-called on every reconnect.
 
-### 6. Register the provider
+### 7. Register the provider — `pkg/provider/registry/registry.go`
 
-In `pkg/provider/registry/registry.go`, add a case to `NewProvider` and `AllProviderIDs`:
+Add a case to `NewProvider`, and the provider ID to `AllProviderIDs` and `AllProviderIDsWithAliases`.
+Also add any short aliases to the `providerAliases` map:
 
 ```go
+var providerAliases = map[string]string{
+    // …
+    "me": "myexchange",
+}
+
 func NewProvider(name string, cfg *config.Config) (provider.Provider, error) {
     switch name {
     case "coingecko", "":
@@ -329,7 +446,16 @@ func NewProvider(name string, cfg *config.Config) (provider.Provider, error) {
 func AllProviderIDs() []string {
     return []string{"coingecko", "binance", "bitget", "myexchange"}
 }
+
+func AllProviderIDsWithAliases() []string {
+    return []string{"coingecko", "binance", "bitget", "myexchange", "me"}
+}
 ```
+
+### 8. Documentation
+
+- Create `_docs/providers/myexchange-api.md` — capabilities table, API notes, auth details, config examples, usage examples
+- Update `_docs/architecture.md` — add a row to the provider capabilities table
 
 ---
 
@@ -339,7 +465,7 @@ All public method signatures use types from `pkg/model/`:
 
 | Type | Description |
 |------|-------------|
-| `Response[T]` | Generic envelope: `Data T`, `Provider`, `Market`, `Fallback`, `Errors` |
+| `Response[T]` | Generic envelope: `Kind`, `Data T`, `Provider`, `Market`, `Fallback`, `Errors` |
 | `MarketType` | `"spot"` \| `"futures"` \| `"margin"` |
 | `CoinPrice` | Current price (coin ID or symbol, price, currency, optional 24h change) |
 | `Ticker24h` | 24h rolling stats (last price, change %, high, low, volume — all optional floats) |
@@ -369,19 +495,71 @@ without spinning up a real WebSocket server.
 
 ---
 
-## Quick Checklist
+## Verification
+
+```sh
+# Compile the whole project
+go build ./...
+
+# Run all tests (race detector on)
+go test -race ./...
+
+# Check formatting
+gofmt -l ./pkg/provider/myexchange/
+
+# Sanity-check the provider appears
+go run . providers
+go run . capabilities -p myexchange
+
+# Live smoke tests (requires network + valid symbols)
+go run . time -p myexchange
+go run . info -p myexchange
+go run . price BTC_USDT -p myexchange
+go run . ticker BTC_USDT -p myexchange
+go run . book BTC_USDT -p myexchange
+```
+
+---
+
+## Common Pitfalls
+
+| Issue | Fix |
+|-------|-----|
+| `resolve.Require` fails at runtime | Verify the provider struct implements the interface method signatures exactly |
+| `bits capabilities` shows no entries | Check `Capabilities()` returns non-empty matrix |
+| Prices always 0 | Exchange returns string prices — use `strconv.ParseFloat` |
+| Wrong percent change | Multiply ratio by 100 if exchange returns e.g. `0.02` for 2% |
+| ExchangeInfo returns all symbols | Filter by product type / status in the loop |
+| `bits time -p myexchange` falls back | Implement `ExchangeProvider` and register `FeatureServerTime` |
+| Import cycle | Never import registry from a provider package; only registry imports providers |
+
+---
+
+## File Checklist
 
 ```
-□ pkg/config/config.go                 — add MyExchangeConfig, wire env vars
+□ pkg/config/config.go
+  □ MyExchangeConfig struct (APIKey, APISecret, BaseURL, Spot/Futures MarketConfig)
+  □ IsSpotEnabled() / IsFuturesEnabled() helpers
+  □ Add MyExchange to top-level Config struct
+  □ applyEnvMap() — ".env" file keys
+  □ applyEnvOverrides() — BITS_MYEXCHANGE_* env vars
+  □ Redacted() — mask APIKey / APISecret
+  □ ConfigTemplate — add commented [myexchange] section
+
 □ pkg/provider/myexchange/
-  □ client.go                          — Client struct, NewClient, ID, SetUserAgent, Capabilities
-  □ types.go                           — internal JSON response structs
-  □ market.go                          — PriceProvider, CandleProvider, TickerProvider, etc.
-  □ exchange.go                        — (optional) ExchangeProvider (ServerTime, ExchangeInfo)
-  □ stream.go                          — (optional) streaming via ws.NewBaseClient
-□ pkg/provider/registry/registry.go    — add case to NewProvider and AllProviderIDs
-□ _docs/architecture.md                — update capability table
-□ _docs/features.md                    — note new provider in relevant commands
-```
+  □ client.go     — Client struct, NewClient, defaultBaseURL, ID, SetUserAgent, Capabilities, doRequest
+  □ types.go      — private JSON response structs (prefixed names, string fields for quoted numbers)
+  □ market.go     — Price / Ticker24h / Candles / OrderBook (set Kind, Provider, Market on every Response)
+  □ exchange.go   — (optional) ServerTime (with Latency) + ExchangeInfo (with SymbolStatus mapping)
+  □ stream.go     — (optional) WatchPrices / WatchOrderBook via ws.NewBaseClient
+  □ client_test.go — httptest mocks for each capability method
 
-Run `go build ./...` and `go test ./...` after each file to catch issues early.
+□ pkg/provider/registry/registry.go
+  □ providerAliases map entry
+  □ NewProvider case
+  □ AllProviderIDs / AllProviderIDsWithAliases
+
+□ _docs/providers/myexchange-api.md  — capabilities, API notes, config examples
+□ _docs/architecture.md              — add row to provider capabilities table
+```

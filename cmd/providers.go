@@ -27,13 +27,13 @@ func runProviders(cmd *cobra.Command, args []string) error {
 
 	ids := registry.AllProviderIDs()
 	tw := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(tw, "PROVIDER\tACTIVE")
+	_, _ = fmt.Fprintln(tw, "PROVIDER\tACTIVE")
 	for _, id := range ids {
 		active := ""
 		if id == cfg.ActiveProvider() {
 			active = "*"
 		}
-		fmt.Fprintf(tw, "%s\t%s\n", id, active)
+		_, _ = fmt.Fprintf(tw, "%s\t%s\n", id, active)
 	}
 	return tw.Flush()
 }

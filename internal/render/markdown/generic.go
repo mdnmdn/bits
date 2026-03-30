@@ -31,9 +31,9 @@ type itemError struct {
 // The document contains a heading with provider/market, an optional fallback
 // blockquote, and a fenced YAML code block with the full provenance envelope.
 func Render[T any](w io.Writer, res model.Response[T]) error {
-	fmt.Fprintf(w, "# %s\n\n", render.ProviderLabel(res))
+	_, _ = fmt.Fprintf(w, "# %s\n\n", render.ProviderLabel(res))
 	if note := render.FallbackFootnote(res); note != "" {
-		fmt.Fprintf(w, "> %s\n\n", note)
+		_, _ = fmt.Fprintf(w, "> %s\n\n", note)
 	}
 	env := envelope[T]{
 		Kind:              res.Kind,
@@ -48,12 +48,12 @@ func Render[T any](w io.Writer, res model.Response[T]) error {
 	for _, e := range res.Errors {
 		env.Errors = append(env.Errors, itemError{Symbol: e.Symbol, Error: e.Err.Error()})
 	}
-	fmt.Fprintln(w, "```yaml")
+	_, _ = fmt.Fprintln(w, "```yaml")
 	enc := yaml.NewEncoder(w)
 	enc.SetIndent(2)
 	if err := enc.Encode(env); err != nil {
 		return err
 	}
-	fmt.Fprint(w, "```\n")
+	_, _ = fmt.Fprint(w, "```\n")
 	return nil
 }

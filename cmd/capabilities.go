@@ -52,7 +52,7 @@ func runCapabilities(cmd *cobra.Command, args []string) error {
 	for _, n := range names {
 		header += "\t" + n
 	}
-	fmt.Fprintln(tw, header)
+	_, _ = fmt.Fprintln(tw, header)
 
 	for _, feat := range capability.AllFeatures() {
 		for _, mkt := range capability.AllMarkets() {
@@ -75,7 +75,7 @@ func runCapabilities(cmd *cobra.Command, args []string) error {
 					row += "\t-"
 				}
 			}
-			fmt.Fprintln(tw, row)
+			_, _ = fmt.Fprintln(tw, row)
 		}
 	}
 	return tw.Flush()
