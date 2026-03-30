@@ -11,12 +11,14 @@ _docs/providers/apis/
 │   ├── binance-general.md        # Base URL, rate limits, auth, exchange info APIs
 │   ├── binance-market.md         # Prices, orderbooks, candles, tickers, streams
 │   ├── binance-market-ws.md      # WebSocket spot market streams
-│   └── binance-market-futures-ws.md  # WebSocket futures market streams (USDT-M + COIN-M)
+│   ├── binance-market-futures-ws.md  # WebSocket futures market streams (USDT-M + COIN-M)
+│   └── binance-accounts.md       # Account REST APIs (balance, subaccounts, transfers)
 ├── bitget/
 │   ├── bitget-general.md         # Base URL, rate limits, auth, exchange info APIs
 │   ├── bitget-market.md          # Prices, orderbooks, candles, tickers, streams
 │   ├── bitget-market-ws.md       # WebSocket spot market streams
-│   └── bitget-market-futures-ws.md   # WebSocket futures market streams (USDT-M + Coin-M)
+│   ├── bitget-market-futures-ws.md   # WebSocket futures market streams (USDT-M + Coin-M)
+│   └── bitget-accounts.md        # Account REST APIs (balance, subaccounts, transfers)
 ├── coingecko/
 │   ├── coingecko-general.md      # Base URL, rate limits, auth, exchange info APIs
 │   ├── coingecko-market.md       # Prices, orderbooks, candles, tickers, streams
@@ -24,16 +26,19 @@ _docs/providers/apis/
 ├── whitebit/
 │   ├── whitebit-general.md       # Base URL, rate limits, auth, exchange info APIs
 │   ├── whitebit-market.md        # Prices, orderbooks, candles, tickers, streams
-│   └── whitebit-market-ws.md     # WebSocket spot market streams
+│   ├── whitebit-market-ws.md     # WebSocket spot market streams
+│   └── whitebit-accounts.md      # Account REST APIs (balance, subaccounts, transfers)
 ├── cryptocom/
 │   ├── cryptocom-general.md      # Base URL, rate limits, auth, exchange info APIs
 │   ├── cryptocom-market.md       # Prices, orderbooks, candles, tickers, streams
-│   └── cryptocom-market-ws.md    # WebSocket spot market streams
+│   ├── cryptocom-market-ws.md    # WebSocket spot market streams
+│   └── cryptocom-accounts.md     # Account REST APIs (balance, subaccounts, transfers)
 └── mexc/
     ├── mexc-general.md           # Base URL, rate limits, auth, exchange info APIs
     ├── mexc-market.md            # Prices, orderbooks, candles, tickers, streams
     ├── mexc-market-ws.md         # WebSocket spot market streams
-    └── mexc-market-futures-ws.md # WebSocket futures market streams
+    ├── mexc-market-futures-ws.md # WebSocket futures market streams
+    └── mexc-accounts.md          # Account REST APIs (balance, subaccounts, transfers)
 ```
 
 ## Document Template
@@ -100,6 +105,17 @@ APIs covered:
 | CoinGecko | N/A | n/a | Spot-only aggregator, no futures support |
 | WhiteBit | [x] | done | Unified WebSocket endpoint — same streams as spot, perpetual symbols use `_PERP` suffix (e.g., `BTC_PERP`) |
 | Crypto.com | [x] | done | Unified WebSocket endpoint — same streams as spot, perpetual symbols use `-PERP` suffix (e.g., `BTCUSD-PERP`) |
+
+### Account REST API Documentation
+
+| Provider | Accounts Doc | Status | Notes |
+|----------|--------------|--------|-------|
+| Binance  | [x] | done | Spot account, subaccount CRUD, universal transfers, futures account/balance |
+| Bitget   | [x] | done | Account assets, bills, subaccount CRUD, transfer V2, sub-transfer |
+| WhiteBit | [x] | done | Main balance, subaccount CRUD, internal transfers, transfer history |
+| Crypto.com | [x] | done | User balance, balance history, accounts, positions, subaccount balance/transfer |
+| MEXC     | [x] | done | Account info, subaccount CRUD, universal transfers, internal transfers |
+| CoinGecko | N/A | n/a | Aggregator only, no account APIs |
 
 ## Provider Capability Summary
 
