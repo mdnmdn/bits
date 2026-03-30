@@ -32,8 +32,8 @@ changelog:
 
 brews:
   - repository:
-      owner: coingecko
-      name: homebrew-coingecko-cli
+      owner: mdnmdn
+      name: homebrew-bits
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
     homepage: https://github.com/mdnmdn/bits
     description: bits CLI — cryptocurrency data at your fingertips

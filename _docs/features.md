@@ -210,7 +210,7 @@ All commands support the `-o` / `--output` flag:
 | `json`     | JSON envelope with data + provenance fields (pretty-printed) |
 | `yaml`     | YAML envelope with data + provenance fields |
 | `markdown` | Markdown document: `# provider/market` heading, data as fenced YAML block |
-| `toon`     | Lipgloss-styled terminal output: colored header + rounded box around YAML data |
+| `toon`     | Token friendly structured format |
 
 All non-table formats include `provider`, `market`, and (when applicable) `fallback`,
 `requested_provider`, `requested_market`, and `errors` provenance fields.
@@ -225,8 +225,8 @@ Streaming commands (`bits stream price`, `bits stream book`) emit **continuous c
 | `json`     | JSONL — one compact JSON object per line |
 | `yaml`     | One YAML document per update, separated by `---` |
 | `markdown` | One markdown bullet (`- **SYMBOL** price currency  _change%_`) per update |
-| `toon`     | Compact colored line per update (bold symbol, green price, red/green change) |
-| `table`    | Plain compact line per update (same as before) |
+| `toon`     | ompact colored line per update (bold symbol, green price, red/green change) |
+| `table`    | Token friendly structured format |
 
 ---
 

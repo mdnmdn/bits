@@ -4,9 +4,6 @@
 
 One CLI. Three exchanges. Every format. Real-time streams, snapshots, order books, candles — all from the same command set, no matter which provider you're pointing at.
 
-> [!NOTE]
-> bits CLI is currently in Beta.
-> We're constantly improving — feedback welcome via this [form](https://forms.gle/VgpVbwsSJLgE7D8Q7) or a PR.
 
 ---
 
@@ -59,7 +56,7 @@ Every command supports `-o` with five formats:
 | `json` | Pretty-printed JSON envelope with provenance metadata |
 | `yaml` | Same as JSON but YAML |
 | `markdown` | Markdown doc — heading + fenced YAML block |
-| `toon` | Lipgloss-styled terminal box with colored header |
+| `toon` | Token friendly structured format |
 
 Streaming commands (`bits stream`) emit continuous compact output per update:
 

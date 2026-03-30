@@ -1,5 +1,5 @@
 # bits Configuration
-# Copy to ~/.config/coingecko-cli/config.yaml
+# Copy to ~/.config/bits/config.yaml (Linux) or ~/Library/Application Support/bits-cli/config.yaml (macOS)
 
 # Active provider (coingecko, binance, bitget)
 provider: coingecko
