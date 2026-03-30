@@ -224,17 +224,32 @@ func (c *Client) Candles(ctx context.Context, symbol string, market model.Market
 	}
 
 	// Spot / Margin
+	// MEXC API klines endpoint (/api/v3/klines) hasquirks that require workarounds:
+	//
+	// #1 Without any time filters:
+	//    curl "https://api.mexc.com/api/v3/klines?symbol=SOLUSDT&interval=1d"
+	//    -> Returns NEWEST 500 candles (correct)
+	//
+	// #2 With only startTime:
+	//    curl "https://api.mexc.com/api/v3/klines?symbol=SOLUSDT&interval=1d&startTime=1774656000000"
+	//    -> Returns OLDEST 500 candles (unexpected - should return newest from that time)
+	//
+	// #3 With only endTime:
+	//    curl "https://api.mexc.com/api/v3/klines?symbol=SOLUSDT&interval=1d&endTime=1774828800000"
+	//    -> Returns OLDEST candles up to that time (unexpected - should return newest)
+	//
+	// #4 With endTime + limit:
+	//    curl "https://api.mexc.com/api/v3/klines?symbol=SOLUSDT&interval=1d&endTime=1774828800000&limit=10"
+	//    -> Returns NEWEST 10 candles up to endTime (works correctly!)
+	//
+	// #5 With startTime + endTime:
+	//    curl "https://api.mexc.com/api/v3/klines?symbol=SOLUSDT&interval=1d&startTime=1774656000000&endTime=1774828800000"
+	//    -> Returns correct range (works correctly!)
+	//
+	// Workaround: Always fetch all (newest 500) and filter client-side.
+	// This is the most reliable approach given the API quirks.
 	mexcInterval := mapInterval(interval, false)
 	query := fmt.Sprintf("symbol=%s&interval=%s", symbol, mexcInterval)
-	if opts.Limit != nil {
-		query += fmt.Sprintf("&limit=%d", *opts.Limit)
-	}
-	if opts.From != nil && !opts.From.IsZero() {
-		query += fmt.Sprintf("&startTime=%d", opts.From.UnixMilli())
-	}
-	if opts.To != nil && !opts.To.IsZero() {
-		query += fmt.Sprintf("&endTime=%d", opts.To.UnixMilli())
-	}
 
 	data, err := c.doRequest(ctx, market, "/klines", query)
 	if err != nil {
@@ -246,7 +261,29 @@ func (c *Client) Candles(ctx context.Context, symbol string, market model.Market
 		return resp, err
 	}
 
-	resp.Data = parseSpotCandles(rawCandles)
+	candles := parseSpotCandles(rawCandles)
+
+	// Filter by time range if specified (MEXC API quirk workaround)
+	if from := opts.From; from != nil && !from.IsZero() {
+		filtered := make([]model.Candle, 0)
+		for _, c := range candles {
+			if !c.OpenTime.Before(*from) {
+				filtered = append(filtered, c)
+			}
+		}
+		candles = filtered
+	}
+	if to := opts.To; to != nil && !to.IsZero() {
+		filtered := make([]model.Candle, 0)
+		for _, c := range candles {
+			if !c.OpenTime.After(*to) {
+				filtered = append(filtered, c)
+			}
+		}
+		candles = filtered
+	}
+
+	resp.Data = candles
 	return resp, nil
 }
 

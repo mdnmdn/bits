@@ -12,11 +12,11 @@ import (
 
 const (
 	providerID     = "cryptocom"
-	defaultBaseURL = "https://api.crypto.com/v2"
+	defaultBaseURL = "https://api.crypto.com/exchange/v1"
 )
 
 // Client is the Crypto.com Exchange provider implementation.
-// Only spot market is supported via the v2 REST API.
+// Supports spot, margin, and futures markets via the v1 REST API.
 type Client struct {
 	cfg        config.CryptoComConfig
 	httpClient *http.Client
@@ -41,17 +41,30 @@ func (c *Client) ID() string { return providerID }
 func (c *Client) SetUserAgent(ua string) { c.userAgent = ua }
 
 // Capabilities returns the capability matrix for Crypto.com.
-// REST and WebSocket streaming are supported for the spot market.
+// Supports spot, margin, and futures markets.
 func (c *Client) Capabilities() capability.CapabilityMatrix {
 	s := capability.MarketSpot
+	f := capability.MarketFutures
+	m := capability.MarketMargin
 	return capability.NewCapabilityMatrix(
 		capability.CapabilityKey{Market: s, Feature: capability.FeatureServerTime},
 		capability.CapabilityKey{Market: s, Feature: capability.FeatureExchangeInfo},
 		capability.CapabilityKey{Market: s, Feature: capability.FeaturePrice},
 		capability.CapabilityKey{Market: s, Feature: capability.FeatureTicker24h},
 		capability.CapabilityKey{Market: s, Feature: capability.FeatureOrderBook},
+		capability.CapabilityKey{Market: s, Feature: capability.FeatureCandles},
 		capability.CapabilityKey{Market: s, Feature: capability.FeatureStreamPrice},
 		capability.CapabilityKey{Market: s, Feature: capability.FeatureStreamOrderBook},
+		capability.CapabilityKey{Market: f, Feature: capability.FeatureServerTime},
+		capability.CapabilityKey{Market: f, Feature: capability.FeatureExchangeInfo},
+		capability.CapabilityKey{Market: f, Feature: capability.FeaturePrice},
+		capability.CapabilityKey{Market: f, Feature: capability.FeatureTicker24h},
+		capability.CapabilityKey{Market: f, Feature: capability.FeatureOrderBook},
+		capability.CapabilityKey{Market: f, Feature: capability.FeatureCandles},
+		capability.CapabilityKey{Market: m, Feature: capability.FeatureExchangeInfo},
+		capability.CapabilityKey{Market: m, Feature: capability.FeaturePrice},
+		capability.CapabilityKey{Market: m, Feature: capability.FeatureTicker24h},
+		capability.CapabilityKey{Market: m, Feature: capability.FeatureOrderBook},
 	)
 }
 

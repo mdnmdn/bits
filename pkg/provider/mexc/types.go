@@ -45,7 +45,7 @@ type mexcSpotSymbol struct {
 	BaseAssetPrecision  int      `json:"baseAssetPrecision"`
 	QuoteAssetPrecision int      `json:"quoteAssetPrecision"`
 	QuotePrecision      int      `json:"quotePrecision"`
-	BaseSizePrecision   int      `json:"baseSizePrecision"`
+	BaseSizePrecision   string   `json:"baseSizePrecision"`
 	Permissions         []string `json:"permissions"`
 }
 

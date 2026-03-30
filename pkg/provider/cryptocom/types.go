@@ -127,3 +127,17 @@ type wsBookData struct {
 	Asks [][]float64 `json:"asks"`
 	T    int64       `json:"t"` // snapshot timestamp (ms)
 }
+
+type apiCandlestickResult struct {
+	Interval string            `json:"interval"`
+	Data     []candlestickData `json:"data"`
+}
+
+type candlestickData struct {
+	O string `json:"o"` // open
+	H string `json:"h"` // high
+	L string `json:"l"` // low
+	C string `json:"c"` // close
+	V string `json:"v"` // volume
+	T int64  `json:"t"` // timestamp (ms)
+}

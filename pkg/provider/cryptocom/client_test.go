@@ -18,6 +18,7 @@ import (
 var _ provider.Provider = (*Client)(nil)
 var _ provider.ExchangeProvider = (*Client)(nil)
 var _ provider.PriceProvider = (*Client)(nil)
+var _ provider.CandleProvider = (*Client)(nil)
 var _ provider.TickerProvider = (*Client)(nil)
 var _ provider.OrderBookProvider = (*Client)(nil)
 var _ provider.PriceStreamProvider = (*Client)(nil)
@@ -143,7 +144,7 @@ var sampleInstruments = apiInstrumentsResult{
 
 func TestTicker24h(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/public/get-ticker" {
+		if r.URL.Path != "/public/get-tickers" {
 			t.Errorf("unexpected path: %s", r.URL.Path)
 		}
 		if sym := r.URL.Query().Get("instrument_name"); sym != "BTC_USDT" {

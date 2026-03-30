@@ -3,6 +3,7 @@ package mexc
 import (
 	"context"
 	"encoding/json"
+	"strconv"
 	"time"
 
 	"github.com/mdnmdn/bits/pkg/model"
@@ -98,7 +99,10 @@ func (c *Client) ExchangeInfo(ctx context.Context, market model.MarketType) (mod
 		}
 
 		pp := s.QuotePrecision
-		qp := s.BaseSizePrecision
+		qp := 0
+		if q, err := strconv.Atoi(s.BaseSizePrecision); err == nil {
+			qp = q
+		}
 
 		symbols = append(symbols, model.Symbol{
 			Symbol:         s.Symbol,
