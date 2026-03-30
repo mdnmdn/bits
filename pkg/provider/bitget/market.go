@@ -197,7 +197,7 @@ func (c *Client) OrderBook(_ context.Context, symbol string, market model.Market
 
 	switch market {
 	case model.MarketFutures:
-		path = "/api/v2/mix/market/depth"
+		path = "/api/v2/mix/market/orderbook"
 		query = fmt.Sprintf("symbol=%s&productType=USDT-FUTURES", symbol)
 	default:
 		path = "/api/v2/spot/market/orderbook"

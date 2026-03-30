@@ -4,7 +4,7 @@ COMMIT=$(shell git rev-parse --short HEAD 2>/dev/null || echo "none")
 DATE=$(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 LDFLAGS=-ldflags "-s -w -X github.com/mdnmdn/bits/cmd.version=$(VERSION) -X github.com/mdnmdn/bits/cmd.commit=$(COMMIT) -X github.com/mdnmdn/bits/cmd.date=$(DATE)"
 
-.PHONY: build test lint clean
+.PHONY: build test lint clean explorer
 
 build:
 	go build $(LDFLAGS) -o $(BINARY_NAME) .
@@ -17,3 +17,6 @@ lint:
 
 clean:
 	rm -f $(BINARY_NAME)
+
+explorer:
+	go run _docs/providers/apis/api-explorer.go $(filter-out $@,$(MAKECMDGOALS))

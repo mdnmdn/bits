@@ -1,0 +1,867 @@
+# API Examples Configuration
+# Used by the bits-api-explorer tool to invoke provider REST APIs directly.
+#
+# Usage:
+#   go run api-explorer.go                          # Interactive TUI mode
+#   go run api-explorer.go --provider binance --endpoint "Price Ticker"  # CLI mode
+#   go run api-explorer.go --provider binance --endpoint "Klines" --param symbol=BTCUSDT --param interval=1h
+
+[providers.binance]
+name = "Binance"
+base_url = "https://api.binance.com"
+api_key_env = "BINANCE_API_KEY"
+
+  [[providers.binance.endpoints]]
+  name = "Server Time"
+  category = "general"
+  method = "GET"
+  path = "/api/v3/time"
+  description = "Returns the current server time in milliseconds"
+
+  [[providers.binance.endpoints]]
+  name = "Exchange Info"
+  category = "general"
+  method = "GET"
+  path = "/api/v3/exchangeInfo"
+  description = "Returns trading rules and symbol configuration"
+
+    [[providers.binance.endpoints.examples]]
+    label = "All symbols"
+
+    [[providers.binance.endpoints.examples]]
+    label = "Single symbol"
+    params = { symbol = "BTCUSDT" }
+
+  [[providers.binance.endpoints]]
+  name = "Price Ticker"
+  category = "market"
+  method = "GET"
+  path = "/api/v3/ticker/price"
+  description = "Latest price for a symbol"
+
+    [[providers.binance.endpoints.examples]]
+    label = "BTC/USDT"
+    params = { symbol = "BTCUSDT" }
+
+    [[providers.binance.endpoints.examples]]
+    label = "ETH/USDT"
+    params = { symbol = "ETHUSDT" }
+
+    [[providers.binance.endpoints.examples]]
+    label = "SOL/USDT"
+    params = { symbol = "SOLUSDT" }
+
+    [[providers.binance.endpoints.examples]]
+    label = "All prices"
+
+  [[providers.binance.endpoints]]
+  name = "24hr Ticker"
+  category = "market"
+  method = "GET"
+  path = "/api/v3/ticker/24hr"
+  description = "24-hour rolling window price change statistics"
+
+    [[providers.binance.endpoints.examples]]
+    label = "BTC/USDT"
+    params = { symbol = "BTCUSDT" }
+
+    [[providers.binance.endpoints.examples]]
+    label = "ETH/BTC"
+    params = { symbol = "ETHBTC" }
+
+    [[providers.binance.endpoints.examples]]
+    label = "All tickers"
+
+  [[providers.binance.endpoints]]
+  name = "Book Ticker"
+  category = "market"
+  method = "GET"
+  path = "/api/v3/ticker/bookTicker"
+  description = "Best price/qty on the order book"
+
+    [[providers.binance.endpoints.examples]]
+    label = "BTC/USDT"
+    params = { symbol = "BTCUSDT" }
+
+    [[providers.binance.endpoints.examples]]
+    label = "All book tickers"
+
+  [[providers.binance.endpoints]]
+  name = "Average Price"
+  category = "market"
+  method = "GET"
+  path = "/api/v3/avgPrice"
+  description = "Current average price for a symbol"
+  params = ["symbol"]
+
+    [[providers.binance.endpoints.examples]]
+    label = "BTC/USDT"
+    params = { symbol = "BTCUSDT" }
+
+    [[providers.binance.endpoints.examples]]
+    label = "ETH/USDT"
+    params = { symbol = "ETHUSDT" }
+
+  [[providers.binance.endpoints]]
+  name = "Klines"
+  category = "market"
+  method = "GET"
+  path = "/api/v3/klines"
+  description = "Candlestick / OHLCV data"
+  params = ["symbol", "interval", "limit"]
+
+    [[providers.binance.endpoints.examples]]
+    label = "BTC 1h (default 500)"
+    params = { symbol = "BTCUSDT", interval = "1h" }
+
+    [[providers.binance.endpoints.examples]]
+    label = "BTC 1d last 30"
+    params = { symbol = "BTCUSDT", interval = "1d", limit = "30" }
+
+    [[providers.binance.endpoints.examples]]
+    label = "ETH 5m last 100"
+    params = { symbol = "ETHUSDT", interval = "5m", limit = "100" }
+
+    [[providers.binance.endpoints.examples]]
+    label = "SOL 4h"
+    params = { symbol = "SOLUSDT", interval = "4h", limit = "50" }
+
+    [[providers.binance.endpoints.examples]]
+    label = "BTC 1w"
+    params = { symbol = "BTCUSDT", interval = "1w", limit = "52" }
+
+  [[providers.binance.endpoints]]
+  name = "Order Book"
+  category = "market"
+  method = "GET"
+  path = "/api/v3/depth"
+  description = "Order book depth snapshot"
+  params = ["symbol", "limit"]
+
+    [[providers.binance.endpoints.examples]]
+    label = "BTC depth 5"
+    params = { symbol = "BTCUSDT", limit = "5" }
+
+    [[providers.binance.endpoints.examples]]
+    label = "BTC depth 20"
+    params = { symbol = "BTCUSDT", limit = "20" }
+
+    [[providers.binance.endpoints.examples]]
+    label = "ETH depth 10"
+    params = { symbol = "ETHUSDT", limit = "10" }
+
+  [[providers.binance.endpoints]]
+  name = "Recent Trades"
+  category = "market"
+  method = "GET"
+  path = "/api/v3/trades"
+  description = "Recent trades for a symbol"
+  params = ["symbol", "limit"]
+
+    [[providers.binance.endpoints.examples]]
+    label = "BTC last 10"
+    params = { symbol = "BTCUSDT", limit = "10" }
+
+    [[providers.binance.endpoints.examples]]
+    label = "ETH last 20"
+    params = { symbol = "ETHUSDT", limit = "20" }
+
+  [[providers.binance.endpoints]]
+  name = "Futures Server Time"
+  category = "futures"
+  method = "GET"
+  path = "https://fapi.binance.com/fapi/v1/time"
+  description = "Futures server time"
+
+  [[providers.binance.endpoints]]
+  name = "Futures Ticker"
+  category = "futures"
+  method = "GET"
+  path = "https://fapi.binance.com/fapi/v1/ticker/24hr"
+  description = "Futures 24hr ticker"
+  params = ["symbol"]
+
+    [[providers.binance.endpoints.examples]]
+    label = "BTC/USDT Perp"
+    params = { symbol = "BTCUSDT" }
+
+    [[providers.binance.endpoints.examples]]
+    label = "ETH/USDT Perp"
+    params = { symbol = "ETHUSDT" }
+
+  [[providers.binance.endpoints]]
+  name = "Futures Klines"
+  category = "futures"
+  method = "GET"
+  path = "https://fapi.binance.com/fapi/v1/klines"
+  description = "Futures candlestick data"
+  params = ["symbol", "interval", "limit"]
+
+    [[providers.binance.endpoints.examples]]
+    label = "BTC 1h"
+    params = { symbol = "BTCUSDT", interval = "1h", limit = "20" }
+
+    [[providers.binance.endpoints.examples]]
+    label = "BTC 4h"
+    params = { symbol = "BTCUSDT", interval = "4h", limit = "30" }
+
+  [[providers.binance.endpoints]]
+  name = "Futures Order Book"
+  category = "futures"
+  method = "GET"
+  path = "https://fapi.binance.com/fapi/v1/depth"
+  description = "Futures order book"
+  params = ["symbol", "limit"]
+
+    [[providers.binance.endpoints.examples]]
+    label = "BTC depth 10"
+    params = { symbol = "BTCUSDT", limit = "10" }
+
+  [[providers.binance.endpoints]]
+  name = "Futures Exchange Info"
+  category = "futures"
+  method = "GET"
+  path = "https://fapi.binance.com/fapi/v1/exchangeInfo"
+  description = "Futures trading rules"
+
+[providers.bitget]
+name = "Bitget"
+base_url = "https://api.bitget.com"
+api_key_env = "BITGET_API_KEY"
+
+  [[providers.bitget.endpoints]]
+  name = "Server Time"
+  category = "general"
+  method = "GET"
+  path = "/api/v2/public/time"
+  description = "Returns the server time in milliseconds"
+
+  [[providers.bitget.endpoints]]
+  name = "Spot Symbols"
+  category = "general"
+  method = "GET"
+  path = "/api/v2/spot/public/symbols"
+  description = "All spot trading pairs"
+
+  [[providers.bitget.endpoints]]
+  name = "Spot Ticker"
+  category = "market"
+  method = "GET"
+  path = "/api/v2/spot/market/tickers"
+  description = "24h ticker statistics for spot"
+  params = ["symbol"]
+
+    [[providers.bitget.endpoints.examples]]
+    label = "BTC/USDT"
+    params = { symbol = "BTCUSDT" }
+
+    [[providers.bitget.endpoints.examples]]
+    label = "ETH/USDT"
+    params = { symbol = "ETHUSDT" }
+
+    [[providers.bitget.endpoints.examples]]
+    label = "SOL/USDT"
+    params = { symbol = "SOLUSDT" }
+
+  [[providers.bitget.endpoints]]
+  name = "Spot Candles"
+  category = "market"
+  method = "GET"
+  path = "/api/v2/spot/market/candles"
+  description = "Spot OHLCV candlestick data"
+  params = ["symbol", "granularity", "limit"]
+
+    [[providers.bitget.endpoints.examples]]
+    label = "BTC 1h"
+    params = { symbol = "BTCUSDT", granularity = "1h", limit = "20" }
+
+    [[providers.bitget.endpoints.examples]]
+    label = "BTC 1day"
+    params = { symbol = "BTCUSDT", granularity = "1day", limit = "30" }
+
+    [[providers.bitget.endpoints.examples]]
+    label = "ETH 5min"
+    params = { symbol = "ETHUSDT", granularity = "5min", limit = "50" }
+
+    [[providers.bitget.endpoints.examples]]
+    label = "SOL 4h"
+    params = { symbol = "SOLUSDT", granularity = "4h", limit = "30" }
+
+  [[providers.bitget.endpoints]]
+  name = "Spot Order Book"
+  category = "market"
+  method = "GET"
+  path = "/api/v2/spot/market/orderbook"
+  description = "Spot order book depth"
+  params = ["symbol", "limit"]
+
+    [[providers.bitget.endpoints.examples]]
+    label = "BTC depth 10"
+    params = { symbol = "BTCUSDT", limit = "10" }
+
+    [[providers.bitget.endpoints.examples]]
+    label = "ETH depth 20"
+    params = { symbol = "ETHUSDT", limit = "20" }
+
+  [[providers.bitget.endpoints]]
+  name = "Futures Ticker"
+  category = "futures"
+  method = "GET"
+  path = "/api/v2/mix/market/ticker"
+  description = "Futures 24h ticker"
+  params = ["symbol", "productType"]
+
+    [[providers.bitget.endpoints.examples]]
+    label = "BTC/USDT"
+    params = { symbol = "BTCUSDT", productType = "USDT-FUTURES" }
+
+    [[providers.bitget.endpoints.examples]]
+    label = "ETH/USDT"
+    params = { symbol = "ETHUSDT", productType = "USDT-FUTURES" }
+
+  [[providers.bitget.endpoints]]
+  name = "Futures Candles"
+  category = "futures"
+  method = "GET"
+  path = "/api/v2/mix/market/history-candles"
+  description = "Futures OHLCV data"
+  params = ["symbol", "productType", "granularity", "limit"]
+
+    [[providers.bitget.endpoints.examples]]
+    label = "BTC 1H"
+    params = { symbol = "BTCUSDT", productType = "USDT-FUTURES", granularity = "1H", limit = "20" }
+
+    [[providers.bitget.endpoints.examples]]
+    label = "BTC 1D"
+    params = { symbol = "BTCUSDT", productType = "USDT-FUTURES", granularity = "1D", limit = "30" }
+
+  [[providers.bitget.endpoints]]
+  name = "Futures Order Book"
+  category = "futures"
+  method = "GET"
+  path = "/api/v2/mix/market/orderbook"
+  description = "Futures order book"
+  params = ["symbol", "productType", "limit"]
+
+    [[providers.bitget.endpoints.examples]]
+    label = "BTC depth 10"
+    params = { symbol = "BTCUSDT", productType = "USDT-FUTURES", limit = "10" }
+
+  [[providers.bitget.endpoints]]
+  name = "Futures Contracts"
+  category = "futures"
+  method = "GET"
+  path = "/api/v2/mix/market/contracts"
+  description = "All futures contracts"
+  params = ["productType"]
+
+    [[providers.bitget.endpoints.examples]]
+    label = "USDT-FUTURES"
+    params = { productType = "USDT-FUTURES" }
+
+[providers.coingecko]
+name = "CoinGecko"
+base_url = "https://api.coingecko.com/api/v3"
+api_key_env = "COINGECKO_API_KEY"
+
+  [[providers.coingecko.endpoints]]
+  name = "Ping"
+  category = "general"
+  method = "GET"
+  path = "/ping"
+  description = "API health check"
+
+  [[providers.coingecko.endpoints]]
+  name = "Coin List"
+  category = "general"
+  method = "GET"
+  path = "/coins/list"
+  description = "All supported coin IDs"
+
+  [[providers.coingecko.endpoints]]
+  name = "Supported Currencies"
+  category = "general"
+  method = "GET"
+  path = "/simple/supported_vs_currencies"
+  description = "List of supported fiat currencies"
+
+  [[providers.coingecko.endpoints]]
+  name = "Simple Price"
+  category = "market"
+  method = "GET"
+  path = "/simple/price"
+  description = "Current prices for coin IDs"
+  params = ["ids", "vs_currencies", "include_24hr_change", "include_market_cap"]
+
+    [[providers.coingecko.endpoints.examples]]
+    label = "BTC + ETH in USD"
+    params = { ids = "bitcoin,ethereum", vs_currencies = "usd", include_24hr_change = "true" }
+
+    [[providers.coingecko.endpoints.examples]]
+    label = "Top 5 in USD"
+    params = { ids = "bitcoin,ethereum,solana,cardano,polkadot", vs_currencies = "usd", include_24hr_change = "true", include_market_cap = "true" }
+
+    [[providers.coingecko.endpoints.examples]]
+    label = "BTC in EUR"
+    params = { ids = "bitcoin", vs_currencies = "eur", include_24hr_change = "true" }
+
+    [[providers.coingecko.endpoints.examples]]
+    label = "BTC in multiple currencies"
+    params = { ids = "bitcoin", vs_currencies = "usd,eur,gbp,jpy,btc", include_24hr_change = "true" }
+
+  [[providers.coingecko.endpoints]]
+  name = "Coin OHLC"
+  category = "market"
+  method = "GET"
+  path = "/coins/{id}/ohlc"
+  description = "OHLC data for a coin"
+  params = ["vs_currency", "days"]
+  path_params = ["id"]
+
+    [[providers.coingecko.endpoints.examples]]
+    label = "BTC 7 days"
+    params = { id = "bitcoin", vs_currency = "usd", days = "7" }
+
+    [[providers.coingecko.endpoints.examples]]
+    label = "BTC 30 days"
+    params = { id = "bitcoin", vs_currency = "usd", days = "30" }
+
+    [[providers.coingecko.endpoints.examples]]
+    label = "ETH 14 days"
+    params = { id = "ethereum", vs_currency = "usd", days = "14" }
+
+    [[providers.coingecko.endpoints.examples]]
+    label = "SOL 90 days"
+    params = { id = "solana", vs_currency = "usd", days = "90" }
+
+  [[providers.coingecko.endpoints]]
+  name = "Coin Markets"
+  category = "market"
+  method = "GET"
+  path = "/coins/markets"
+  description = "Paginated coin market data"
+  params = ["vs_currency", "order", "per_page", "page", "ids"]
+
+    [[providers.coingecko.endpoints.examples]]
+    label = "Top 10 by market cap"
+    params = { vs_currency = "usd", order = "market_cap_desc", per_page = "10", page = "1" }
+
+    [[providers.coingecko.endpoints.examples]]
+    label = "Top 20 by volume"
+    params = { vs_currency = "usd", order = "volume_desc", per_page = "20", page = "1" }
+
+    [[providers.binance.endpoints.examples]]
+    label = "BTC and ETH only"
+    params = { vs_currency = "usd", ids = "bitcoin,ethereum" }
+
+  [[providers.coingecko.endpoints]]
+  name = "Coin Details"
+  category = "market"
+  method = "GET"
+  path = "/coins/{id}"
+  description = "Full coin metadata"
+  path_params = ["id"]
+
+    [[providers.coingecko.endpoints.examples]]
+    label = "Bitcoin"
+    params = { id = "bitcoin" }
+
+    [[providers.coingecko.endpoints.examples]]
+    label = "Ethereum"
+    params = { id = "ethereum" }
+
+  [[providers.coingecko.endpoints]]
+  name = "Global Data"
+  category = "market"
+  method = "GET"
+  path = "/global"
+  description = "Global crypto market data"
+
+  [[providers.coingecko.endpoints]]
+  name = "Trending"
+  category = "market"
+  method = "GET"
+  path = "/search/trending"
+  description = "Trending coins"
+
+[providers.whitebit]
+name = "WhiteBit"
+base_url = "https://whitebit.com"
+api_key_env = "WHITEBIT_API_KEY"
+
+  [[providers.whitebit.endpoints]]
+  name = "Server Time"
+  category = "general"
+  method = "GET"
+  path = "/api/v4/public/time"
+  description = "Server time in Unix seconds"
+
+  [[providers.whitebit.endpoints]]
+  name = "Markets"
+  category = "general"
+  method = "GET"
+  path = "/api/v4/public/markets"
+  description = "All spot trading pairs"
+
+  [[providers.whitebit.endpoints]]
+  name = "Futures Markets"
+  category = "general"
+  method = "GET"
+  path = "/api/v4/public/futures"
+  description = "All perpetual futures contracts"
+
+  [[providers.whitebit.endpoints]]
+  name = "Ticker"
+  category = "market"
+  method = "GET"
+  path = "/api/v1/public/ticker"
+  description = "24h ticker for a market"
+  params = ["market"]
+
+    [[providers.whitebit.endpoints.examples]]
+    label = "BTC/USD"
+    params = { market = "BTC_USD" }
+
+    [[providers.whitebit.endpoints.examples]]
+    label = "ETH/USD"
+    params = { market = "ETH_USD" }
+
+    [[providers.whitebit.endpoints.examples]]
+    label = "SOL/USDT"
+    params = { market = "SOL_USDT" }
+
+  [[providers.whitebit.endpoints]]
+  name = "Klines"
+  category = "market"
+  method = "GET"
+  path = "/api/v1/public/kline"
+  description = "Candlestick data"
+  params = ["market", "interval", "limit"]
+
+    [[providers.whitebit.endpoints.examples]]
+    label = "BTC 1h"
+    params = { market = "BTC_USD", interval = "1h", limit = "20" }
+
+    [[providers.whitebit.endpoints.examples]]
+    label = "BTC 1d"
+    params = { market = "BTC_USD", interval = "1d", limit = "30" }
+
+    [[providers.whitebit.endpoints.examples]]
+    label = "ETH 4h"
+    params = { market = "ETH_USD", interval = "4h", limit = "30" }
+
+    [[providers.whitebit.endpoints.examples]]
+    label = "SOL 15m"
+    params = { market = "SOL_USDT", interval = "15m", limit = "50" }
+
+  [[providers.whitebit.endpoints]]
+  name = "Order Book"
+  category = "market"
+  method = "GET"
+  path = "/api/v4/public/orderbook/{market}"
+  description = "Order book depth"
+  params = ["limit"]
+  path_params = ["market"]
+
+    [[providers.whitebit.endpoints.examples]]
+    label = "BTC depth 10"
+    params = { market = "BTC_USD", limit = "10" }
+
+    [[providers.whitebit.endpoints.examples]]
+    label = "ETH depth 20"
+    params = { market = "ETH_USD", limit = "20" }
+
+  [[providers.whitebit.endpoints]]
+  name = "Recent Trades"
+  category = "market"
+  method = "GET"
+  path = "/api/v4/public/trades/{market}"
+  description = "Recent trades"
+  params = ["limit"]
+  path_params = ["market"]
+
+    [[providers.whitebit.endpoints.examples]]
+    label = "BTC last 10"
+    params = { market = "BTC_USD", limit = "10" }
+
+    [[providers.whitebit.endpoints.examples]]
+    label = "ETH last 20"
+    params = { market = "ETH_USD", limit = "20" }
+
+[providers.cryptocom]
+name = "Crypto.com"
+base_url = "https://api.crypto.com/exchange/v1"
+api_key_env = "CRYPTOCOM_API_KEY"
+
+  [[providers.cryptocom.endpoints]]
+  name = "Instruments"
+  category = "general"
+  method = "GET"
+  path = "/public/get-instruments"
+  description = "All supported trading instruments"
+
+  [[providers.cryptocom.endpoints]]
+  name = "Tickers"
+  category = "market"
+  method = "GET"
+  path = "/public/get-tickers"
+  description = "24h ticker statistics"
+
+    [[providers.cryptocom.endpoints.examples]]
+    label = "BTC/USDT"
+    params = { instrument_name = "BTC_USDT" }
+
+    [[providers.cryptocom.endpoints.examples]]
+    label = "ETH/USDT"
+    params = { instrument_name = "ETH_USDT" }
+
+    [[providers.cryptocom.endpoints.examples]]
+    label = "CRO/USDT"
+    params = { instrument_name = "CRO_USDT" }
+
+  [[providers.cryptocom.endpoints]]
+  name = "All Tickers"
+  category = "market"
+  method = "GET"
+  path = "/public/get-tickers"
+  description = "24h tickers for all instruments"
+
+  [[providers.cryptocom.endpoints]]
+  name = "Candlestick"
+  category = "market"
+  method = "GET"
+  path = "/public/get-candlestick"
+  description = "OHLCV candlestick data"
+  params = ["instrument_name", "timeframe"]
+
+    [[providers.cryptocom.endpoints.examples]]
+    label = "BTC 1h"
+    params = { instrument_name = "BTC_USDT", timeframe = "1h" }
+
+    [[providers.cryptocom.endpoints.examples]]
+    label = "BTC 1d"
+    params = { instrument_name = "BTC_USDT", timeframe = "1D" }
+
+    [[providers.cryptocom.endpoints.examples]]
+    label = "ETH 5m"
+    params = { instrument_name = "ETH_USDT", timeframe = "5m" }
+
+    [[providers.cryptocom.endpoints.examples]]
+    label = "ETH 4h"
+    params = { instrument_name = "ETH_USDT", timeframe = "4h" }
+
+  [[providers.cryptocom.endpoints]]
+  name = "Order Book"
+  category = "market"
+  method = "GET"
+  path = "/public/get-book"
+  description = "Order book depth"
+  params = ["instrument_name", "depth"]
+
+    [[providers.cryptocom.endpoints.examples]]
+    label = "BTC depth 10"
+    params = { instrument_name = "BTC_USDT", depth = "10" }
+
+    [[providers.cryptocom.endpoints.examples]]
+    label = "ETH depth 20"
+    params = { instrument_name = "ETH_USDT", depth = "20" }
+
+  [[providers.cryptocom.endpoints]]
+  name = "Recent Trades"
+  category = "market"
+  method = "GET"
+  path = "/public/get-trades"
+  description = "Recent trades"
+  params = ["instrument_name"]
+
+    [[providers.cryptocom.endpoints.examples]]
+    label = "BTC"
+    params = { instrument_name = "BTC_USDT" }
+
+    [[providers.cryptocom.endpoints.examples]]
+    label = "ETH"
+    params = { instrument_name = "ETH_USDT" }
+
+[providers.mexc]
+name = "MEXC"
+base_url = "https://api.mexc.com"
+api_key_env = "MEXC_API_KEY"
+
+  [[providers.mexc.endpoints]]
+  name = "Server Time"
+  category = "general"
+  method = "GET"
+  path = "/api/v3/time"
+  description = "Server time in milliseconds"
+
+  [[providers.mexc.endpoints]]
+  name = "Exchange Info"
+  category = "general"
+  method = "GET"
+  path = "/api/v3/exchangeInfo"
+  description = "Trading rules and symbol configuration"
+
+  [[providers.mexc.endpoints]]
+  name = "Price Ticker"
+  category = "market"
+  method = "GET"
+  path = "/api/v3/ticker/price"
+  description = "Latest price for a symbol"
+  params = ["symbol"]
+
+    [[providers.mexc.endpoints.examples]]
+    label = "BTC/USDT"
+    params = { symbol = "BTCUSDT" }
+
+    [[providers.mexc.endpoints.examples]]
+    label = "ETH/USDT"
+    params = { symbol = "ETHUSDT" }
+
+    [[providers.mexc.endpoints.examples]]
+    label = "SOL/USDT"
+    params = { symbol = "SOLUSDT" }
+
+  [[providers.mexc.endpoints]]
+  name = "24hr Ticker"
+  category = "market"
+  method = "GET"
+  path = "/api/v3/ticker/24hr"
+  description = "24-hour price change statistics"
+  params = ["symbol"]
+
+    [[providers.mexc.endpoints.examples]]
+    label = "BTC/USDT"
+    params = { symbol = "BTCUSDT" }
+
+    [[providers.mexc.endpoints.examples]]
+    label = "ETH/BTC"
+    params = { symbol = "ETHBTC" }
+
+  [[providers.mexc.endpoints]]
+  name = "Klines"
+  category = "market"
+  method = "GET"
+  path = "/api/v3/klines"
+  description = "Candlestick / OHLCV data"
+  params = ["symbol", "interval", "limit"]
+
+    [[providers.mexc.endpoints.examples]]
+    label = "BTC 1h"
+    params = { symbol = "BTCUSDT", interval = "60m", limit = "20" }
+
+    [[providers.mexc.endpoints.examples]]
+    label = "BTC 1d"
+    params = { symbol = "BTCUSDT", interval = "1d", limit = "30" }
+
+    [[providers.mexc.endpoints.examples]]
+    label = "ETH 5m"
+    params = { symbol = "ETHUSDT", interval = "5m", limit = "50" }
+
+    [[providers.mexc.endpoints.examples]]
+    label = "SOL 4h"
+    params = { symbol = "SOLUSDT", interval = "4h", limit = "30" }
+
+    [[providers.mexc.endpoints.examples]]
+    label = "BTC 1M"
+    params = { symbol = "BTCUSDT", interval = "1M", limit = "20" }
+
+  [[providers.mexc.endpoints]]
+  name = "Order Book"
+  category = "market"
+  method = "GET"
+  path = "/api/v3/depth"
+  description = "Order book depth snapshot"
+  params = ["symbol", "limit"]
+
+    [[providers.mexc.endpoints.examples]]
+    label = "BTC depth 10"
+    params = { symbol = "BTCUSDT", limit = "10" }
+
+    [[providers.mexc.endpoints.examples]]
+    label = "ETH depth 20"
+    params = { symbol = "ETHUSDT", limit = "20" }
+
+  [[providers.mexc.endpoints]]
+  name = "Recent Trades"
+  category = "market"
+  method = "GET"
+  path = "/api/v3/trades"
+  description = "Recent trades"
+  params = ["symbol", "limit"]
+
+    [[providers.mexc.endpoints.examples]]
+    label = "BTC last 10"
+    params = { symbol = "BTCUSDT", limit = "10" }
+
+    [[providers.mexc.endpoints.examples]]
+    label = "ETH last 20"
+    params = { symbol = "ETHUSDT", limit = "20" }
+
+  [[providers.mexc.endpoints]]
+  name = "Futures Ticker"
+  category = "futures"
+  method = "GET"
+  path = "/api/v1/contract/ticker"
+  description = "Futures 24h ticker"
+
+    [[providers.mexc.endpoints.examples]]
+    label = "BTC/USDT Perp"
+    params = { symbol = "BTC_USDT" }
+
+    [[providers.mexc.endpoints.examples]]
+    label = "ETH/USDT Perp"
+    params = { symbol = "ETH_USDT" }
+
+  [[providers.mexc.endpoints]]
+  name = "Futures Klines"
+  category = "futures"
+  method = "GET"
+  path = "/api/v1/contract/kline/{symbol}"
+  description = "Futures candlestick data"
+  path_params = ["symbol"]
+  params = ["interval", "limit"]
+
+    [[providers.mexc.endpoints.examples]]
+    label = "BTC 1h"
+    params = { symbol = "BTC_USDT", interval = "Min60", limit = "20" }
+
+    [[providers.mexc.endpoints.examples]]
+    label = "BTC 4h"
+    params = { symbol = "BTC_USDT", interval = "Hour4", limit = "30" }
+
+    [[providers.mexc.endpoints.examples]]
+    label = "BTC 1d"
+    params = { symbol = "BTC_USDT", interval = "Day1", limit = "30" }
+
+  [[providers.mexc.endpoints]]
+  name = "Futures Order Book"
+  category = "futures"
+  method = "GET"
+  path = "/api/v1/contract/depth/{symbol}"
+  description = "Futures order book"
+  path_params = ["symbol"]
+  params = ["limit"]
+
+    [[providers.mexc.endpoints.examples]]
+    label = "BTC depth 10"
+    params = { symbol = "BTC_USDT", limit = "10" }
+
+  [[providers.mexc.endpoints]]
+  name = "Futures Detail"
+  category = "futures"
+  method = "GET"
+  path = "/api/v1/contract/detail"
+  description = "All futures contract details"
+
+  [[providers.mexc.endpoints]]
+  name = "Futures Trades"
+  category = "futures"
+  method = "GET"
+  path = "/api/v1/contract/deals/{symbol}"
+  description = "Recent futures trades"
+  path_params = ["symbol"]
+  params = ["limit"]
+
+    [[providers.mexc.endpoints.examples]]
+    label = "BTC last 10"
+    params = { symbol = "BTC_USDT", limit = "10" }
