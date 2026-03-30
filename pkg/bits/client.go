@@ -68,7 +68,7 @@ func (c *Client) ComparePrices(ctx context.Context, symbol string, providerIDs [
 			if err != nil {
 				results[index] = model.Response[model.CoinPrice]{
 					Provider: pid,
-					Errors: []model.ItemError{{Symbol: symbol, Err: err}},
+					Errors:   []model.ItemError{{Symbol: symbol, Err: err}},
 				}
 				return
 			}

@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/mdnmdn/bits/pkg/model"
 	"github.com/mdnmdn/bits/internal/ws"
+	"github.com/mdnmdn/bits/pkg/model"
 )
 
 // whitebitWSRequest represents a WhiteBit WebSocket request.
