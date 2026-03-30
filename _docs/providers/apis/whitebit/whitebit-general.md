@@ -49,7 +49,12 @@ signature = HMAC-SHA512(secretKey, timestamp + METHOD + path + body)
 
 ## WebSocket
 
-*Streaming endpoints exist but are not documented here.*
+- **Endpoint**: `wss://api.whitebit.com/ws` (single endpoint for all markets)
+- **Protocol**: JSON-RPC 2.0 over WebSocket
+- **Unified streams**: The same WebSocket endpoint and stream methods serve both spot and perpetual futures markets
+- **Symbol differentiation**: Spot markets use `BASE_QUOTE` format (e.g., `BTC_USDT`), perpetual futures use `BASE_PERP` format (e.g., `BTC_PERP`)
+- **Supported stream methods**: `lastprice_subscribe`, `market_subscribe`, `depth_subscribe`, `trades_subscribe`, `candles_subscribe`, `bookTicker_subscribe` — all work identically for spot and futures symbols
+- See `whitebit-market-ws.md` for full WebSocket documentation
 
 ---
 

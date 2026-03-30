@@ -48,7 +48,12 @@ signature = HMAC-SHA512(secretKey, request_body)
 
 ## WebSocket
 
-*Streaming endpoints exist but are not documented here.*
+- **Endpoint**: `wss://stream.crypto.com/exchange/v1/market` (Market Data), `wss://stream.crypto.com/exchange/v1/user` (User API)
+- **Protocol**: JSON-RPC 2.0 over WebSocket
+- **Unified streams**: The same WebSocket endpoint and channel formats serve both spot and derivatives markets
+- **Symbol differentiation**: Spot markets use `{BASE}_{QUOTE}` format (e.g., `BTC_USDT`), perpetuals use `{BASE}USD-PERP` (e.g., `BTCUSD-PERP`), futures use `{BASE}USD-{YYMMDD}` (e.g., `BTCUSD-231124`)
+- **Supported channel formats**: `trade.{instrument_name}`, `ticker.{instrument_name}`, `book.{instrument_name}.{depth}`, `candlestick.{time_frame}.{instrument_name}` — all work identically for spot and derivative symbols
+- See `cryptocom-market-ws.md` for full WebSocket documentation
 
 ---
 

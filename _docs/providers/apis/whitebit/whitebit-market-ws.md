@@ -448,6 +448,28 @@ Use `candles_request` with params `["ETH_BTC", start_time, end_time, interval]` 
 - Examples: `BTC_USDT`, `ETH_BTC`, `SOL_USD`
 - Always uppercase
 
+### Perpetual Futures Support
+- WhiteBit WebSocket market streams support **both spot and perpetual futures** using the same endpoint and methods
+- Perpetual futures use the `_PERP` suffix format instead of the quote currency
+- Spot symbol `BTC_USDT` maps to futures symbol `BTC_PERP`
+- All 6 market stream methods work identically for perpetual futures:
+  - `lastprice_subscribe` / `lastprice_update`
+  - `market_subscribe` / `market_update`
+  - `depth_subscribe` / `depth_update`
+  - `trades_subscribe` / `trades_update`
+  - `candles_subscribe` / `candles_update`
+  - `bookTicker_subscribe` / `bookTicker_update`
+- Example subscription for perpetual futures:
+  ```json
+  {
+    "id": 1,
+    "method": "lastprice_subscribe",
+    "params": ["BTC_PERP", "ETH_PERP"]
+  }
+  ```
+- Futures markets are listed via the REST endpoint `GET /api/v4/public/futures`
+- The glossary defines "Futures" as an alias for "Perpetual futures" — no expiry-based contracts exist
+
 ### Subscription Behavior
 - Repeating a subscription for the same data type **replaces** the previous subscription
 - Use a single WebSocket connection for all subscriptions

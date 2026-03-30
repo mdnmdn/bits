@@ -8,29 +8,32 @@ Master index for the formalized exchange provider API documentation.
 _docs/providers/apis/
 ├── provider-index.md          # This file
 ├── binance/
-│   ├── binance-general.md     # Base URL, rate limits, auth, exchange info APIs
-│   ├── binance-market.md      # Prices, orderbooks, candles, tickers, streams
-│   └── binance-market-ws.md   # WebSocket spot market streams
+│   ├── binance-general.md        # Base URL, rate limits, auth, exchange info APIs
+│   ├── binance-market.md         # Prices, orderbooks, candles, tickers, streams
+│   ├── binance-market-ws.md      # WebSocket spot market streams
+│   └── binance-market-futures-ws.md  # WebSocket futures market streams (USDT-M + COIN-M)
 ├── bitget/
-│   ├── bitget-general.md
-│   ├── bitget-market.md
-│   └── bitget-market-ws.md    # WebSocket spot market streams (pending)
+│   ├── bitget-general.md         # Base URL, rate limits, auth, exchange info APIs
+│   ├── bitget-market.md          # Prices, orderbooks, candles, tickers, streams
+│   ├── bitget-market-ws.md       # WebSocket spot market streams
+│   └── bitget-market-futures-ws.md   # WebSocket futures market streams (USDT-M + Coin-M)
 ├── coingecko/
-│   ├── coingecko-general.md
-│   ├── coingecko-market.md
-│   └── coingecko-market-ws.md # WebSocket spot market streams
+│   ├── coingecko-general.md      # Base URL, rate limits, auth, exchange info APIs
+│   ├── coingecko-market.md       # Prices, orderbooks, candles, tickers, streams
+│   └── coingecko-market-ws.md    # WebSocket spot market streams
 ├── whitebit/
-│   ├── whitebit-general.md
-│   ├── whitebit-market.md
-│   └── whitebit-market-ws.md  # WebSocket spot market streams
+│   ├── whitebit-general.md       # Base URL, rate limits, auth, exchange info APIs
+│   ├── whitebit-market.md        # Prices, orderbooks, candles, tickers, streams
+│   └── whitebit-market-ws.md     # WebSocket spot market streams
 ├── cryptocom/
-│   ├── cryptocom-general.md
-│   ├── cryptocom-market.md
-│   └── cryptocom-market-ws.md # WebSocket spot market streams
+│   ├── cryptocom-general.md      # Base URL, rate limits, auth, exchange info APIs
+│   ├── cryptocom-market.md       # Prices, orderbooks, candles, tickers, streams
+│   └── cryptocom-market-ws.md    # WebSocket spot market streams
 └── mexc/
-    ├── mexc-general.md
-    ├── mexc-market.md
-    └── mexc-market-ws.md      # WebSocket spot market streams
+    ├── mexc-general.md           # Base URL, rate limits, auth, exchange info APIs
+    ├── mexc-market.md            # Prices, orderbooks, candles, tickers, streams
+    ├── mexc-market-ws.md         # WebSocket spot market streams
+    └── mexc-market-futures-ws.md # WebSocket futures market streams
 ```
 
 ## Document Template
@@ -87,6 +90,17 @@ APIs covered:
 | Crypto.com | [x] | done | JSON-RPC 2.0, 4 stream types |
 | MEXC     | [x] | done | Protobuf format, 7 stream types, 30 subs/connection |
 
+### WebSocket Documentation (Futures Markets)
+
+| Provider | WS Futures Doc | Status | Notes |
+|----------|----------------|--------|-------|
+| Binance  | [x] | done | Separate USDT-M/COIN-M endpoints, 16+ streams, mark price, liquidations, composite index |
+| Bitget   | [x] | done | Unified endpoint, 8 channels, mark price, funding rate, open interest, liquidations |
+| MEXC     | [x] | done | Gzip compressed, 8 channels, fair price, index price, funding rate |
+| CoinGecko | N/A | n/a | Spot-only aggregator, no futures support |
+| WhiteBit | [x] | done | Unified WebSocket endpoint — same streams as spot, perpetual symbols use `_PERP` suffix (e.g., `BTC_PERP`) |
+| Crypto.com | [x] | done | Unified WebSocket endpoint — same streams as spot, perpetual symbols use `-PERP` suffix (e.g., `BTCUSD-PERP`) |
+
 ## Provider Capability Summary
 
 Based on `pkg/provider/` implementation:
@@ -115,3 +129,6 @@ Based on `pkg/provider/` implementation:
 - All market data endpoints are public (no auth required) except where noted.
 - Symbol formats vary by provider (e.g., MEXC futures uses underscore separator `BTC_USDT`, spot uses `BTCUSDT`).
 - WebSocket stream naming conventions differ per provider.
+- **Unified WebSocket pattern**: WhiteBit and Crypto.com use a single WebSocket endpoint for both spot and perpetual futures — the same stream methods/channels work for both, differentiated only by symbol format:
+  - WhiteBit: Spot `BTC_USDT` → Perpetual `BTC_PERP`
+  - Crypto.com: Spot `BTC_USDT` → Perpetual `BTCUSD-PERP`
