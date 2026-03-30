@@ -79,6 +79,7 @@ def parse_capabilities():
 
     matrix = {p: [] for p in providers}
 
+    # NOTE: assumes single-word provider names
     for line in lines[1:]:
         line = line.strip()
         if not line or line.startswith('-'):
@@ -166,38 +167,16 @@ def test_capability(provider, feat, market):
 
                 try:
                     obj, end_pos = decoder.raw_decode(text[pos:])
-                    objs.append(json.dumps(obj)) # Re-serialize to keep consistent with previous logic
+                    objs.append(obj)
                     pos += end_pos
+                    # Once we find one valid object, we're good for stream validation
+                    return objs
                 except json.JSONDecodeError:
                     pos += 1
             return objs
 
-        found_valid = False
-        potential_objs = find_json_objects(content)
-
-        for obj_str in potential_objs:
-            try:
-                json.loads(obj_str)
-                found_valid = True
-                break
-            except json.JSONDecodeError:
-                continue
-
-        if found_valid:
-            return True, "OK (Stream)"
-
-        # Fallback to line-by-line just in case
-        for line in content.splitlines():
-            line = line.strip()
-            if line:
-                try:
-                    json.loads(line)
-                    found_valid = True
-                    break
-                except json.JSONDecodeError:
-                    continue
-
-        if found_valid:
+        valid_objs = find_json_objects(content)
+        if valid_objs:
             return True, "OK (Stream)"
 
         return False, f"Could not find valid JSON in stream output (first 100 chars): {content[:100]}"
