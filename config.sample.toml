@@ -1,5 +1,5 @@
 # bits Configuration (TOML format)
-# Copy to ~/.config/coingecko-cli/config.toml
+# Copy to ~/.config/bits/config.toml (Linux) or ~/Library/Application Support/bits-cli/config.toml (macOS)
 
 # Active provider (coingecko, binance, bitget)
 provider = "coingecko"
