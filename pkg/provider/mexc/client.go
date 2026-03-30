@@ -54,6 +54,7 @@ func (c *Client) Capabilities() capability.CapabilityMatrix {
 	}
 
 	for _, m := range markets {
+		// Note: MEXC Margin market data is served via Spot REST endpoints.
 		// All markets support these features via REST
 		matrix[capability.CapabilityKey{Market: m, Feature: capability.FeatureServerTime}] = true
 		matrix[capability.CapabilityKey{Market: m, Feature: capability.FeatureExchangeInfo}] = true

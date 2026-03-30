@@ -25,12 +25,24 @@ func (c *Client) Price(ctx context.Context, symbols []string, currency string) (
 
 	// Heuristic: if any requested symbol contains an underscore, it's likely a futures request.
 	// This aligns with how bits routes internal requests.
-	resp.Market = model.MarketSpot
+	hasSpot := false
+	hasFutures := false
 	for _, s := range symbols {
 		if strings.Contains(s, "_") {
-			resp.Market = model.MarketFutures
-			break
+			hasFutures = true
+		} else {
+			hasSpot = true
 		}
+	}
+
+	if hasSpot && hasFutures {
+		return resp, fmt.Errorf("MEXC provider does not support mixed spot/futures batches in a single Price() call")
+	}
+
+	if hasFutures {
+		resp.Market = model.MarketFutures
+	} else {
+		resp.Market = model.MarketSpot
 	}
 
 	var prices []model.CoinPrice
@@ -234,17 +246,46 @@ func (c *Client) Candles(ctx context.Context, symbol string, market model.Market
 		return resp, err
 	}
 
+	resp.Data = parseSpotCandles(rawCandles)
+	return resp, nil
+}
+
+func parseSpotCandles(raw [][]interface{}) []model.Candle {
 	var candles []model.Candle
-	for _, rc := range rawCandles {
+	for _, rc := range raw {
 		if len(rc) < 6 {
 			continue
 		}
-		t := int64(rc[0].(float64))
-		o, _ := strconv.ParseFloat(rc[1].(string), 64)
-		h, _ := strconv.ParseFloat(rc[2].(string), 64)
-		l, _ := strconv.ParseFloat(rc[3].(string), 64)
-		cl, _ := strconv.ParseFloat(rc[4].(string), 64)
-		v, _ := strconv.ParseFloat(rc[5].(string), 64)
+
+		// Safely parse time
+		var t int64
+		switch v := rc[0].(type) {
+		case float64:
+			t = int64(v)
+		case string:
+			t, _ = strconv.ParseInt(v, 10, 64)
+		default:
+			continue
+		}
+
+		// Helper for price fields
+		parseFloat := func(val interface{}) float64 {
+			switch v := val.(type) {
+			case string:
+				f, _ := strconv.ParseFloat(v, 64)
+				return f
+			case float64:
+				return v
+			default:
+				return 0
+			}
+		}
+
+		o := parseFloat(rc[1])
+		h := parseFloat(rc[2])
+		l := parseFloat(rc[3])
+		cl := parseFloat(rc[4])
+		v := parseFloat(rc[5])
 
 		candles = append(candles, model.Candle{
 			OpenTime: time.UnixMilli(t),
@@ -255,9 +296,7 @@ func (c *Client) Candles(ctx context.Context, symbol string, market model.Market
 			Volume:   &v,
 		})
 	}
-
-	resp.Data = candles
-	return resp, nil
+	return candles
 }
 
 // OrderBook implements provider.OrderBookProvider.

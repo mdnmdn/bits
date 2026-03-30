@@ -9,6 +9,7 @@ import (
 )
 
 // ServerTime implements provider.ExchangeProvider.
+// Note: MEXC uses the same endpoint for all market types.
 func (c *Client) ServerTime(ctx context.Context) (model.Response[model.ServerTime], error) {
 	start := time.Now()
 	data, err := c.doRequest(ctx, model.MarketSpot, "/time", "")
@@ -38,6 +39,7 @@ func (c *Client) ServerTime(ctx context.Context) (model.Response[model.ServerTim
 }
 
 // ExchangeInfo implements provider.ExchangeProvider.
+// Note: MEXC Margin market data is served via Spot REST endpoints.
 func (c *Client) ExchangeInfo(ctx context.Context, market model.MarketType) (model.Response[model.ExchangeInfo], error) {
 	resp := model.Response[model.ExchangeInfo]{
 		Provider: providerID,

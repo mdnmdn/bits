@@ -728,6 +728,9 @@ func Save(cfg *Config) error {
 	v.Set("mexc.api_key", cfg.MEXC.APIKey)
 	v.Set("mexc.api_secret", cfg.MEXC.APISecret)
 	v.Set("mexc.base_url", cfg.MEXC.BaseURL)
+	v.Set("mexc.spot.enabled", cfg.MEXC.Spot.Enabled)
+	v.Set("mexc.margin.enabled", cfg.MEXC.Margin.Enabled)
+	v.Set("mexc.futures.enabled", cfg.MEXC.Futures.Enabled)
 
 	path := filepath.Join(dir, "config.yaml")
 	if err := v.WriteConfigAs(path); err != nil {
