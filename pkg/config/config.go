@@ -160,14 +160,15 @@ func (c BitgetConfig) IsFuturesEnabled() bool { return c.Futures.Enabled }
 // Config holds all provider configurations.
 // It embeds the public config.Config for extensibility.
 type Config struct {
-	Provider  string          `mapstructure:"provider"`
-	CoinGecko CoinGeckoConfig `mapstructure:"coingecko"`
-	Binance   BinanceConfig   `mapstructure:"binance"`
-	Bitget    BitgetConfig    `mapstructure:"bitget"`
-	WhiteBit  WhiteBitConfig  `mapstructure:"whitebit"`
-	CryptoCom CryptoComConfig `mapstructure:"cryptocom"`
-	MEXC      MEXCConfig      `mapstructure:"mexc"`
-	Symbol    SymbolConfig    `mapstructure:"symbol"`
+	Provider        string          `mapstructure:"provider"`
+	CheckNewVersion *bool           `mapstructure:"check_new_version"`
+	CoinGecko       CoinGeckoConfig `mapstructure:"coingecko"`
+	Binance         BinanceConfig   `mapstructure:"binance"`
+	Bitget          BitgetConfig    `mapstructure:"bitget"`
+	WhiteBit        WhiteBitConfig  `mapstructure:"whitebit"`
+	CryptoCom       CryptoComConfig `mapstructure:"cryptocom"`
+	MEXC            MEXCConfig      `mapstructure:"mexc"`
+	Symbol          SymbolConfig    `mapstructure:"symbol"`
 }
 
 func ConfigDirs() []string {
@@ -565,6 +566,10 @@ func applyEnvOverrides(cfg *Config) {
 	if v := os.Getenv("BITS_PROVIDER"); v != "" {
 		cfg.Provider = v
 	}
+	if v := os.Getenv("BITS_CHECK_NEW_VERSION"); v != "" {
+		cfg.CheckNewVersion = new(bool)
+		*cfg.CheckNewVersion = v == "true" || v == "1"
+	}
 	// CoinGecko
 	if v := os.Getenv("BITS_COINGECKO_API_KEY"); v != "" {
 		cfg.CoinGecko.APIKey = v
@@ -750,7 +755,8 @@ func (c *Config) Redacted() *Config {
 	}
 
 	return &Config{
-		Provider: c.Provider,
+		Provider:        c.Provider,
+		CheckNewVersion: c.CheckNewVersion,
 		CoinGecko: CoinGeckoConfig{
 			APIKey:  maskedLong(c.CoinGecko.APIKey),
 			Tier:    c.CoinGecko.Tier,

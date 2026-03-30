@@ -30,7 +30,7 @@ checksum:
 changelog:
   sort: asc
 
-brews:
+homebrew:
   - repository:
       owner: mdnmdn
       name: homebrew-bits
