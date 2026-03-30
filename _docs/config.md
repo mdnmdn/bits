@@ -76,6 +76,25 @@ bits config init --local      # Create in current directory
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `provider` | string | `"coingecko"` | Active provider (`coingecko`, `binance`, `bitget`) |
+| `check_new_version` | bool | `true` | Check for new releases on `bits version` |
+
+### Version Check
+
+By default, `bits version` checks GitHub for newer releases (except when version is "dev"). To disable:
+
+```bash
+# Via flag
+bits version --no-check
+
+# Via environment variable
+export BITS_CHECK_NEW_VERSION=false
+```
+
+Or via config file:
+
+```toml
+check_new_version = false
+```
 
 ### CoinGecko
 
@@ -174,6 +193,9 @@ BITS_BITGET_PASSPHRASE=your-passphrase
 # Symbol cache
 BITS_SYMBOL_CACHE_TTL=5m
 # BITS_SYMBOL_CACHE_DIR=  # defaults to system temp dir
+
+# Version check
+BITS_CHECK_NEW_VERSION=false  # disable checking for new releases
 ```
 
 ## .env File

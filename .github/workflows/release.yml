@@ -27,14 +27,14 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HOMEBREW_TAP_TOKEN: ${{ secrets.BITS_BREW_TOKEN }}
 
-  godoc:
-    needs: release
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          fetch-depth: 0
-      - uses: jlordiales/godoc-push-action@54d0d0f0b767dfc4a92e22bc4f5bd98b36c2a47f # v1.0.1
-        with:
-          package-path: github.com/mdnmdn/bits
-          token: ${{ secrets.GITHUB_TOKEN }}
+  # godoc:
+  #   needs: release
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+  #       with:
+  #         fetch-depth: 0
+  #     - uses: jlordiales/godoc-push-action@54d0d0f0b767dfc4a92e22bc4f5bd98b36c2a47f # v1.0.1
+  #       with:
+  #         package-path: github.com/mdnmdn/bits
+  #         token: ${{ secrets.GITHUB_TOKEN }}
