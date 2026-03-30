@@ -1,319 +1,63 @@
 # MEXC API Documentation
 
-MEXC is a global cryptocurrency exchange offering Spot, Futures, and ETF trading. The MEXC API provides comprehensive market data and trading capabilities through REST and WebSocket interfaces.
+MEXC is a global cryptocurrency exchange offering Spot and Futures (Perpetual) trading. This document focuses on market data endpoints for quotes, candles, and order books.
 
 ## Base URLs
 
 | Type | URL |
 |------|-----|
-| REST API | `https://api.mexc.com` |
-| WebSocket (Market) | `wss://wbs-api.mexc.com/ws` |
-| WebSocket (User Data) | `wss://wbs-api.mexc.com/ws/v3` |
-
-## Go SDK
-
-MEXC provides an official Go SDK as part of their multi-language SDK package:
-
-- **Repository**: https://github.com/mexcdevelop/mexc-api-sdk
-- **Location**: `dist/go/` in the SDK
-- **Alternative**: Community Go SDK at https://github.com/Sagleft/mexcsdk (MIT licensed)
-
-### Go SDK Initialization
-
-```go
-package main
-
-import (
-	"fmt"
-	"mexc-sdk/mexcsdk"
-)
-
-func main() {
-	apiKey := "your-api-key"
-	apiSecret := "your-api-secret"
-	spot := mexcsdk.NewSpot(apiKey, apiSecret)
-	
-	// Get ticker
-	ticker := spot.Ticker24hr("BTCUSDT")
-	fmt.Println(ticker)
-}
-```
+| Spot REST API | `https://api.mexc.com` |
+| Futures REST API | `https://api.mexc.com` |
+| Spot WebSocket | `wss://wbs-api.mexc.com/ws` |
+| Futures WebSocket | `wss://contract.mexc.com/edge` |
 
 ---
 
-## Authentication
+## Spot Market Data
 
-### Required Headers
+### Symbol Format
 
-For authenticated endpoints:
-
-```
-X-MEXC-APIKEY: <your-api-key>
-Content-Type: application/json
-```
-
-### Signature Generation (HMAC-SHA256)
-
-SIGNED endpoints require a signature parameter sent in the query string or request body.
-
-```
-signature = HMAC-SHA256(secretKey, totalParams)
-```
-
-Where `totalParams` = query string concatenated with request body.
-
-**Important**: 
-- Use millisecond timestamp (`timestamp` parameter)
-- Default `recvWindow` is 5000ms (max 60000ms)
-- Timestamp must be within `serverTime + 1000ms` and `serverTime + recvWindow`
-
-### Timing Security
-
-```
-if (timestamp < (serverTime + 1000) && (serverTime - timestamp) <= recvWindow) {
-    // process request
-} else {
-    // reject request
-}
-```
-
-### Signature Example
-
-```go
-import (
-	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/hex"
-	"fmt"
-	"strconv"
-	"time"
-)
-
-func generateSignature(secretKey string, params string) string {
-	h := hmac.New(sha256.New, []byte(secretKey))
-	h.Write([]byte(params))
-	return hex.EncodeToString(h.Sum(nil))
-}
-
-func main() {
-	timestamp := strconv.FormatInt(time.Now().UnixNano()/1e6, 10)
-	params := fmt.Sprintf("symbol=BTCUSDT&side=BUY&type=LIMIT&quantity=1&price=11&recvWindow=5000&timestamp=%s", timestamp)
-	signature := generateSignature("your-secret-key", params)
-	fmt.Println("Signature:", signature)
-}
-```
+- Format: `BTCUSDT`, `ETHUSDT` (uppercase)
+- Base asset + Quote asset concatenated
 
 ---
 
-## Rate Limits
+## Spot Quotes (Price Data)
 
-### REST API Limits
-
-| Limit Type | Value |
-|------------|-------|
-| IP-based | 300 requests / 10 seconds |
-| UID-based | 500 requests / 10 seconds |
-
-### WebSocket Limits
-
-| Limit Type | Value |
-|------------|-------|
-| Requests | 100 requests / second |
-| Max subscriptions | 30 streams per connection |
-| Connection validity | 24 hours |
-| Idle disconnect | 30 seconds (no subscription), 60 seconds (no data) |
-
-### HTTP Return Codes
-
-| Code | Description |
-|------|-------------|
-| 4XX | Malformed request (client error) |
-| 403 | WAF limit violated |
-| 429 | Rate limit exceeded |
-| 5XX | Internal server error (retry) |
-
----
-
-## Market Data Endpoints
-
-All market data endpoints are public and don't require authentication.
-
-### Test Connectivity
+### Price Ticker
 
 ```
-GET /api/v3/ping
+GET /api/v3/ticker/price
 ```
 
-Response: `{}`
-
-Weight: 1
-
-### Check Server Time
-
-```
-GET /api/v3/time
-```
+Query parameters:
+- `symbol` (optional) - Omit for all symbols
 
 Response:
 ```json
 {
-  "serverTime": 1645539742000
+  "symbol": "BTCUSDT",
+  "price": "46263.71"
 }
 ```
 
-Weight: 1
+Weight: 10
 
-### Exchange Information
-
-```
-GET /api/v3/exchangeInfo
-```
-
-Query parameters:
-- `symbol` - Single symbol (e.g., `BTCUSDT`)
-- `symbols` - Comma-separated symbols (e.g., `BTCUSDT,ETHUSDT`)
-
-Response includes: timezone, serverTime, rateLimits, symbols with status, precision, commission, filters
-
-Weight: 25
-
-### Order Book (Depth)
-
-```
-GET /api/v3/depth
-```
-
-Query parameters:
-- `symbol` (required) - Trading pair
-- `limit` (optional) - Number of results, default 100, max 5000
-
-Response:
-```json
-{
-  "lastUpdateId": 1112416,
-  "bids": [["15.00000", "49999.00000"]],
-  "asks": [["14.0000", "1.0000"]]
-}
-```
-
-Weight: 3
-
-### Recent Trades List
-
-```
-GET /api/v3/trades
-```
-
-Query parameters:
-- `symbol` (required)
-- `limit` (optional) - Default 500, max 1000
-
-Response:
-```json
-[{
-  "id": null,
-  "price": "23",
-  "qty": "0.478468",
-  "quoteQty": "11.004764",
-  "time": 1640830579240,
-  "isBuyerMaker": true,
-  "isBestMatch": true
-}]
-```
-
-Weight: 5
-
-### Aggregate Trades List
-
-```
-GET /api/v3/aggTrades
-```
-
-Query parameters:
-- `symbol` (required)
-- `startTime` (optional) - Timestamp in ms
-- `endTime` (optional) - Timestamp in ms
-- `limit` (optional) - Default 500, max 1000
-
-Response:
-```json
-[{
-  "a": null,
-  "f": null,
-  "l": null,
-  "p": "46782.67",
-  "q": "0.0038",
-  "T": 1641380483000,
-  "m": false,
-  "M": true
-}]
-```
-
-Weight: 1
-
-### Kline/Candlestick Data
-
-```
-GET /api/v3/klines
-```
-
-Query parameters:
-- `symbol` (required)
-- `interval` (required) - 1m, 5m, 15m, 30m, 60m, 4h, 1d, 1w, 1M
-- `startTime` (optional)
-- `endTime` (optional)
-- `limit` (optional) - Default 500, max 500
-
-Response:
-```json
-[[
-  1640804880000,    // Open time
-  "47482.36",       // Open
-  "47482.36",       // High
-  "47416.57",       // Low
-  "47436.1",        // Close
-  "3.550717",       // Volume
-  1640804940000,    // Close time
-  "168387.3"        // Quote asset volume
-]]
-```
-
-Weight: 1
-
-### Current Average Price
-
-```
-GET /api/v3/avgPrice
-```
-
-Query parameters:
-- `symbol` (required)
-
-Response:
-```json
-{
-  "mins": 5,
-  "price": "9.35751834"
-}
-```
-
-Weight: 1
-
-### 24hr Ticker Price Change Statistics
+### 24hr Ticker
 
 ```
 GET /api/v3/ticker/24hr
 ```
 
 Query parameters:
-- `symbol` (optional) - If omitted, returns all symbols
+- `symbol` (optional) - Omit for all symbols
 
 Response:
 ```json
 {
   "symbol": "BTCUSDT",
   "priceChange": "184.34",
-  "priceChangePercent": "0.00400048",
+  "priceChangePercent": "0.4",
   "prevClosePrice": "46079.37",
   "lastPrice": "46263.71",
   "bidPrice": "46260.38",
@@ -324,35 +68,16 @@ Response:
   "highPrice": "47550.01",
   "lowPrice": "45555.5",
   "volume": "1732.461487",
-  "quoteVolume": null,
+  "quoteVolume": "80417543.23",
   "openTime": 1641349500000,
   "closeTime": 1641349582808,
   "count": null
 }
 ```
 
-Weight: 25 (single symbol), 50 (all symbols)
+Weight: 25 (single), 50 (all)
 
-### Symbol Price Ticker
-
-```
-GET /api/v3/ticker/price
-```
-
-Query parameters:
-- `symbol` (optional)
-
-Response:
-```json
-{
-  "symbol": "BTCUSDT",
-  "price": "184.34"
-}
-```
-
-Weight: 10
-
-### Symbol Order Book Ticker
+### Book Ticker (Best Bid/Ask)
 
 ```
 GET /api/v3/ticker/bookTicker
@@ -374,133 +99,717 @@ Response:
 
 Weight: 10
 
+### Average Price
+
+```
+GET /api/v3/avgPrice?symbol=BTCUSDT
+```
+
+Response:
+```json
+{
+  "mins": 5,
+  "price": "46258.34"
+}
+```
+
+Weight: 1
+
 ---
 
-## WebSocket Market Streams
+## Spot Candles (Kline)
 
-MEXC WebSocket uses Protocol Buffers (protobuf) for data serialization.
-
-### Connection
+### Candlestick Data
 
 ```
-wss://wbs-api.mexc.com/ws
+GET /api/v3/klines
 ```
 
-### Subscribe/Unubscribe
+Query parameters:
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| symbol | string | Yes | Trading pair (e.g., BTCUSDT) |
+| interval | string | Yes | 1m, 5m, 15m, 30m, 60m, 4h, 1d, 1w, 1M |
+| startTime | long | No | Start time in ms |
+| endTime | long | No | End time in ms |
+| limit | int | No | Default 500, max 500 |
+
+Response (array of arrays):
+```json
+[
+  [
+    1640804880000,    // Open time (ms)
+    "47482.36",       // Open
+    "47482.36",       // High
+    "47416.57",       // Low
+    "47436.1",        // Close
+    "3.550717",       // Volume (base)
+    1640804940000,    // Close time (ms)
+    "168387.3"       // Volume (quote)
+  ]
+]
+```
+
+Weight: 1
+
+---
+
+## Spot Order Book
+
+### Depth (Order Book)
+
+```
+GET /api/v3/depth
+```
+
+Query parameters:
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| symbol | string | Yes | Trading pair |
+| limit | int | No | Default 100, max 5000 |
+
+Response:
+```json
+{
+  "lastUpdateId": 1112416,
+  "bids": [
+    ["46260.38", "1.5"],      // [price, quantity]
+    ["46260.00", "2.3"],
+    ["46259.50", "5.0"]
+  ],
+  "asks": [
+    ["46260.41", "0.8"],
+    ["46260.50", "1.2"],
+    ["46261.00", "3.5"]
+  ]
+}
+```
+
+Weight: 3
+
+### Recent Trades
+
+```
+GET /api/v3/trades
+```
+
+Query parameters:
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| symbol | string | Yes | Trading pair |
+| limit | int | No | Default 500, max 1000 |
+
+Response:
+```json
+[
+  {
+    "id": null,
+    "price": "46260.41",
+    "qty": "0.5",
+    "quoteQty": "23130.205",
+    "time": 1640830579240,
+    "isBuyerMaker": false,
+    "isBestMatch": true
+  }
+]
+```
+
+Weight: 5
+
+### Aggregate Trades
+
+```
+GET /api/v3/aggTrades
+```
+
+Query parameters:
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| symbol | string | Yes | Trading pair |
+| startTime | long | No | Start time in ms |
+| endTime | long | No | End time in ms |
+| limit | int | No | Default 500, max 1000 |
+
+Response:
+```json
+[
+  {
+    "a": 12345,              // Aggregate trade ID
+    "p": "46260.41",         // Price
+    "q": "0.5",              // Quantity
+    "T": 1640830579240,      // Timestamp
+    "m": false,              // Is buyer maker
+    "M": true                // Is best match
+  }
+]
+```
+
+Weight: 1
+
+---
+
+## Futures Market Data
+
+### Symbol Format
+
+- Format: `BTC_USDT`, `ETH_USDT` (underscore separator)
+- Perpetual contracts only
+
+---
+
+## Futures Quotes
+
+### Ticker
+
+```
+GET /api/v1/contract/ticker
+```
+
+Query parameters:
+- `symbol` (optional) - Omit for all contracts
+
+Response:
+```json
+{
+  "success": true,
+  "code": 0,
+  "data": {
+    "symbol": "BTC_USDT",
+    "lastPrice": 109167.1,
+    "bid1": 109167,
+    "ask1": 109167.1,
+    "volume24": 954830625,
+    "amount24": 10374579341.00211,
+    "holdVol": 381485808,
+    "lower24Price": 106226,
+    "high24Price": 111553.8,
+    "riseFallRate": 0.014,
+    "riseFallValue": 1510.6,
+    "indexPrice": 109235,
+    "fairPrice": 109168.9,
+    "fundingRate": 0,
+    "maxBidPrice": 120158.5,
+    "minAskPrice": 98311.5,
+    "timestamp": 1761883095759
+  }
+}
+```
+
+Rate limit: 10/2s
+
+### Index Price
+
+```
+GET /api/v1/contract/index_price/{symbol}
+```
+
+Response:
+```json
+{
+  "success": true,
+  "code": 0,
+  "data": {
+    "symbol": "BTC_USDT",
+    "indexPrice": 31103.4,
+    "timestamp": 1609829705178
+  }
+}
+```
+
+Rate limit: 20/2s
+
+### Fair Price
+
+```
+GET /api/v1/contract/fair_price/{symbol}
+```
+
+Response:
+```json
+{
+  "success": true,
+  "code": 0,
+  "data": {
+    "symbol": "BTC_USDT",
+    "fairPrice": 31103.4,
+    "timestamp": 1609829705178
+  }
+}
+```
+
+Rate limit: 20/2s
+
+### Funding Rate
+
+```
+GET /api/v1/contract/funding_rate/{symbol}
+```
+
+Response:
+```json
+{
+  "success": true,
+  "code": 0,
+  "data": {
+    "symbol": "BTC_USDT",
+    "fundingRate": 0.000018,
+    "maxFundingRate": 0.0018,
+    "minFundingRate": -0.0018,
+    "collectCycle": 8,
+    "nextSettleTime": 1761897600000,
+    "timestamp": 1761879755894
+  }
+}
+```
+
+Rate limit: 20/2s
+
+---
+
+## Futures Candles
+
+### Candlestick Data
+
+```
+GET /api/v1/contract/kline/{symbol}
+```
+
+Query parameters:
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| symbol | string | Yes | Contract symbol |
+| interval | string | No | Min1, Min5, Min15, Min30, Min60, Hour4, Hour8, Day1, Week1, Month1 |
+| start | long | No | Start timestamp (seconds) |
+| end | long | No | End timestamp (seconds) |
+
+Response:
+```json
+{
+  "success": true,
+  "code": 0,
+  "data": {
+    "time": [1761876000, 1761876900, 1761877800],
+    "open": [109573.9, 109006.4, 109301.5],
+    "close": [109006.4, 109301.5, 108725.9],
+    "high": [109628.1, 109426.2, 109350.2],
+    "low": [108953.3, 109006.4, 108666.2],
+    "vol": [5587051.0, 5739575.0, 5945477.0],
+    "amount": [6.106243567181E7, ...]
+  }
+}
+```
+
+Notes:
+- Max 2000 data points per request
+- Timestamp in seconds (not ms)
+
+Rate limit: 20/2s
+
+### Index Price Candles
+
+```
+GET /api/v1/contract/kline/index_price/{symbol}
+```
+
+Same parameters as standard kline.
+
+### Fair Price Candles
+
+```
+GET /api/v1/contract/kline/fair_price/{symbol}
+```
+
+Same parameters as standard kline.
+
+---
+
+## Futures Order Book
+
+### Depth (Order Book)
+
+```
+GET /api/v1/contract/depth/{symbol}
+```
+
+Query parameters:
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| symbol | string | Yes | Contract symbol |
+| limit | int | No | Number of rows |
+
+Response:
+```json
+{
+  "success": true,
+  "code": 0,
+  "data": {
+    "asks": [
+      [108779.2, 3240, 1],   // [price, orders, quantity]
+      [108779.3, 3884, 1]
+    ],
+    "bids": [
+      [108779.1, 3240, 1],
+      [108779, 3884, 1]
+    ],
+    "version": 28111438870,
+    "timestamp": 1761879567135
+  }
+}
+```
+
+Note: `[price, order_count, quantity]`
+
+Rate limit: 10/2s
+
+### Depth Snapshots
+
+```
+GET /api/v1/contract/depth_commits/{symbol}/{limit}
+```
+
+Returns last N depth snapshots.
+
+Response:
+```json
+{
+  "success": true,
+  "code": 0,
+  "data": [
+    {
+      "asks": [...],
+      "bids": [[3818.91, 272, 1]],
+      "version": 26457599299
+    }
+  ]
+}
+```
+
+Rate limit: 20/2s
+
+### Recent Trades
+
+```
+GET /api/v1/contract/deals/{symbol}
+```
+
+Query parameters:
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| symbol | string | Yes | Contract symbol |
+| limit | int | No | Max 100, default 100 |
+
+Response:
+```json
+{
+  "success": true,
+  "code": 0,
+  "data": [
+    {
+      "p": 109177.4,         // Price
+      "v": 14,               // Quantity
+      "T": 1,                // Side: 1=buy, 2=sell
+      "O": 1,                // Open flag: 1=open, 2=reduce, 3=other
+      "M": 1,                // Self-trade: 1=yes, 2=no
+      "t": 1761883066648     // Timestamp
+    }
+  ]
+}
+```
+
+Rate limit: 20/2s
+
+---
+
+## WebSocket Streams
+
+### Spot WebSocket
+
+Base: `wss://wbs-api.mexc.com/ws`
+
+Uses Protocol Buffers (protobuf). See: https://github.com/mexcdevelop/websocket-proto
+
+#### Subscribe Format
 
 ```json
-// Subscribe
 {
   "method": "SUBSCRIPTION",
   "params": ["spot@public.kline.v3.api.pb@BTCUSDT@Min15"]
 }
+```
 
-// Unsubscribe
+#### Unsubscribe
+
+```json
 {
   "method": "UNSUBSCRIPTION",
   "params": ["spot@public.kline.v3.api.pb@BTCUSDT@Min15"]
 }
-
-// Ping
-{"method": "PING"}
-
-// Response
-{
-  "id": 0,
-  "code": 0,
-  "msg": "spot@public.kline.v3.api.pb@BTCUSDT@Min15"
-}
 ```
 
-### Stream Channels
+#### Spot K-line Stream
 
-| Channel | Description |
-|---------|-------------|
-| `spot@public.aggre.deals.v3.api.pb@100ms@<symbol>` | Trade streams (100ms or 10ms) |
-| `spot@public.kline.v3.api.pb@<symbol>@<interval>` | K-line streams |
-| `spot@public.aggre.depth.v3.api.pb@100ms@<symbol>` | Diff depth (incremental) |
-| `spot@public.limit.depth.v3.api.pb@<symbol>@<level>` | Partial book depth (5, 10, 20 levels) |
-| `spot@public.aggre.bookTicker.v3.api.pb@100ms@<symbol>` | Book ticker (best bid/ask) |
-| `spot@public.miniTicker.v3.api.pb@<symbol>@<timezone>` | Mini ticker for symbol |
-| `spot@public.miniTickers.v3.api.pb@<timezone>` | Mini tickers for all symbols |
+```
+spot@public.kline.v3.api.pb@<symbol>@<interval>
+```
 
-### K-line Intervals
+Intervals: Min1, Min5, Min15, Min30, Min60, Hour4, Hour8, Day1, Week1, Month1
 
-- `Min1`, `Min5`, `Min15`, `Min30`, `Min60`
-- `Hour4`, `Hour8`
-- `Day1`
-- `Week1`
-- `Month1`
+#### Spot Depth Stream
 
-### Trade Stream Response
+```
+spot@public.aggre.depth.v3.api.pb@100ms@<symbol>
+```
+
+Push frequency: 100ms or 10ms
+
+#### Spot Book Ticker
+
+```
+spot@public.aggre.bookTicker.v3.api.pb@100ms@<symbol>
+```
+
+#### Spot Trade Stream
+
+```
+spot@public.aggre.deals.v3.api.pb@100ms@<symbol>
+```
+
+---
+
+### Futures WebSocket
+
+Base: `wss://contract.mexc.com/edge`
+
+Native JSON (no protobuf)
+
+#### Subscribe
 
 ```json
 {
-  "channel": "spot@public.aggre.deals.v3.api.pb@100ms@BTCUSDT",
-  "publicdeals": {
-    "dealsList": [{
-      "price": "93220.00",
-      "quantity": "0.04438243",
-      "tradetype": 2,
-      "time": 1736409765051
-    }]
-  },
-  "symbol": "BTCUSDT",
-  "sendtime": 1736409765052
+  "method": "sub.ticker",
+  "param": {"symbol": "BTC_USDT"}
 }
 ```
 
-### K-line Stream Response
+#### Unsubscribe
 
 ```json
 {
-  "channel": "spot@public.kline.v3.api.pb@BTCUSDT@Min15",
-  "publicspotkline": {
-    "interval": "Min15",
-    "windowstart": 1736410500,
-    "openingprice": "92925",
-    "closingprice": "93158.47",
-    "highestprice": "93158.47",
-    "lowestprice": "92800",
-    "volume": "36.83803224",
-    "amount": "3424811.05",
-    "windowend": 1736411400
-  },
-  "symbol": "BTCUSDT",
-  "symbolid": "2fb942154ef44a4ab2ef98c8afb6a4a7",
-  "createtime": 1736410707571
+  "method": "unsub.ticker",
+  "param": {"symbol": "BTC_USDT"}
 }
 ```
 
-### Diff Depth Stream Response
+#### Ping
+
+```json
+{"method": "ping"}
+```
+
+Note: Connection closes after 60s without ping. Send ping every 10-20s.
+
+#### Futures Ticker Stream
+
+```
+sub.ticker / unsub.ticker
+```
+
+Response:
+```json
+{
+  "channel": "push.ticker",
+  "data": {
+    "symbol": "BTC_USDT",
+    "lastPrice": 109167.1,
+    "bid1": 109167,
+    "ask1": 109167.1,
+    "volume24": 954830625,
+    "holdVol": 381485808,
+    "riseFallRate": 0.014,
+    "indexPrice": 109235,
+    "fairPrice": 109168.9,
+    "timestamp": 1761883095759
+  }
+}
+```
+
+Push frequency: 1s (on trade)
+
+#### Futures K-line Stream
+
+```
+sub.kline / unsub.kline
+```
 
 ```json
 {
-  "channel": "spot@public.aggre.depth.v3.api.pb@100ms@BTCUSDT",
-  "publicincreasedepths": {
-    "asksList": [],
-    "bidsList": [{
-      "price": "92877.58",
-      "quantity": "0.00000000"
-    }],
-    "eventtype": "spot@public.aggre.depth.v3.api.pb@100ms",
-    "fromVersion": "10589632359",
-    "toVersion": "10589632359"
-  },
-  "symbol": "BTCUSDT",
-  "sendtime": 1736411507002
+  "method": "sub.kline",
+  "param": {"symbol": "BTC_USDT", "interval": "Min60"}
 }
 ```
 
-Note: If quantity is 0, the price level should be removed.
+Intervals: Min1, Min5, Min15, Min30, Min60, Hour4, Hour8, Day1, Week1, Month1
 
-### Order Book Local Maintenance
+Response:
+```json
+{
+  "channel": "push.kline",
+  "data": {
+    "symbol": "BTC_USDT",
+    "interval": "Min60",
+    "o": 6894.5,
+    "c": 6885,
+    "h": 6910.5,
+    "l": 6885,
+    "v": 1611754,
+    "a": 233.74,
+    "t": 1587448800
+  }
+}
+```
 
-1. Connect to WebSocket and subscribe to diff depth
-2. Request snapshot: `GET /api/v3/depth?symbol=BTCUSDT&limit=5000`
-3. Compare `lastUpdateId` with first `fromVersion`
-4. Apply incremental updates sequentially
-5. Reinitialize if version gap detected
+#### Futures Depth Stream
+
+```
+sub.depth / unsub.depth
+```
+
+```json
+{
+  "method": "sub.depth",
+  "param": {"symbol": "BTC_USDT"}
+}
+```
+
+Response:
+```json
+{
+  "channel": "push.depth",
+  "data": {
+    "asks": [[6859.5, 3251, 1]],
+    "bids": [],
+    "version": 96801927
+  },
+  "symbol": "BTC_USDT",
+  "ts": 1587442022003
+}
+```
+
+Note: `[price, order_count, quantity]`
+
+Push frequency: 200ms
+
+#### Futures Trade Stream
+
+```
+sub.deal / unsub.deal
+```
+
+```json
+{
+  "method": "sub.deal",
+  "param": {"symbol": "BTC_USDT"}
+}
+```
+
+Response:
+```json
+{
+  "channel": "push.deal",
+  "data": [
+    {
+      "p": 115309.8,
+      "v": 55,
+      "T": 2,
+      "O": 3,
+      "M": 1,
+      "t": 1755487578276,
+      "i": 13064218826
+    }
+  ]
+}
+```
+
+---
+
+## Exchange Information
+
+### Spot
+
+```
+GET /api/v3/exchangeInfo
+```
+
+Response includes: symbols, status, precision, commission, filters
+
+Weight: 25
+
+### Futures
+
+```
+GET /api/v1/contract/detail
+```
+
+Response includes: contract details, leverage, fees, risk limits
+
+Rate limit: 10/2s
+
+---
+
+## Rate Limits
+
+### Spot REST
+
+| Type | Limit |
+|------|-------|
+| IP-based | 300/10s |
+| UID-based | 500/10s |
+
+### Futures REST
+
+| Endpoint | Limit |
+|----------|-------|
+| General | 20/2s |
+| Ticker | 10/2s |
+| Depth | 10/2s |
+| Kline | 20/2s |
+
+### WebSocket
+
+| Type | Limit |
+|------|-------|
+| Requests | 100/s |
+| Max subscriptions | 30/connection |
+| Connection validity | 24h |
+
+---
+
+## Integration with bits CLI
+
+### Market Data Mapping
+
+| bits Capability | Spot Endpoint | Futures Endpoint |
+|-----------------|---------------|------------------|
+| Price | `/api/v3/ticker/price` | `/api/v1/contract/ticker` |
+| Ticker | `/api/v3/ticker/24hr` | `/api/v1/contract/ticker` |
+| OrderBook | `/api/v3/depth` | `/api/v1/contract/depth/{symbol}` |
+| Candles | `/api/v3/klines` | `/api/v1/contract/kline/{symbol}` |
+| Exchange Info | `/api/v3/exchangeInfo` | `/api/v1/contract/detail` |
+
+### Symbol Conversion
+
+| Direction | Format | Example |
+|-----------|--------|---------|
+| bits → MEXC Spot | uppercase | BTCUSDT |
+| bits → MEXC Futures | underscore | BTC_USDT |
+
+### WebSocket Streams
+
+| bits Capability | Spot WS | Futures WS |
+|-----------------|---------|------------|
+| Stream Price | `spot@public.bookTicker.v3.api.pb@100ms@<symbol>` | `sub.ticker` |
+| Stream Book | `spot@public.aggre.depth.v3.api.pb@100ms@<symbol>` | `sub.depth` |
+| Stream Candles | `spot@public.kline.v3.api.pb@<symbol>@<interval>` | `sub.kline` |
 
 ---
 
@@ -508,96 +817,22 @@ Note: If quantity is 0, the price level should be removed.
 
 | Code | Description |
 |------|-------------|
-| -2011 | Unknown order sent |
+| -2011 | Unknown order |
 | 400 | API key required |
 | 401 | No authority |
 | 403 | Access denied |
-| 429 | Too many requests |
+| 429 | Rate limit |
 | 500 | Internal error |
-| 503 | Service not available |
-| 602 | Signature verification failed |
-| 10001 | User does not exist |
 | 10007 | Bad symbol |
-| 10072 | Invalid access key |
-| 10073 | Invalid Request-Time |
-| 10101 | Insufficient balance |
-| 30000 | Suspended transaction |
 | 30016 | Trading disabled |
-| 700001 | API-key format invalid |
-| 700002 | Signature not valid |
+| 700002 | Signature invalid |
 | 700003 | Timestamp outside recvWindow |
-| 700006 | IP not in whitelist |
-
----
-
-## ENUM Definitions
-
-### Order Side
-- `BUY`
-- `SELL`
-
-### Order Type
-- `LIMIT`
-- `MARKET`
-- `LIMIT_MAKER`
-- `IMMEDIATE_OR_CANCEL`
-- `FILL_OR_KILL`
-- `STOP_MARKET_ORDER` (Query only)
-
-### Order Status
-- `NEW` - Uncompleted
-- `FILLED` - Filled
-- `PARTIALLY_FILLED` - Partially filled
-- `CANCELED` - Canceled
-- `PARTIALLY_CANCELED` - Partially canceled
-
-### Kline Interval
-- `1m`, `5m`, `15m`, `30m`, `60m`
-- `4h`, `1d`, `1w`, `1M`
-
----
-
-## Integration with bits CLI
-
-For adding MEXC as a provider in bits:
-
-1. Create `internal/provider/mexc/client.go` implementing `provider.Provider`
-2. Implement capability interfaces: `PriceProvider`, `TickerProvider`, `CandleProvider`, `OrderBookProvider`
-3. Return `model.Response[T]` with `Provider` and `Market` populated
-4. Register in `internal/registry/registry.go`
-
-### Market Data Mapping
-
-| bits Capability | MEXC Endpoint |
-|-----------------|---------------|
-| Price | `/api/v3/ticker/price` |
-| Ticker | `/api/v3/ticker/24hr` |
-| OrderBook | `/api/v3/depth` |
-| Candles | `/api/v3/klines` |
-| Exchange Info | `/api/v3/exchangeInfo` |
-
-### Symbol Format
-
-MEXC uses uppercase symbol format with quote asset suffix (e.g., `BTCUSDT`, `ETHUSDT`)
-
-### WebSocket for Streaming
-
-For streaming capabilities, use `wss://wbs-api.mexc.com/ws` with protobuf deserialization
-
----
-
-## API Key Setup
-
-1. Go to [MEXC API Management](https://www.mexc.com/user/openapi)
-2. Create API key with appropriate permissions
-3. Set IP restrictions for security
-4. Configure trading pair permissions
 
 ---
 
 ## Resources
 
-- [MEXC API Documentation](https://www.mexc.com/api-docs/spot-v3/introduction)
-- [Official SDK Repository](https://github.com/mexcdevelop/mexc-api-sdk)
-- [WebSocket Proto Files](https://github.com/mexcdevelop/websocket-proto)
-- [API Support](https://t.me/MEXCAPIsupport)
+- [Spot API Docs](https://www.mexc.com/api-docs/spot-v3/introduction)
+- [Futures API Docs](https://www.mexc.com/api-docs/futures/market-endpoints)
+- [WebSocket Proto](https://github.com/mexcdevelop/websocket-proto)
+- [Official SDK](https://github.com/mexcdevelop/mexc-api-sdk)
