@@ -14,6 +14,9 @@ DEFAULT_SYMBOLS = {
     "cryptocom": "BTC_USDT",
 }
 
+# Providers that use coin IDs (aggregator style) instead of trading pairs
+AGGREGATOR_PROVIDERS = ["coingecko"]
+
 # Mapping features to bits commands
 # %s will be replaced by symbols if needed
 FEATURE_COMMANDS = {
@@ -29,7 +32,7 @@ FEATURE_COMMANDS = {
 }
 
 # Features that don't strictly require a market context in the CLI
-MARKET_AGNOSTIC_FEATURES = ["server_time", "markets_list", "coin_info", "search", "trending"]
+MARKET_AGNOSTIC_FEATURES = ["server_time", "markets_list"]
 
 def run_bits(args, timeout=None, format_json=True):
     cmd = ["./bits"] + args
@@ -94,7 +97,11 @@ def parse_capabilities():
     return matrix
 
 def test_capability(provider, feat, market):
-    symbol = DEFAULT_SYMBOLS.get(provider, "BTCUSDT")
+    # Determine appropriate symbol for provider
+    if provider in AGGREGATOR_PROVIDERS:
+        symbol = DEFAULT_SYMBOLS.get(provider, "bitcoin")
+    else:
+        symbol = DEFAULT_SYMBOLS.get(provider, "BTCUSDT")
 
     if feat not in FEATURE_COMMANDS:
         return False, f"Unknown feature: {feat}"
@@ -125,7 +132,8 @@ def test_capability(provider, feat, market):
             "API key not configured",
             "binance: futures client not configured",
             "websocket: bad handshake",
-            "plan restricted"
+            "plan restricted",
+            "requires paid CoinGecko API key"
         ]
 
         if any(pattern in error_msg for pattern in skip_patterns):
