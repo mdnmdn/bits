@@ -7,26 +7,26 @@ The goal is to achieve parity across supported exchanges where API support exist
 
 ### Target Capability Matrix
 
-| FEATURE            | MARKET  | coingecko | binance | bitget | whitebit |
-|--------------------|---------|-----------|---------|--------|----------|
-| server_time        | spot    | -         | ✓       | ✓      | ✓        |
-| exchange_info      | spot    | -         | ✓       | ✓      | ✓        |
-| exchange_info      | futures | -         | ✓       | ✓      | ✓        |
-| price              | spot    | ✓         | ✓       | ✓      | ✓        |
-| price              | futures | -         | ✓       | ✓      | -        |
-| price              | margin  | -         | ✓       | ✓      | -        |
-| candles            | spot    | ✓         | ✓       | ✓      | ✓        |
-| candles            | futures | -         | ✓       | ✓      | -        |
-| candles            | margin  | -         | ✓       | -      | -        |
-| ticker_24h         | spot    | -         | ✓       | ✓      | ✓        |
-| ticker_24h         | futures | -         | ✓       | ✓      | ✓        |
-| ticker_24h         | margin  | -         | ✓       | ✓      | -        |
-| order_book         | spot    | -         | ✓       | ✓      | ✓        |
-| order_book         | futures | -         | ✓       | ✓      | ✓        |
-| markets_list       | spot    | ✓         | -       | -      | -        |
-| stream_price       | spot    | ✓         | ✓       | ✓      | ✓        |
-| stream_order_book  | spot    | -         | ✓       | ✓      | ✓        |
-| stream_order_book  | futures | -         | ✓       | ✓      | ✓        |
+| FEATURE            | MARKET  | coingecko | binance | bitget | whitebit | mexc |
+|--------------------|---------|-----------|---------|--------|----------|------|
+| server_time        | spot    | -         | ✓       | ✓      | ✓        | ✓    |
+| exchange_info      | spot    | -         | ✓       | ✓      | ✓        | ✓    |
+| exchange_info      | futures | -         | ✓       | ✓      | ✓        | ✓    |
+| price              | spot    | ✓         | ✓       | ✓      | ✓        | ✓    |
+| price              | futures | -         | ✓       | ✓      | -        | ✓    |
+| price              | margin  | -         | ✓       | ✓      | -        | ✓    |
+| candles            | spot    | ✓         | ✓       | ✓      | ✓        | ✓    |
+| candles            | futures | -         | ✓       | ✓      | -        | ✓    |
+| candles            | margin  | -         | ✓       | -      | -        | ✓    |
+| ticker_24h         | spot    | -         | ✓       | ✓      | ✓        | ✓    |
+| ticker_24h         | futures | -         | ✓       | ✓      | ✓        | ✓    |
+| ticker_24h         | margin  | -         | ✓       | ✓      | -        | ✓    |
+| order_book         | spot    | -         | ✓       | ✓      | ✓        | ✓    |
+| order_book         | futures | -         | ✓       | ✓      | ✓        | ✓    |
+| markets_list       | spot    | ✓         | -       | -      | -        | -    |
+| stream_price       | spot    | ✓         | ✓       | ✓      | ✓        | -    |
+| stream_order_book  | spot    | -         | ✓       | ✓      | ✓        | -    |
+| stream_order_book  | futures | -         | ✓       | ✓      | ✓        | -    |
 
 **Legend:**
 - ✓ : Already implemented
@@ -38,6 +38,20 @@ The goal is to achieve parity across supported exchanges where API support exist
 - At the end of each phase, update this document marking the phase as completed and describing updates (briefly, method/file references only).
 - Delegate tasks to subagents when possible.
 - Simplicity is the ultimate perfection.
+
+---
+
+## Phase 6: MEXC Support ✅ COMPLETED
+
+**Goal:** Implement MEXC provider with support for Spot, Margin, and Futures.
+
+**Completed:**
+- Updated `pkg/config/config.go` with `MEXCConfig` and integrated it into the system.
+- Implemented MEXC provider in `pkg/provider/mexc/` with REST support for all market types.
+- Implemented `Price`, `Ticker24h`, `Candles`, and `OrderBook` in `market.go`.
+- Implemented `ServerTime` and `ExchangeInfo` in `exchange.go`.
+- Registered MEXC provider in `pkg/provider/registry/registry.go`.
+- Updated `_docs/provider-capabilites-wip.md` and created `_docs/mexc-provider-wip.md`.
 
 ---
 

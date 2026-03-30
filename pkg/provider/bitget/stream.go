@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/mdnmdn/bits/internal/logger"
-	"github.com/mdnmdn/bits/pkg/model"
 	"github.com/mdnmdn/bits/internal/ws"
+	"github.com/mdnmdn/bits/pkg/model"
 )
 
 const wsURL = "wss://ws.bitget.com/v2/ws/public"

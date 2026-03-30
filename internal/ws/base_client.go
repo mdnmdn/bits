@@ -209,8 +209,8 @@ type Manager struct {
 	pingTicker  *time.Ticker
 	pingTimeout time.Duration
 
-	mu           sync.RWMutex
-	subs         map[string]Command
+	mu   sync.RWMutex
+	subs map[string]Command
 }
 
 type CommandKind string

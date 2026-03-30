@@ -8,9 +8,9 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/mdnmdn/bits/internal/tui/section"
 	"github.com/mdnmdn/bits/pkg/capability"
 	"github.com/mdnmdn/bits/pkg/model"
-	"github.com/mdnmdn/bits/internal/tui/section"
 )
 
 type Options struct {

@@ -8,8 +8,8 @@ import (
 	"syscall"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/mdnmdn/bits/pkg/capability"
 	"github.com/mdnmdn/bits/internal/render"
+	"github.com/mdnmdn/bits/pkg/capability"
 	"github.com/mdnmdn/bits/pkg/resolve"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"

@@ -113,6 +113,20 @@ type CryptoComConfig struct {
 
 func (c CryptoComConfig) IsSpotEnabled() bool { return c.Spot.Enabled }
 
+// MEXCConfig holds MEXC API credentials.
+type MEXCConfig struct {
+	APIKey    string       `mapstructure:"api_key"`
+	APISecret string       `mapstructure:"api_secret"`
+	BaseURL   string       `mapstructure:"base_url"`
+	Spot      MarketConfig `mapstructure:"spot"`
+	Margin    MarketConfig `mapstructure:"margin"`
+	Futures   MarketConfig `mapstructure:"futures"`
+}
+
+func (c MEXCConfig) IsSpotEnabled() bool    { return c.Spot.Enabled }
+func (c MEXCConfig) IsMarginEnabled() bool  { return c.Margin.Enabled }
+func (c MEXCConfig) IsFuturesEnabled() bool { return c.Futures.Enabled }
+
 // SymbolConfig holds symbol resolution settings.
 type SymbolConfig struct {
 	CacheTTL time.Duration `mapstructure:"cache_ttl"`
@@ -152,6 +166,7 @@ type Config struct {
 	Bitget    BitgetConfig    `mapstructure:"bitget"`
 	WhiteBit  WhiteBitConfig  `mapstructure:"whitebit"`
 	CryptoCom CryptoComConfig `mapstructure:"cryptocom"`
+	MEXC      MEXCConfig      `mapstructure:"mexc"`
 	Symbol    SymbolConfig    `mapstructure:"symbol"`
 }
 
@@ -324,6 +339,21 @@ api_secret = ""
 # base_url = "https://api.crypto.com/v2"
 
 [cryptocom.spot]
+enabled = false
+
+# MEXC configuration
+[mexc]
+api_key = ""
+api_secret = ""
+# base_url = "https://api.mexc.com"
+
+[mexc.spot]
+enabled = false
+
+[mexc.margin]
+enabled = false
+
+[mexc.futures]
 enabled = false
 
 # Symbol resolution cache settings
@@ -512,6 +542,24 @@ func applyEnvMap(envVars map[string]string, cfg *Config) {
 	if v, ok := envVars["cryptocom.spot.enabled"]; ok {
 		cfg.CryptoCom.Spot.Enabled = v == "true" || v == "1"
 	}
+	if v, ok := envVars["mexc.api_key"]; ok {
+		cfg.MEXC.APIKey = v
+	}
+	if v, ok := envVars["mexc.api_secret"]; ok {
+		cfg.MEXC.APISecret = v
+	}
+	if v, ok := envVars["mexc.base_url"]; ok {
+		cfg.MEXC.BaseURL = v
+	}
+	if v, ok := envVars["mexc.spot.enabled"]; ok {
+		cfg.MEXC.Spot.Enabled = v == "true" || v == "1"
+	}
+	if v, ok := envVars["mexc.margin.enabled"]; ok {
+		cfg.MEXC.Margin.Enabled = v == "true" || v == "1"
+	}
+	if v, ok := envVars["mexc.futures.enabled"]; ok {
+		cfg.MEXC.Futures.Enabled = v == "true" || v == "1"
+	}
 	// Symbol config
 	if v, ok := envVars["symbol.cache_ttl"]; ok {
 		if d, err := time.ParseDuration(v); err == nil {
@@ -614,6 +662,25 @@ func applyEnvOverrides(cfg *Config) {
 	if v := os.Getenv("BITS_CRYPTOCOM_SPOT_ENABLED"); v != "" {
 		cfg.CryptoCom.Spot.Enabled = v == "true" || v == "1"
 	}
+	// MEXC
+	if v := os.Getenv("BITS_MEXC_API_KEY"); v != "" {
+		cfg.MEXC.APIKey = v
+	}
+	if v := os.Getenv("BITS_MEXC_API_SECRET"); v != "" {
+		cfg.MEXC.APISecret = v
+	}
+	if v := os.Getenv("BITS_MEXC_BASE_URL"); v != "" {
+		cfg.MEXC.BaseURL = v
+	}
+	if v := os.Getenv("BITS_MEXC_SPOT_ENABLED"); v != "" {
+		cfg.MEXC.Spot.Enabled = v == "true" || v == "1"
+	}
+	if v := os.Getenv("BITS_MEXC_MARGIN_ENABLED"); v != "" {
+		cfg.MEXC.Margin.Enabled = v == "true" || v == "1"
+	}
+	if v := os.Getenv("BITS_MEXC_FUTURES_ENABLED"); v != "" {
+		cfg.MEXC.Futures.Enabled = v == "true" || v == "1"
+	}
 	// Symbol resolution cache
 	if v := os.Getenv("BITS_SYMBOL_CACHE_TTL"); v != "" {
 		if d, err := time.ParseDuration(v); err == nil {
@@ -658,6 +725,9 @@ func Save(cfg *Config) error {
 	v.Set("bitget.api_secret", cfg.Bitget.APISecret)
 	v.Set("bitget.passphrase", cfg.Bitget.Passphrase)
 	v.Set("bitget.base_url", cfg.Bitget.BaseURL)
+	v.Set("mexc.api_key", cfg.MEXC.APIKey)
+	v.Set("mexc.api_secret", cfg.MEXC.APISecret)
+	v.Set("mexc.base_url", cfg.MEXC.BaseURL)
 
 	path := filepath.Join(dir, "config.yaml")
 	if err := v.WriteConfigAs(path); err != nil {
@@ -722,6 +792,14 @@ func (c *Config) Redacted() *Config {
 			APISecret: maskedLong(c.CryptoCom.APISecret),
 			BaseURL:   c.CryptoCom.BaseURL,
 			Spot:      c.CryptoCom.Spot,
+		},
+		MEXC: MEXCConfig{
+			APIKey:    maskedLong(c.MEXC.APIKey),
+			APISecret: maskedLong(c.MEXC.APISecret),
+			BaseURL:   c.MEXC.BaseURL,
+			Spot:      c.MEXC.Spot,
+			Margin:    c.MEXC.Margin,
+			Futures:   c.MEXC.Futures,
 		},
 		Symbol: SymbolConfig{
 			CacheTTL: c.Symbol.CacheTTL,

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/mdnmdn/bits/pkg/model"
 	"github.com/mdnmdn/bits/internal/render"
+	"github.com/mdnmdn/bits/pkg/model"
 )
 
 // printProvenance writes a provider/market header line and, if a fallback

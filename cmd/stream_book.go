@@ -7,11 +7,11 @@ import (
 	"syscall"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/mdnmdn/bits/pkg/capability"
-	"github.com/mdnmdn/bits/pkg/model"
 	"github.com/mdnmdn/bits/internal/render"
 	renderjson "github.com/mdnmdn/bits/internal/render/json"
 	rendertoon "github.com/mdnmdn/bits/internal/render/toon"
+	"github.com/mdnmdn/bits/pkg/capability"
+	"github.com/mdnmdn/bits/pkg/model"
 	"github.com/mdnmdn/bits/pkg/resolve"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"

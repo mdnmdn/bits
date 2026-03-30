@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/mdnmdn/bits/pkg/model"
 	"github.com/mdnmdn/bits/internal/ws"
+	"github.com/mdnmdn/bits/pkg/model"
 )
 
 type depthStreamData struct {

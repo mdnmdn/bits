@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/mdnmdn/bits/pkg/model"
 	"github.com/mdnmdn/bits/internal/ws"
+	"github.com/mdnmdn/bits/pkg/model"
 )
 
 const wsMarketURL = "wss://stream.crypto.com/v2/market"
