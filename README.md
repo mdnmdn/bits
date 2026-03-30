@@ -2,8 +2,7 @@
 
 **The crypto Swiss Army knife for your terminal.**
 
-One CLI. Three exchanges. Every format. Real-time streams, snapshots, order books, candles — all from the same command set, no matter which provider you're pointing at.
-
+One CLI, multiple exchanges. Every format. Real-time streams, snapshots, order books, candles — all from the same command set.
 
 ---
 

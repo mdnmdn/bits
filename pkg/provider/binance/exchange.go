@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	binance "github.com/adshao/go-binance/v2"
+	"github.com/adshao/go-binance/v2/futures"
 	"github.com/mdnmdn/bits/pkg/model"
 )
 
@@ -50,13 +52,7 @@ func (c *Client) ExchangeInfo(ctx context.Context, market model.MarketType) (mod
 		}
 		symbols := make([]model.Symbol, 0, len(info.Symbols))
 		for _, s := range info.Symbols {
-			symbols = append(symbols, model.Symbol{
-				Symbol:     s.Symbol,
-				BaseAsset:  s.BaseAsset,
-				QuoteAsset: s.QuoteAsset,
-				Status:     convertStatus(s.Status),
-				Market:     market,
-			})
+			symbols = append(symbols, convertFuturesSymbol(s))
 		}
 		return model.Response[model.ExchangeInfo]{
 			Kind:     model.KindExchangeInfo,
@@ -79,13 +75,7 @@ func (c *Client) ExchangeInfo(ctx context.Context, market model.MarketType) (mod
 		}
 		symbols := make([]model.Symbol, 0, len(info.Symbols))
 		for _, s := range info.Symbols {
-			symbols = append(symbols, model.Symbol{
-				Symbol:     s.Symbol,
-				BaseAsset:  s.BaseAsset,
-				QuoteAsset: s.QuoteAsset,
-				Status:     convertStatus(s.Status),
-				Market:     market,
-			})
+			symbols = append(symbols, convertSpotSymbol(s))
 		}
 		return model.Response[model.ExchangeInfo]{
 			Kind:     model.KindExchangeInfo,
@@ -113,4 +103,91 @@ func convertStatus(s string) model.SymbolStatus {
 	default:
 		return model.SymbolStatus(strings.ToLower(s))
 	}
+}
+
+func convertSpotSymbol(s binance.Symbol) model.Symbol {
+	sym := model.Symbol{
+		Symbol:     s.Symbol,
+		BaseAsset:  s.BaseAsset,
+		QuoteAsset: s.QuoteAsset,
+		Status:     convertStatus(s.Status),
+		Market:     model.MarketSpot,
+	}
+	pp := s.QuotePrecision
+	sym.PricePrecision = &pp
+	qp := int(s.BaseAssetPrecision)
+	sym.QtyPrecision = &qp
+
+	if pf := s.PriceFilter(); pf != nil {
+		if minP, ok := parseFloat(pf.MinPrice); ok {
+			sym.MinPrice = minP
+		}
+		if maxP, ok := parseFloat(pf.MaxPrice); ok {
+			sym.MaxPrice = maxP
+		}
+		if tick, ok := parseFloat(pf.TickSize); ok {
+			sym.StepSize = tick
+		}
+	}
+	if lsf := s.LotSizeFilter(); lsf != nil {
+		if minQ, ok := parseFloat(lsf.MinQuantity); ok {
+			sym.MinQty = minQ
+		}
+		if maxQ, ok := parseFloat(lsf.MaxQuantity); ok {
+			sym.MaxQty = maxQ
+		}
+		if step, ok := parseFloat(lsf.StepSize); ok {
+			sym.StepSize = step
+		}
+	}
+	return sym
+}
+
+func convertFuturesSymbol(s futures.Symbol) model.Symbol {
+	sym := model.Symbol{
+		Symbol:     s.Symbol,
+		BaseAsset:  s.BaseAsset,
+		QuoteAsset: s.QuoteAsset,
+		Status:     convertStatus(s.Status),
+		Market:     model.MarketFutures,
+	}
+	pp := s.PricePrecision
+	sym.PricePrecision = &pp
+	qp := s.QuantityPrecision
+	sym.QtyPrecision = &qp
+
+	if pf := s.PriceFilter(); pf != nil {
+		if minP, ok := parseFloat(pf.MinPrice); ok {
+			sym.MinPrice = minP
+		}
+		if maxP, ok := parseFloat(pf.MaxPrice); ok {
+			sym.MaxPrice = maxP
+		}
+		if tick, ok := parseFloat(pf.TickSize); ok {
+			sym.StepSize = tick
+		}
+	}
+	if lsf := s.LotSizeFilter(); lsf != nil {
+		if minQ, ok := parseFloat(lsf.MinQuantity); ok {
+			sym.MinQty = minQ
+		}
+		if maxQ, ok := parseFloat(lsf.MaxQuantity); ok {
+			sym.MaxQty = maxQ
+		}
+		if step, ok := parseFloat(lsf.StepSize); ok {
+			sym.StepSize = step
+		}
+	}
+	return sym
+}
+
+func parseFloat(s string) (*float64, bool) {
+	if s == "" || s == "0" {
+		return nil, false
+	}
+	var v float64
+	if _, err := fmt.Sscanf(s, "%f", &v); err == nil {
+		return &v, true
+	}
+	return nil, false
 }
