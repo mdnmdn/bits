@@ -12,38 +12,42 @@ _docs/providers/apis/
 │   ├── binance-market.md         # Prices, orderbooks, candles, tickers, streams
 │   ├── binance-market-ws.md      # WebSocket spot market streams
 │   ├── binance-market-futures-ws.md  # WebSocket futures market streams (USDT-M + COIN-M)
-│   └── binance-accounts.md       # Account REST APIs (balance, subaccounts, transfers)
+│   ├── binance-accounts.md       # Account REST APIs (balance, subaccounts, transfers)
+│   └── binance-spot-order.md     # Spot order REST APIs (place, cancel, query, history)
 ├── bitget/
 │   ├── bitget-general.md         # Base URL, rate limits, auth, exchange info APIs
 │   ├── bitget-market.md          # Prices, orderbooks, candles, tickers, streams
 │   ├── bitget-market-ws.md       # WebSocket spot market streams
 │   ├── bitget-market-futures-ws.md   # WebSocket futures market streams (USDT-M + Coin-M)
-│   └── bitget-accounts.md        # Account REST APIs (balance, subaccounts, transfers)
+│   ├── bitget-accounts.md        # Account REST APIs (balance, subaccounts, transfers)
+│   └── bitget-spot-order.md      # Spot order REST APIs (place, cancel, query, history)
 ├── coingecko/
 │   ├── coingecko-general.md      # Base URL, rate limits, auth, exchange info APIs
 │   ├── coingecko-market.md       # Prices, orderbooks, candles, tickers, streams
-│   └── coingecko-market-ws.md    # WebSocket spot market streams
+│   ├── coingecko-market-ws.md    # WebSocket spot market streams
+│   └── coingecko-spot-order.md   # N/A — aggregator only, no order APIs
 ├── whitebit/
 │   ├── whitebit-general.md       # Base URL, rate limits, auth, exchange info APIs
 │   ├── whitebit-market.md        # Prices, orderbooks, candles, tickers, streams
 │   ├── whitebit-market-ws.md     # WebSocket spot market streams
-│   └── whitebit-accounts.md      # Account REST APIs (balance, subaccounts, transfers)
+│   ├── whitebit-accounts.md      # Account REST APIs (balance, subaccounts, transfers)
+│   └── whitebit-spot-order.md    # Spot order REST APIs (place, cancel, query, history)
 ├── cryptocom/
 │   ├── cryptocom-general.md      # Base URL, rate limits, auth, exchange info APIs
 │   ├── cryptocom-market.md       # Prices, orderbooks, candles, tickers, streams
 │   ├── cryptocom-market-ws.md    # WebSocket spot market streams
-│   └── cryptocom-accounts.md     # Account REST APIs (balance, subaccounts, transfers)
+│   ├── cryptocom-accounts.md     # Account REST APIs (balance, subaccounts, transfers)
+│   └── cryptocom-spot-order.md   # Spot order REST APIs (place, cancel, query, history)
 └── mexc/
     ├── mexc-general.md           # Base URL, rate limits, auth, exchange info APIs
     ├── mexc-market.md            # Prices, orderbooks, candles, tickers, streams
     ├── mexc-market-ws.md         # WebSocket spot market streams
     ├── mexc-market-futures-ws.md # WebSocket futures market streams
-    └── mexc-accounts.md          # Account REST APIs (balance, subaccounts, transfers)
+    ├── mexc-accounts.md          # Account REST APIs (balance, subaccounts, transfers)
+    └── mexc-spot-order.md        # Spot order REST APIs (place, cancel, query, history)
 ```
 
 ## Document Template
-
-Each provider follows this structure:
 
 ### `{provider}-general.md`
 - **Overview**: Provider description, official site, API docs link
@@ -70,6 +74,27 @@ APIs covered:
 - Candles / Klines
 - Recent Trades
 - Exchange Info (market-specific)
+
+### `{provider}-spot-order.md`
+For each order API:
+- **Description** and any quirks/notes
+- **URL** (complete path with HTTP method)
+- **Parameters** (table: name, type, required, description)
+- **Response Fields** (table: field, type, description)
+- **Sample Request/Response** (JSON)
+- **Rate Limit Weight** (if applicable)
+
+APIs covered:
+- Place Order (limit, market, etc.)
+- Test New Order (if available)
+- Query Order
+- Cancel Order
+- Cancel All Open Orders
+- Open Orders
+- Order History / All Orders
+- Batch Orders (if available)
+- Order Types, Time In Force, Order Status enums
+- Self Trade Prevention modes
 
 ## Progress
 
@@ -117,6 +142,17 @@ APIs covered:
 | MEXC     | [x] | done | Account info, subaccount CRUD, universal transfers, internal transfers |
 | CoinGecko | N/A | n/a | Aggregator only, no account APIs |
 
+### Spot Order REST API Documentation
+
+| Provider | Spot Order Doc | Status | Notes |
+|----------|----------------|--------|-------|
+| Binance  | [x] | done | Unified endpoint, 7 order types, ACK/RESULT/FULL response modes, STP, pegged orders |
+| Bitget   | [x] | done | Unified endpoint, limit/market, batch place/cancel (50 orders), lowercase enums |
+| WhiteBit | [x] | done | Separate endpoints per order type (limit/market/stop-limit/stop-market), bulk orders (20), HMAC-SHA512 |
+| Crypto.com | [x] | done | JSON-RPC envelope in body, limit/market, async operations, `BASE_QUOTE` symbol format |
+| MEXC     | [x] | done | Binance-compatible API, 5 order types, batch orders (20), HMAC-SHA256 |
+| CoinGecko | N/A | n/a | Aggregator only, no order APIs |
+
 ## Provider Capability Summary
 
 Based on `pkg/provider/` implementation:
@@ -148,3 +184,9 @@ Based on `pkg/provider/` implementation:
 - **Unified WebSocket pattern**: WhiteBit and Crypto.com use a single WebSocket endpoint for both spot and perpetual futures — the same stream methods/channels work for both, differentiated only by symbol format:
   - WhiteBit: Spot `BTC_USDT` → Perpetual `BTC_PERP`
   - Crypto.com: Spot `BTC_USDT` → Perpetual `BTCUSD-PERP`
+- **Order API patterns**:
+  - **Binance/MEXC**: Unified `POST /order` endpoint with `type` parameter; uppercase enums (`BUY`, `SELL`, `LIMIT`, `MARKET`)
+  - **Bitget**: Unified endpoint; lowercase enums (`buy`, `sell`, `limit`, `market`)
+  - **WhiteBit**: Separate endpoints per order type (`/order/new`, `/order/market`, `/order/stop_limit`, `/order/stop_market`); underscore symbol format (`BTC_USDT`)
+  - **Crypto.com**: JSON-RPC envelope in request body; `BASE_QUOTE` symbol format; async operations
+  - **CoinGecko**: No order APIs (price aggregator only)
