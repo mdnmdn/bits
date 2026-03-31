@@ -7,10 +7,12 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/charmbracelet/lipgloss"
 	"github.com/mdnmdn/bits/internal/render"
+	rendertoon "github.com/mdnmdn/bits/internal/render/toon"
 	"github.com/mdnmdn/bits/pkg/capability"
+	"github.com/mdnmdn/bits/pkg/model"
 	"github.com/mdnmdn/bits/pkg/resolve"
+	"github.com/mdnmdn/bits/pkg/resolve/symbol"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 
@@ -27,14 +29,6 @@ var streamPriceCmd = &cobra.Command{
 func init() {
 	streamCmd.AddCommand(streamPriceCmd)
 }
-
-var (
-	streamToonID     = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("205"))
-	streamToonPrice  = lipgloss.NewStyle().Foreground(lipgloss.Color("82"))
-	streamToonUp     = lipgloss.NewStyle().Foreground(lipgloss.Color("46"))
-	streamToonDown   = lipgloss.NewStyle().Foreground(lipgloss.Color("196"))
-	streamToonNeutrl = lipgloss.NewStyle().Faint(true)
-)
 
 func runStreamPrice(cmd *cobra.Command, args []string) error {
 	cfg, err := loadConfig()
@@ -63,7 +57,16 @@ func runStreamPrice(cmd *cobra.Command, args []string) error {
 	ctx, cancel := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
-	ch, err := sp.StartPriceStream(ctx, args)
+	ids := make([]string, len(args))
+	for i, arg := range args {
+		sym, _ := symbol.New(p).Resolve(ctx, arg, opts.Market)
+		if sym == "" {
+			sym = arg
+		}
+		ids[i] = sym
+	}
+
+	ch, err := sp.StartPriceStream(ctx, ids)
 	if err != nil {
 		return err
 	}
@@ -91,32 +94,38 @@ func runStreamPrice(cmd *cobra.Command, args []string) error {
 			_ = enc.Close()
 
 		case render.FormatMarkdown:
-			// one markdown bullet per update
-			_, _ = fmt.Fprintf(os.Stdout, "- **%s** %.6f %s  _%s_\n",
-				update.ID, update.Price, update.Currency, change)
+			// one markdown bullet per update with bid/ask and volume
+			bidAsk := ""
+			if update.BidPrice != nil && update.AskPrice != nil {
+				bidAsk = fmt.Sprintf(" | bid:%.4f ask:%.4f", *update.BidPrice, *update.AskPrice)
+			}
+			vol := ""
+			if update.Volume24h != nil {
+				vol = fmt.Sprintf(" | vol:%.2f", *update.Volume24h)
+			}
+			_, _ = fmt.Fprintf(os.Stdout, "- **%s** %.6f %s  _%s_%s%s\n",
+				update.ID, update.Price, update.Currency, change, bidAsk, vol)
 
 		case render.FormatToon:
-			// compact colored line: ID  PRICE CURRENCY  CHANGE
-			chgStyle := streamToonNeutrl
-			if update.Change24h != nil {
-				if *update.Change24h > 0 {
-					change = "▲" + change
-					chgStyle = streamToonUp
-				} else if *update.Change24h < 0 {
-					change = "▼" + change
-					chgStyle = streamToonDown
-				}
+			res := model.Response[model.CoinPrice]{
+				Kind:     model.KindPrice,
+				Provider: p.ID(),
+				Data:     *update,
 			}
-			_, _ = fmt.Fprintf(os.Stdout, "%s  %s %s  %s\n",
-				streamToonID.Render(update.ID),
-				streamToonPrice.Render(fmt.Sprintf("%.6f", update.Price)),
-				update.Currency,
-				chgStyle.Render(change))
+			_ = rendertoon.RenderPrice(os.Stdout, res)
 
 		default:
-			// table: compact plain line
-			_, _ = fmt.Fprintf(os.Stdout, "%s  %.6f %s  %s\n",
-				update.ID, update.Price, update.Currency, change)
+			// table: compact plain line with bid/ask and volume
+			bidAsk := ""
+			if update.BidPrice != nil && update.AskPrice != nil {
+				bidAsk = fmt.Sprintf(" | bid:%.4f ask:%.4f", *update.BidPrice, *update.AskPrice)
+			}
+			vol := ""
+			if update.Volume24h != nil {
+				vol = fmt.Sprintf(" | vol:%.2f", *update.Volume24h)
+			}
+			_, _ = fmt.Fprintf(os.Stdout, "%s  %.6f %s  %s%s%s\n",
+				update.ID, update.Price, update.Currency, change, bidAsk, vol)
 		}
 	}
 	return nil

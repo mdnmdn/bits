@@ -38,7 +38,18 @@ type bitgetWSArg struct {
 type bitgetWSTickerData struct {
 	InstID    string `json:"instId"`
 	LastPr    string `json:"lastPr"`
+	Open24h   string `json:"open24h"`
+	High24h   string `json:"high24h"`
+	Low24h    string `json:"low24h"`
 	Change24h string `json:"change24h"`
+	BidPr     string `json:"bidPr"`
+	AskPr     string `json:"askPr"`
+	BidSz     string `json:"bidSz"`
+	AskSz     string `json:"askSz"`
+	BaseVol   string `json:"baseVolume"`
+	QuoteVol  string `json:"quoteVolume"`
+	OpenUtc   string `json:"openUtc"`
+	Ts        string `json:"ts"`
 }
 
 type bitgetWSDepthData struct {
@@ -130,6 +141,41 @@ func (p *bitgetProtocol) Parse(ctx context.Context, raw []byte) (any, error) {
 		changePct, _ := strconv.ParseFloat(d.Change24h, 64)
 		changePct *= 100
 
+		high24h, _ := strconv.ParseFloat(d.High24h, 64)
+		low24h, _ := strconv.ParseFloat(d.Low24h, 64)
+		open24h, _ := strconv.ParseFloat(d.Open24h, 64)
+		volume24h, _ := strconv.ParseFloat(d.BaseVol, 64)
+
+		var bidPrice, askPrice, bidSize, askSize *float64
+		if d.BidPr != "" {
+			if bp, err := strconv.ParseFloat(d.BidPr, 64); err == nil {
+				bidPrice = &bp
+			}
+		}
+		if d.AskPr != "" {
+			if ap, err := strconv.ParseFloat(d.AskPr, 64); err == nil {
+				askPrice = &ap
+			}
+		}
+		if d.BidSz != "" {
+			if bs, err := strconv.ParseFloat(d.BidSz, 64); err == nil {
+				bidSize = &bs
+			}
+		}
+		if d.AskSz != "" {
+			if as, err := strconv.ParseFloat(d.AskSz, 64); err == nil {
+				askSize = &as
+			}
+		}
+
+		var ts *time.Time
+		if d.Ts != "" {
+			if ms, err := strconv.ParseInt(d.Ts, 10, 64); err == nil {
+				t := time.UnixMilli(ms)
+				ts = &t
+			}
+		}
+
 		return &model.Response[model.CoinPrice]{
 			Kind:     model.KindPrice,
 			Provider: p.providerID,
@@ -138,6 +184,15 @@ func (p *bitgetProtocol) Parse(ctx context.Context, raw []byte) (any, error) {
 				Symbol:    d.InstID,
 				Price:     price,
 				Change24h: &changePct,
+				High24h:   &high24h,
+				Low24h:    &low24h,
+				Open24h:   &open24h,
+				Volume24h: &volume24h,
+				BidPrice:  bidPrice,
+				BidSize:   bidSize,
+				AskPrice:  askPrice,
+				AskSize:   askSize,
+				Time:      ts,
 			},
 		}, nil
 	}
