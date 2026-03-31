@@ -42,9 +42,11 @@ type bitgetWSTickerData struct {
 }
 
 type bitgetWSDepthData struct {
-	Asks [][]string `json:"asks"`
-	Bids [][]string `json:"bids"`
-	Ts   string     `json:"ts"`
+	Asks     [][]string `json:"asks"`
+	Bids     [][]string `json:"bids"`
+	Ts       string     `json:"ts"`
+	Checksum any        `json:"checksum"`
+	Seq      int64      `json:"seq"`
 }
 
 func (p *bitgetProtocol) Dial(ctx context.Context, conn *ws.Conn) error {
@@ -173,14 +175,34 @@ func (p *bitgetProtocol) Parse(ctx context.Context, raw []byte) (any, error) {
 			}
 		}
 
+		var lastUpdateID *int64
+		extra := make(map[string]any)
+
+		// books channel: update messages have incremental updates with checksum
+		// books5/books15: always snapshots, no LastUpdateID
+		if msg.Arg.Channel == "books" && msg.Action == "update" && d.Seq > 0 {
+			lastUpdateID = &d.Seq
+			if d.Checksum != nil {
+				extra["checksum"] = d.Checksum
+			}
+		} else if msg.Arg.Channel == "books" && msg.Action == "snapshot" && d.Seq > 0 {
+			// Snapshot messages for books channel have checksum too
+			if d.Checksum != nil {
+				extra["checksum"] = d.Checksum
+			}
+		}
+		// books5/books15: no LastUpdateID, no checksum validation needed
+
 		return &model.Response[model.OrderBook]{
 			Kind:     model.KindOrderBook,
 			Provider: p.providerID,
 			Data: model.OrderBook{
-				Symbol: msg.Arg.InstID,
-				Bids:   parseEntries(d.Bids),
-				Asks:   parseEntries(d.Asks),
-				Time:   ts,
+				Symbol:       msg.Arg.InstID,
+				Bids:         parseEntries(d.Bids),
+				Asks:         parseEntries(d.Asks),
+				Time:         ts,
+				LastUpdateID: lastUpdateID,
+				Extra:        extra,
 			},
 		}, nil
 	}

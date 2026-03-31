@@ -6,6 +6,7 @@ import (
 
 	"github.com/mdnmdn/bits/internal/logger"
 	"github.com/mdnmdn/bits/internal/ws"
+	"github.com/mdnmdn/bits/internal/ws/middleware"
 	"github.com/mdnmdn/bits/pkg/model"
 )
 
@@ -20,6 +21,10 @@ func (c *Client) pool(ctx context.Context) (*ws.Pool, <-chan ws.StreamResponse[a
 			OutChanBuffer: 100,
 		},
 		Protocol: &bitgetProtocol{providerID: providerID},
+		Pipeline: ws.Pipeline{
+			middleware.CRC32ValidatorMW(),
+			middleware.OrderBookReconstructorMW(),
+		},
 	}
 	pool := ws.NewPool(cfg, 0) // 0 = unlimited per connection
 	out, err := pool.Start(ctx)
