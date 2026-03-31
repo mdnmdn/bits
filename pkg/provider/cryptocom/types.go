@@ -32,11 +32,6 @@ func (e *apiEnvelope) GetCode() (int, error) {
 	return codeInt, nil
 }
 
-// apiInstrumentsResult is the result payload for public/get-instruments.
-type apiInstrumentsResult struct {
-	Instruments []apiInstrument `json:"instruments"`
-}
-
 // apiInstrumentsV1Response is the response for v1 public/get-instruments.
 type apiInstrumentsV1Response struct {
 	ID     int64                `json:"id"`
@@ -63,18 +58,6 @@ type apiInstrumentV1 struct {
 	Tradable          bool   `json:"tradable"`
 	MarginBuyEnabled  bool   `json:"margin_buy_enabled"`
 	MarginSellEnabled bool   `json:"margin_sell_enabled"`
-}
-
-// apiInstrument represents a single trading instrument.
-type apiInstrument struct {
-	InstrumentName    string `json:"instrument_name"`
-	ProductType       string `json:"product_type"`
-	QuoteCurrency     string `json:"quote_currency"`
-	BaseCurrency      string `json:"base_currency"`
-	MinOrderSize      string `json:"min_order_size"`
-	MaxOrderSize      string `json:"max_order_size"`
-	PricePrecision    int    `json:"price_precision"`
-	QuantityPrecision int    `json:"quantity_precision"`
 }
 
 // apiTickerResult is the result payload for public/get-ticker.
