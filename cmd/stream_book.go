@@ -13,6 +13,7 @@ import (
 	"github.com/mdnmdn/bits/pkg/capability"
 	"github.com/mdnmdn/bits/pkg/model"
 	"github.com/mdnmdn/bits/pkg/resolve"
+	"github.com/mdnmdn/bits/pkg/resolve/symbol"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 
@@ -65,7 +66,11 @@ func runStreamBook(cmd *cobra.Command, args []string) error {
 	ctx, cancel := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
-	ch, err := obsp.WatchOrderBook(ctx, args[0], market, depth)
+	sym, _ := symbol.New(p).Resolve(ctx, args[0], market) // falls back to raw input on error
+	if sym == "" {
+		sym = args[0]
+	}
+	ch, err := obsp.WatchOrderBook(ctx, sym, market, depth)
 	if err != nil {
 		return err
 	}
