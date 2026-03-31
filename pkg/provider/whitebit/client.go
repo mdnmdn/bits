@@ -4,22 +4,48 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sync"
 	"time"
 
+	"github.com/mdnmdn/bits/internal/ws"
 	"github.com/mdnmdn/bits/pkg/capability"
 	"github.com/mdnmdn/bits/pkg/config"
+	"github.com/mdnmdn/bits/pkg/model"
+	"github.com/mdnmdn/bits/pkg/provider"
 )
 
 const (
 	providerID     = "whitebit"
 	defaultBaseURL = "https://whitebit.com"
+	wsURLRetry     = "wss://api.whitebit.eu/ws"
 )
+
+var _ provider.Provider = (*Client)(nil)
+var _ provider.PriceStreamProvider = (*Client)(nil)
+var _ provider.OrderBookStreamProvider = (*Client)(nil)
 
 // Client is the WhiteBit provider implementation.
 type Client struct {
 	cfg        config.WhiteBitConfig
 	httpClient *http.Client
 	userAgent  string
+
+	pricePool   *ws.Pool
+	priceOut    <-chan ws.StreamResponse[any]
+	priceChan   chan *model.CoinPrice
+	priceSubs   map[string]bool
+	priceStatus provider.StreamStatus
+	streamMu    sync.RWMutex
+
+	bookPool   *ws.Pool
+	bookOut    <-chan ws.StreamResponse[any]
+	bookChan   chan *model.OrderBook
+	bookSubs   map[string]bool
+	bookStatus provider.StreamStatus
+	market     model.MarketType
+
+	// priceMerged stores merged state for dual-subscription price stream
+	priceMerged map[string]*mergedPriceState
 }
 
 // NewClient creates a new WhiteBit API client from the given config.
@@ -28,8 +54,14 @@ func NewClient(cfg config.WhiteBitConfig) *Client {
 		cfg.BaseURL = defaultBaseURL
 	}
 	return &Client{
-		cfg:        cfg,
-		httpClient: &http.Client{Timeout: 30 * time.Second},
+		cfg:         cfg,
+		httpClient:  &http.Client{Timeout: 30 * time.Second},
+		priceChan:   make(chan *model.CoinPrice, 100),
+		priceSubs:   make(map[string]bool),
+		priceStatus: provider.StreamStatusStopped,
+		bookChan:    make(chan *model.OrderBook, 100),
+		bookSubs:    make(map[string]bool),
+		bookStatus:  provider.StreamStatusStopped,
 	}
 }
 
@@ -63,6 +95,7 @@ func (c *Client) Capabilities() capability.CapabilityMatrix {
 	// Register streaming features (Spot and Futures)
 	matrix[capability.CapabilityKey{Market: s, Feature: capability.FeatureStreamPrice}] = true
 	matrix[capability.CapabilityKey{Market: s, Feature: capability.FeatureStreamOrderBook}] = true
+	matrix[capability.CapabilityKey{Market: f, Feature: capability.FeatureStreamPrice}] = true
 	matrix[capability.CapabilityKey{Market: f, Feature: capability.FeatureStreamOrderBook}] = true
 
 	return matrix
