@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"sort"
 	"sync"
 
 	"github.com/mdnmdn/bits/pkg/model"
@@ -46,7 +47,30 @@ func (r *OrderBookReconstructor) Middleware(ctx context.Context, msg any, next f
 	local.Asks = mergeLevels(local.Asks, book.Asks)
 	local.Time = book.Time
 
-	return next(msg)
+	// Return a copy of the reconstructed full book to avoid aliasing issues
+	reconstructed := &model.Response[model.OrderBook]{
+		Kind:     resp.Kind,
+		Provider: resp.Provider,
+		Data: model.OrderBook{
+			Symbol:       local.Symbol,
+			Market:       local.Market,
+			Bids:         copyEntries(local.Bids),
+			Asks:         copyEntries(local.Asks),
+			Time:         local.Time,
+			LastUpdateID: local.LastUpdateID,
+			Extra:        local.Extra,
+		},
+	}
+	return next(reconstructed)
+}
+
+func copyEntries(entries []model.OrderBookEntry) []model.OrderBookEntry {
+	if entries == nil {
+		return nil
+	}
+	result := make([]model.OrderBookEntry, len(entries))
+	copy(result, entries)
+	return result
 }
 
 func mergeLevels(existing, updates []model.OrderBookEntry) []model.OrderBookEntry {
@@ -78,7 +102,14 @@ func mergeLevels(existing, updates []model.OrderBookEntry) []model.OrderBookEntr
 		result = append(result, model.OrderBookEntry{Price: price, Quantity: qty})
 	}
 
+	sortByPrice(result)
 	return result
+}
+
+func sortByPrice(entries []model.OrderBookEntry) {
+	sort.Slice(entries, func(i, j int) bool {
+		return entries[i].Price > entries[j].Price
+	})
 }
 
 func (r *OrderBookReconstructor) Reset(symbol string) {
