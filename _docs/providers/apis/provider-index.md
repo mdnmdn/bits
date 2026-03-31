@@ -13,38 +13,44 @@ _docs/providers/apis/
 │   ├── binance-market-ws.md      # WebSocket spot market streams
 │   ├── binance-market-futures-ws.md  # WebSocket futures market streams (USDT-M + COIN-M)
 │   ├── binance-accounts.md       # Account REST APIs (balance, subaccounts, transfers)
-│   └── binance-spot-order.md     # Spot order REST APIs (place, cancel, query, history)
+│   ├── binance-spot-order.md     # Spot order REST APIs (place, cancel, query, history)
+│   └── binance-future-order.md   # Futures order REST APIs (USDT-M + COIN-M)
 ├── bitget/
 │   ├── bitget-general.md         # Base URL, rate limits, auth, exchange info APIs
 │   ├── bitget-market.md          # Prices, orderbooks, candles, tickers, streams
 │   ├── bitget-market-ws.md       # WebSocket spot market streams
 │   ├── bitget-market-futures-ws.md   # WebSocket futures market streams (USDT-M + Coin-M)
 │   ├── bitget-accounts.md        # Account REST APIs (balance, subaccounts, transfers)
-│   └── bitget-spot-order.md      # Spot order REST APIs (place, cancel, query, history)
+│   ├── bitget-spot-order.md      # Spot order REST APIs (place, cancel, query, history)
+│   └── bitget-future-order.md    # Futures order REST APIs (unified USDT-M + Coin-M)
 ├── coingecko/
 │   ├── coingecko-general.md      # Base URL, rate limits, auth, exchange info APIs
 │   ├── coingecko-market.md       # Prices, orderbooks, candles, tickers, streams
 │   ├── coingecko-market-ws.md    # WebSocket spot market streams
-│   └── coingecko-spot-order.md   # N/A — aggregator only, no order APIs
+│   ├── coingecko-spot-order.md   # N/A — aggregator only, no order APIs
+│   └── coingecko-future-order.md # N/A — aggregator only, no order APIs
 ├── whitebit/
 │   ├── whitebit-general.md       # Base URL, rate limits, auth, exchange info APIs
 │   ├── whitebit-market.md        # Prices, orderbooks, candles, tickers, streams
 │   ├── whitebit-market-ws.md     # WebSocket spot market streams
 │   ├── whitebit-accounts.md      # Account REST APIs (balance, subaccounts, transfers)
-│   └── whitebit-spot-order.md    # Spot order REST APIs (place, cancel, query, history)
+│   ├── whitebit-spot-order.md    # Spot order REST APIs (place, cancel, query, history)
+│   └── whitebit-future-order.md  # N/A — spot only, no futures trading APIs
 ├── cryptocom/
 │   ├── cryptocom-general.md      # Base URL, rate limits, auth, exchange info APIs
 │   ├── cryptocom-market.md       # Prices, orderbooks, candles, tickers, streams
 │   ├── cryptocom-market-ws.md    # WebSocket spot market streams
 │   ├── cryptocom-accounts.md     # Account REST APIs (balance, subaccounts, transfers)
-│   └── cryptocom-spot-order.md   # Spot order REST APIs (place, cancel, query, history)
+│   ├── cryptocom-spot-order.md   # Spot order REST APIs (place, cancel, query, history)
+│   └── cryptocom-future-order.md # N/A — spot only, no futures trading APIs
 └── mexc/
     ├── mexc-general.md           # Base URL, rate limits, auth, exchange info APIs
     ├── mexc-market.md            # Prices, orderbooks, candles, tickers, streams
     ├── mexc-market-ws.md         # WebSocket spot market streams
     ├── mexc-market-futures-ws.md # WebSocket futures market streams
     ├── mexc-accounts.md          # Account REST APIs (balance, subaccounts, transfers)
-    └── mexc-spot-order.md        # Spot order REST APIs (place, cancel, query, history)
+    ├── mexc-spot-order.md        # Spot order REST APIs (place, cancel, query, history)
+    └── mexc-future-order.md      # Futures order REST APIs
 ```
 
 ## Document Template
@@ -95,6 +101,30 @@ APIs covered:
 - Batch Orders (if available)
 - Order Types, Time In Force, Order Status enums
 - Self Trade Prevention modes
+
+### `{provider}-future-order.md`
+For each order API:
+- **Description** and any quirks/notes
+- **URL** (complete path with HTTP method)
+- **Parameters** (table: name, type, required, description)
+- **Response Fields** (table: field, type, description)
+- **Sample Request/Response** (JSON)
+- **Rate Limit Weight** (if applicable)
+
+APIs covered:
+- Place Order (limit, market, stop, take-profit, trailing stop)
+- Test New Order (if available)
+- Query Order
+- Cancel Order
+- Cancel All Open Orders
+- Cancel Multiple Orders (batch cancel)
+- Place Multiple Orders (batch place)
+- Open Orders
+- All Orders / Order History
+- Position Mode (one-way vs hedge)
+- Order Types, Time In Force, Order Status enums
+- Position Side, Reduce Only, Close Position
+- Self Trade Prevention, Price Match modes
 
 ## Progress
 
@@ -148,9 +178,20 @@ APIs covered:
 |----------|----------------|--------|-------|
 | Binance  | [x] | done | Unified endpoint, 7 order types, ACK/RESULT/FULL response modes, STP, pegged orders |
 | Bitget   | [x] | done | Unified endpoint, limit/market, batch place/cancel (50 orders), lowercase enums |
-| WhiteBit | [x] | done | Separate endpoints per order type (limit/market/stop-limit/stop-market), bulk orders (20), HMAC-SHA512 |
-| Crypto.com | [x] | done | JSON-RPC envelope in body, limit/market, async operations, `BASE_QUOTE` symbol format |
+| WhiteBit | [x] | done | Unified collateral trading system (`/api/v4/order/collateral/*`) for margin & perpetuals; separate endpoints per order type (limit/market/stop-limit/trigger-market/oco/bulk); underscore symbol format (`BTC_USDT` for spot/margin, `BTC_PERP` for perpetuals) |
+| Crypto.com | [x] | done | JSON-RPC envelope in body; unified API v1 for spot, margin & perpetuals; `BASE_QUOTE` symbol format for spot, `BASEQUOTE-PERP` for perpetuals; async operations |
 | MEXC     | [x] | done | Binance-compatible API, 5 order types, batch orders (20), HMAC-SHA256 |
+| CoinGecko | N/A | n/a | Aggregator only, no order APIs |
+
+### Futures Order REST API Documentation
+
+| Provider | Futures Order Doc | Status | Notes |
+|----------|-------------------|--------|-------|
+| Binance  | [x] | done | Separate USDT-M (`/fapi/v1/`) and COIN-M (`/dapi/v1/`) endpoints, 7 order types, trailing stop, GTD, price match, hedge/one-way modes |
+| Bitget   | [x] | done | Unified `/api/v2/mix/` endpoint for USDT-M/Coin-M, limit/market, batch place/cancel (50 orders), hedge mode `tradeSide`, TP/SL preset |
+| MEXC     | [x] | done | Integer enums for types/sides, dual-side/one-way modes, BBO pricing, batch query (50), batch place (market makers only) |
+| WhiteBit | [x] | done | Unified collateral trading system (`/api/v4/order/collateral/*`), same endpoints for margin & perpetuals, distinguished by `market` param (`BTC_USDT` vs `BTC_PERP`), positionSide, leverage, hedge mode |
+| Crypto.com | [x] | done | Unified API v1 — same endpoints for spot, margin & perpetuals, distinguished by `instrument_name` (`BTC_USDT` vs `BTCUSD-PERP`), leverage, isolated margin, close-position |
 | CoinGecko | N/A | n/a | Aggregator only, no order APIs |
 
 ## Provider Capability Summary
@@ -187,6 +228,12 @@ Based on `pkg/provider/` implementation:
 - **Order API patterns**:
   - **Binance/MEXC**: Unified `POST /order` endpoint with `type` parameter; uppercase enums (`BUY`, `SELL`, `LIMIT`, `MARKET`)
   - **Bitget**: Unified endpoint; lowercase enums (`buy`, `sell`, `limit`, `market`)
-  - **WhiteBit**: Separate endpoints per order type (`/order/new`, `/order/market`, `/order/stop_limit`, `/order/stop_market`); underscore symbol format (`BTC_USDT`)
-  - **Crypto.com**: JSON-RPC envelope in request body; `BASE_QUOTE` symbol format; async operations
+  - **WhiteBit**: Unified collateral trading system (`/api/v4/order/collateral/*`) for margin & perpetuals; separate endpoints per order type (limit/market/stop-limit/trigger-market/oco/bulk); underscore symbol format (`BTC_USDT` for spot/margin, `BTC_PERP` for perpetuals)
+  - **Crypto.com**: JSON-RPC envelope in request body; unified API v1 for spot, margin & perpetuals; `BASE_QUOTE` symbol format for spot, `BASEQUOTE-PERP` for perpetuals; async operations
   - **CoinGecko**: No order APIs (price aggregator only)
+- **Futures order API patterns**:
+  - **Binance**: Separate base paths for USDT-M (`/fapi/v1/`) and COIN-M (`/dapi/v1/`); 7 order types including trailing stop; GTD support; price match modes
+  - **Bitget**: Unified `/api/v2/mix/` endpoint; `productType` distinguishes USDT-M vs Coin-M; `tradeSide` required in hedge mode
+  - **MEXC**: Integer enums for all order types and sides; `side` combines direction + action (1=open long, 2=close short, etc.); BBO pricing support
+  - **WhiteBit**: Unified collateral trading system (`/api/v4/order/collateral/*`) — same endpoints for margin & perpetuals, distinguished by `market` param (`BTC_USDT` vs `BTC_PERP`); positionSide, leverage, hedge mode support
+  - **Crypto.com**: Unified API v1 — same endpoints for spot, margin & perpetuals, distinguished by `instrument_name` (`BTC_USDT` vs `BTCUSD-PERP`); leverage, isolated margin, close-position support
