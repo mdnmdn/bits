@@ -122,13 +122,40 @@ type OrderBookProvider interface {
 
 ### Streaming interfaces (stream.go)
 
+Streaming interfaces use the client as a stateful object that manages the WebSocket connection.
+All methods return a single channel where updates for all subscribed symbols flow.
+
 ```go
+type StreamStatus string
+
+const (
+    StreamStatusRunning StreamStatus = "running"
+    StreamStatusStopped StreamStatus = "stopped"
+    StreamStatusError   StreamStatus = "error"
+)
+
 type PriceStreamProvider interface {
-    WatchPrices(ctx context.Context, ids []string) (<-chan *model.CoinPrice, error)
+    StartPriceStream(ctx context.Context, ids []string) (<-chan *model.CoinPrice, error)
+    SubscribePrice(ctx context.Context, ids []string) (<-chan *model.CoinPrice, error)
+    UnsubscribePrice(ctx context.Context, ids []string) error
+    SubscribedPrices() []string
+    StopPriceStream() error
+    PriceStreamStatus() StreamStatus
+    GetLastPrice(id string) (*model.CoinPrice, error)
+    ReconnectPrice(ctx context.Context) error
+    GetDataChannelPrice() <-chan *model.CoinPrice
 }
 
 type OrderBookStreamProvider interface {
-    WatchOrderBook(ctx context.Context, symbol string, market model.MarketType, depth int) (<-chan *model.OrderBook, error)
+    StartOrderBookStream(ctx context.Context, symbols []string, market model.MarketType, depth int) (<-chan *model.OrderBook, error)
+    SubscribeOrderBook(ctx context.Context, symbols []string, market model.MarketType, depth int) (<-chan *model.OrderBook, error)
+    UnsubscribeOrderBook(ctx context.Context, symbols []string) error
+    SubscribedOrderBooks() []string
+    StopOrderBookStream() error
+    OrderBookStreamStatus() StreamStatus
+    GetLastOrderBook(symbol string) (*model.OrderBook, error)
+    ReconnectOrderBook(ctx context.Context) error
+    GetDataChannelOrderBook() <-chan *model.OrderBook
 }
 ```
 

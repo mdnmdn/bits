@@ -6,10 +6,14 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sync"
 	"time"
 
+	"github.com/mdnmdn/bits/internal/ws"
 	"github.com/mdnmdn/bits/pkg/capability"
 	"github.com/mdnmdn/bits/pkg/config"
+	"github.com/mdnmdn/bits/pkg/model"
+	"github.com/mdnmdn/bits/pkg/provider"
 )
 
 const providerID = "coingecko"
@@ -19,6 +23,13 @@ type Client struct {
 	cfg       *config.Config
 	http      *http.Client
 	UserAgent string
+
+	// Stream management
+	streamMu      sync.RWMutex
+	wsClient      *ws.Client
+	priceChan     chan *model.CoinPrice
+	priceSubsList []string
+	priceStatus   provider.StreamStatus
 }
 
 // NewClient creates a new CoinGecko provider client.

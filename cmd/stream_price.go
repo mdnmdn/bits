@@ -63,7 +63,7 @@ func runStreamPrice(cmd *cobra.Command, args []string) error {
 	ctx, cancel := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
-	ch, err := sp.WatchPrices(ctx, args)
+	ch, err := sp.StartPriceStream(ctx, args)
 	if err != nil {
 		return err
 	}

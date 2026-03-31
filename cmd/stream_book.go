@@ -70,7 +70,7 @@ func runStreamBook(cmd *cobra.Command, args []string) error {
 	if sym == "" {
 		sym = args[0]
 	}
-	ch, err := obsp.WatchOrderBook(ctx, sym, market, depth)
+	ch, err := obsp.StartOrderBookStream(ctx, []string{sym}, market, depth)
 	if err != nil {
 		return err
 	}

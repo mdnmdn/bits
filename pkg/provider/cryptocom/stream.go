@@ -8,6 +8,7 @@ import (
 
 	"github.com/mdnmdn/bits/internal/ws"
 	"github.com/mdnmdn/bits/pkg/model"
+	"github.com/mdnmdn/bits/pkg/provider"
 )
 
 const wsMarketURL = "wss://stream.crypto.com/v2/market"
@@ -263,4 +264,79 @@ func (c *Client) WatchOrderBook(ctx context.Context, symbol string, market model
 		}
 	}()
 	return books, nil
+}
+
+func (c *Client) StartPriceStream(ctx context.Context, ids []string) (<-chan *model.CoinPrice, error) {
+	return c.WatchPrices(ctx, ids)
+}
+
+func (c *Client) SubscribePrice(ctx context.Context, ids []string) (<-chan *model.CoinPrice, error) {
+	return c.WatchPrices(ctx, ids)
+}
+
+func (c *Client) UnsubscribePrice(ctx context.Context, ids []string) error {
+	return nil
+}
+
+func (c *Client) SubscribedPrices() []string {
+	return nil
+}
+
+func (c *Client) StopPriceStream() error {
+	return nil
+}
+
+func (c *Client) PriceStreamStatus() provider.StreamStatus {
+	return provider.StreamStatusStopped
+}
+
+func (c *Client) GetLastPrice(id string) (*model.CoinPrice, error) {
+	return nil, nil
+}
+
+func (c *Client) ReconnectPrice(ctx context.Context) error {
+	return nil
+}
+
+func (c *Client) GetDataChannelPrice() <-chan *model.CoinPrice {
+	return nil
+}
+
+func (c *Client) StartOrderBookStream(ctx context.Context, symbols []string, market model.MarketType, depth int) (<-chan *model.OrderBook, error) {
+	if len(symbols) == 0 {
+		return nil, nil
+	}
+	return c.WatchOrderBook(ctx, symbols[0], market, depth)
+}
+
+func (c *Client) SubscribeOrderBook(ctx context.Context, symbols []string, market model.MarketType, depth int) (<-chan *model.OrderBook, error) {
+	return c.StartOrderBookStream(ctx, symbols, market, depth)
+}
+
+func (c *Client) UnsubscribeOrderBook(ctx context.Context, symbols []string) error {
+	return nil
+}
+
+func (c *Client) SubscribedOrderBooks() []string {
+	return nil
+}
+
+func (c *Client) StopOrderBookStream() error {
+	return nil
+}
+
+func (c *Client) OrderBookStreamStatus() provider.StreamStatus {
+	return provider.StreamStatusStopped
+}
+
+func (c *Client) GetLastOrderBook(symbol string) (*model.OrderBook, error) {
+	return nil, nil
+}
+
+func (c *Client) ReconnectOrderBook(ctx context.Context) error {
+	return nil
+}
+
+func (c *Client) GetDataChannelOrderBook() <-chan *model.OrderBook {
+	return nil
 }

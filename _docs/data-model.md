@@ -130,13 +130,76 @@ type OrderBookProvider interface {
 
 ## Streaming Interfaces
 
+Streaming interfaces use the client as a stateful object that manages the WebSocket connection.
+All methods return a single channel where updates for all subscribed symbols flow.
+
 ```go
+type StreamStatus string
+
+const (
+    StreamStatusRunning StreamStatus = "running"
+    StreamStatusStopped StreamStatus = "stopped"
+    StreamStatusError   StreamStatus = "error"
+)
+
 type PriceStreamProvider interface {
-    WatchPrices(ctx context.Context, ids []string) (<-chan *model.CoinPrice, error)
+    // StartPriceStream initiates a price stream for multiple symbols.
+    // Returns a single channel where all price updates flow.
+    StartPriceStream(ctx context.Context, ids []string) (<-chan *model.CoinPrice, error)
+
+    // SubscribePrice adds new symbols to an existing price stream.
+    SubscribePrice(ctx context.Context, ids []string) (<-chan *model.CoinPrice, error)
+
+    // UnsubscribePrice removes symbols from the price stream.
+    UnsubscribePrice(ctx context.Context, ids []string) error
+
+    // SubscribedPrices returns the list of currently subscribed symbol IDs.
+    SubscribedPrices() []string
+
+    // StopPriceStream stops all price streams and closes all channels.
+    StopPriceStream() error
+
+    // PriceStreamStatus returns the current status of the price stream.
+    PriceStreamStatus() StreamStatus
+
+    // GetLastPrice returns the last received price for a symbol.
+    GetLastPrice(id string) (*model.CoinPrice, error)
+
+    // ReconnectPrice reconnects the price stream.
+    ReconnectPrice(ctx context.Context) error
+
+    // GetDataChannelPrice returns the current price channel.
+    GetDataChannelPrice() <-chan *model.CoinPrice
 }
 
 type OrderBookStreamProvider interface {
-    WatchOrderBook(ctx context.Context, symbol string, market model.MarketType, depth int) (<-chan *model.OrderBook, error)
+    // StartOrderBookStream initiates an order book stream for multiple symbols.
+    // Returns a single channel where all order book updates flow.
+    StartOrderBookStream(ctx context.Context, symbols []string, market model.MarketType, depth int) (<-chan *model.OrderBook, error)
+
+    // SubscribeOrderBook adds new symbols to an existing order book stream.
+    SubscribeOrderBook(ctx context.Context, symbols []string, market model.MarketType, depth int) (<-chan *model.OrderBook, error)
+
+    // UnsubscribeOrderBook removes symbols from the order book stream.
+    UnsubscribeOrderBook(ctx context.Context, symbols []string) error
+
+    // SubscribedOrderBooks returns the list of currently subscribed symbols.
+    SubscribedOrderBooks() []string
+
+    // StopOrderBookStream stops all order book streams and closes all channels.
+    StopOrderBookStream() error
+
+    // OrderBookStreamStatus returns the current status of the order book stream.
+    OrderBookStreamStatus() StreamStatus
+
+    // GetLastOrderBook returns the last received order book for a symbol.
+    GetLastOrderBook(symbol string) (*model.OrderBook, error)
+
+    // ReconnectOrderBook reconnects the order book stream.
+    ReconnectOrderBook(ctx context.Context) error
+
+    // GetDataChannelOrderBook returns the current order book channel.
+    GetDataChannelOrderBook() <-chan *model.OrderBook
 }
 ```
 

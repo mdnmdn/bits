@@ -5,11 +5,15 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/mdnmdn/bits/internal/auth"
+	"github.com/mdnmdn/bits/internal/ws"
 	"github.com/mdnmdn/bits/pkg/capability"
 	"github.com/mdnmdn/bits/pkg/config"
+	"github.com/mdnmdn/bits/pkg/model"
+	"github.com/mdnmdn/bits/pkg/provider"
 )
 
 const (
@@ -23,6 +27,22 @@ type Client struct {
 	cfg        config.BitgetConfig
 	httpClient *http.Client
 	userAgent  string
+
+	// Stream management
+	streamMu    sync.RWMutex
+	pricePool   *ws.Pool
+	priceOut    <-chan ws.StreamResponse[any]
+	priceChan   chan *model.CoinPrice
+	priceSubs   map[string]bool
+	priceStatus provider.StreamStatus
+
+	bookPool   *ws.Pool
+	bookOut    <-chan ws.StreamResponse[any]
+	bookChan   chan *model.OrderBook
+	bookSubs   map[string]bool
+	bookStatus provider.StreamStatus
+	bookMarket model.MarketType
+	bookDepth  int
 }
 
 // NewClient creates a new Bitget API client from the given config.
@@ -33,6 +53,10 @@ func NewClient(cfg config.BitgetConfig) *Client {
 	return &Client{
 		cfg:        cfg,
 		httpClient: &http.Client{Timeout: 30 * time.Second},
+		priceChan:  make(chan *model.CoinPrice, 100),
+		priceSubs:  make(map[string]bool),
+		bookChan:   make(chan *model.OrderBook, 100),
+		bookSubs:   make(map[string]bool),
 	}
 }
 
