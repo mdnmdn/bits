@@ -30,8 +30,11 @@ var providerAliases = map[string]string{
 	// cryptocom aliases
 	"cdc": "cryptocom",
 	"cro": "cryptocom",
+	"crypto.com": "cryptocom",
+	"crypto": "cryptocom",
 	// mexc aliases
 	"mx": "mexc",
+	"mxc": "mexc",
 }
 
 // ResolveProvider resolves an alias to the canonical provider name.
