@@ -29,8 +29,11 @@ Pick a provider with `-p`, a market with `-m`, an output format with `-o`. That'
 | **CoinGecko** | — | Prices, candles, ranked markets, live price stream |
 | **Binance** | spot · futures | Server time, exchange info, prices, candles, ticker, order book, live book stream |
 | **Bitget** | spot · futures | Server time, exchange info, prices, candles, ticker |
+| **WhiteBit** | spot · futures | Server time, exchange info, prices, candles, ticker, price stream, order book stream |
+| **Crypto.com** | spot | Prices, ticker, price stream, order book stream |
+| **MEXC** | spot | Prices, ticker, price stream, order book stream |
 
-Switch providers with `-p coingecko / -p binance / -p bitget`.
+Switch providers with `-p coingecko / -p binance / -p bitget / -p whitebit / -p cryptocom / -p mexc`.
 
 **Fallback is controlled by whether you use `-p`:**
 - No `-p` → fallback allowed; `bits` auto-routes to a capable provider.
@@ -87,9 +90,9 @@ Or download a binary from [Releases](https://github.com/mdnmdn/bits/releases).
 
 ## Usage as a Library
 
-`bits` can be used as a Go library to build your own crypto tools. Its core components (models, providers, and registry) are available in the `pkg/` directory.
+`bits` can be used as a Go library to build your own crypto tools. Import `github.com/mdnmdn/bits`.
 
-### Quick Start
+### Multi-Provider Client
 
 ```go
 import (
@@ -97,27 +100,73 @@ import (
 	"fmt"
 	"github.com/mdnmdn/bits"
 	"github.com/mdnmdn/bits/config"
+	"github.com/mdnmdn/bits/model"
 )
 
 func main() {
-	// Initialize with spot enabled for Binance
 	cfg := &config.Config{
 		Binance: config.BinanceConfig{
 			Spot: config.MarketConfig{Enabled: true},
 		},
 	}
-	client := bits.NewClient(cfg)
 
-	// Fetch price from Binance
-	res, _ := client.GetPrice(context.Background(), "BTCUSDT", "binance")
-	fmt.Printf("BTC Price: %.2f\n", res.Data.Price)
+	// Multi-provider client with symbol resolution
+	client := bits.NewClient(cfg, bits.WithSymbolEngine())
+
+	// Get price with automatic symbol resolution
+	price, _ := client.GetPriceWithResolution(context.Background(), "BTC-USDT", "binance", model.MarketSpot)
+	fmt.Printf("BTC Price: %.2f\n", price.Data.Price)
+
+	// Compare prices across exchanges
+	results, _ := client.ComparePricesWithResolution(context.Background(), "BTC-USDT",
+		[]string{"binance", "bitget", "whitebit"}, model.MarketSpot)
+	for _, r := range results {
+		fmt.Printf("%s: $%.2f\n", r.Provider, r.Data.Price)
+	}
 }
 ```
 
-Check the `examples/` directory for more detailed use cases, including concurrent price comparison across multiple exchanges. To run an example, use:
+### Provider-Specific Client (Stateful)
 
+For stateful operations like WebSocket streaming, create a client locked to a specific provider:
+
+```go
+cfg := &config.Config{
+	Binance: config.BinanceConfig{Spot: config.MarketConfig{Enabled: true}},
+}
+
+p := bits.NewProvider(cfg, "binance")
+
+// Direct method calls - transparent to implementation
+p.Price(ctx, []string{"BTCUSDT"}, "")
+p.Ticker24h(ctx, "BTCUSDT", "spot")
+p.Candles(ctx, "BTCUSDT", "spot", "1h", nil)
+p.OrderBook(ctx, "BTCUSDT", "spot", 10)
+
+// WebSocket streaming (stateful)
+p.StartPriceStream(ctx, []string{"bitcoin"})
+p.StartOrderBookStream(ctx, []string{"BTCUSDT"}, "spot", 10)
+
+// Capabilities
+p.ID()
+p.Capabilities()
+```
+
+When a provider doesn't support a capability (e.g., Binance has no PriceStream), the method returns a "not implemented" error instead of panicking.
+
+### Symbol Normalization
+
+```go
+// Works without the symbol engine
+bits.NormalizeSymbol("BTCUSDT")  // "BTC-USDT"
+bits.NormalizeSymbol("BTC_USDT") // "BTC-USDT"
+```
+
+Run examples:
 ```sh
 go run ./examples/basic_usage
+go run ./examples/price_comparison
+go run ./examples/symbol_resolution
 ```
 
 ---
