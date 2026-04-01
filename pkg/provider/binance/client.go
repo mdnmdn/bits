@@ -108,6 +108,7 @@ func (c *Client) Capabilities() capability.CapabilityMatrix {
 
 	if marginEnabled {
 		keys = append(keys,
+			capability.CapabilityKey{Market: m, Feature: capability.FeatureExchangeInfo},
 			capability.CapabilityKey{Market: m, Feature: capability.FeaturePrice},
 			capability.CapabilityKey{Market: m, Feature: capability.FeatureCandles},
 			capability.CapabilityKey{Market: m, Feature: capability.FeatureTicker24h},

@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/mdnmdn/bits/internal/logger"
 	"github.com/mdnmdn/bits/pkg/model"
 )
 
@@ -75,6 +76,21 @@ type bitgetMarginSymbolsResponse struct {
 	Code string               `json:"code"`
 	Msg  string               `json:"msg"`
 	Data []bitgetMarginSymbol `json:"data"`
+}
+
+// bitgetVIPFeeRate is the VIP fee rate from the public endpoint.
+type bitgetVIPFeeRate struct {
+	Level        string `json:"level"`
+	DealAmount   string `json:"dealAmount"`
+	AssetAmount  string `json:"assetAmount"`
+	TakerFeeRate string `json:"takerFeeRate"`
+	MakerFeeRate string `json:"makerFeeRate"`
+}
+
+type bitgetVIPFeeRateResponse struct {
+	Code string             `json:"code"`
+	Msg  string             `json:"msg"`
+	Data []bitgetVIPFeeRate `json:"data"`
 }
 
 // ServerTime fetches the server time from the Bitget API.
@@ -177,25 +193,32 @@ func (c *Client) marginExchangeInfo(market model.MarketType) (model.Response[mod
 }
 
 func (c *Client) spotExchangeInfo(market model.MarketType) (model.Response[model.ExchangeInfo], error) {
-	body, err := c.doRequest("GET", "/api/v2/spot/public/symbols", "")
+	symbolsBody, err := c.doRequest("GET", "/api/v2/spot/public/symbols", "")
 	if err != nil {
 		return model.Response[model.ExchangeInfo]{}, err
 	}
 
-	var resp bitgetSpotSymbolsResponse
-	if err := json.Unmarshal(body, &resp); err != nil {
+	var symbolsResp bitgetSpotSymbolsResponse
+	if err := json.Unmarshal(symbolsBody, &symbolsResp); err != nil {
 		return model.Response[model.ExchangeInfo]{}, fmt.Errorf("failed to parse spot symbols response: %w", err)
 	}
-	if resp.Code != "00000" {
-		return model.Response[model.ExchangeInfo]{}, fmt.Errorf("API error: %s", resp.Msg)
+	if symbolsResp.Code != "00000" {
+		return model.Response[model.ExchangeInfo]{}, fmt.Errorf("API error: %s", symbolsResp.Msg)
 	}
 
-	symbols := make([]model.Symbol, 0, len(resp.Data))
-	for _, s := range resp.Data {
+	feeRates, err := c.getSpotFeeRates()
+	if err != nil {
+		return model.Response[model.ExchangeInfo]{}, fmt.Errorf("failed to get fee rates: %w", err)
+	}
+
+	symbols := make([]model.Symbol, 0, len(symbolsResp.Data))
+	for _, s := range symbolsResp.Data {
 		pp, _ := strconv.Atoi(s.PricePrecision)
 		qp, _ := strconv.Atoi(s.QuantityPrecision)
 		minQty, _ := strconv.ParseFloat(s.MinTradeAmount, 64)
 		maxQty, _ := strconv.ParseFloat(s.MaxTradeAmount, 64)
+
+		makerFee, takerFee := getDefaultFees(feeRates)
 
 		symbols = append(symbols, model.Symbol{
 			Symbol:         s.Symbol,
@@ -207,6 +230,8 @@ func (c *Client) spotExchangeInfo(market model.MarketType) (model.Response[model
 			QtyPrecision:   &qp,
 			MinQty:         &minQty,
 			MaxQty:         &maxQty,
+			MakerFee:       &makerFee,
+			TakerFee:       &takerFee,
 		})
 	}
 
@@ -223,6 +248,11 @@ func (c *Client) spotExchangeInfo(market model.MarketType) (model.Response[model
 }
 
 func (c *Client) futuresExchangeInfo(market model.MarketType) (model.Response[model.ExchangeInfo], error) {
+	feeRates, err := c.getFuturesFeeRates()
+	if err != nil {
+		return model.Response[model.ExchangeInfo]{}, fmt.Errorf("failed to get futures fee rates: %w", err)
+	}
+
 	body, err := c.doRequest("GET", "/api/v2/mix/market/contracts", "productType=USDT-FUTURES")
 	if err != nil {
 		return model.Response[model.ExchangeInfo]{}, err
@@ -235,6 +265,8 @@ func (c *Client) futuresExchangeInfo(market model.MarketType) (model.Response[mo
 	if resp.Code != "00000" {
 		return model.Response[model.ExchangeInfo]{}, fmt.Errorf("API error: %s", resp.Msg)
 	}
+
+	makerFee, takerFee := getDefaultFees(feeRates)
 
 	symbols := make([]model.Symbol, 0, len(resp.Data))
 	for _, s := range resp.Data {
@@ -253,6 +285,8 @@ func (c *Client) futuresExchangeInfo(market model.MarketType) (model.Response[mo
 			QtyPrecision:   &qp,
 			MinQty:         &minQty,
 			MaxQty:         &maxQty,
+			MakerFee:       &makerFee,
+			TakerFee:       &takerFee,
 		})
 	}
 
@@ -292,4 +326,59 @@ func convertFuturesStatus(status string) model.SymbolStatus {
 	default:
 		return model.SymbolStatusBreak
 	}
+}
+
+func (c *Client) getSpotFeeRates() ([]bitgetVIPFeeRate, error) {
+	logger.Default.Debug("fetching VIP fee rates from Bitget")
+	body, err := c.doRequest("GET", "/api/v2/spot/market/vip-fee-rate", "")
+	if err != nil {
+		logger.Default.Debug("failed to fetch fee rates", "error", err)
+		return nil, err
+	}
+
+	var resp bitgetVIPFeeRateResponse
+	if err := json.Unmarshal(body, &resp); err != nil {
+		logger.Default.Debug("failed to parse fee rate response", "error", err)
+		return nil, fmt.Errorf("failed to parse VIP fee rate response: %w", err)
+	}
+	if resp.Code != "00000" {
+		logger.Default.Debug("API error fetching fee rates", "code", resp.Code, "msg", resp.Msg)
+		return nil, fmt.Errorf("API error: %s", resp.Msg)
+	}
+
+	logger.Default.Debug("fetched VIP fee rates", "levels", len(resp.Data))
+	return resp.Data, nil
+}
+
+func getDefaultFees(rates []bitgetVIPFeeRate) (makerFee, takerFee float64) {
+	for _, r := range rates {
+		if r.Level == "0" {
+			makerFee, _ = strconv.ParseFloat(r.MakerFeeRate, 64)
+			takerFee, _ = strconv.ParseFloat(r.TakerFeeRate, 64)
+			return makerFee, takerFee
+		}
+	}
+	return 0.001, 0.001
+}
+
+func (c *Client) getFuturesFeeRates() ([]bitgetVIPFeeRate, error) {
+	logger.Default.Debug("fetching VIP fee rates from Bitget (futures)")
+	body, err := c.doRequest("GET", "/api/v2/mix/market/vip-fee-rate", "")
+	if err != nil {
+		logger.Default.Debug("failed to fetch futures fee rates", "error", err)
+		return nil, err
+	}
+
+	var resp bitgetVIPFeeRateResponse
+	if err := json.Unmarshal(body, &resp); err != nil {
+		logger.Default.Debug("failed to parse futures fee rate response", "error", err)
+		return nil, fmt.Errorf("failed to parse futures VIP fee rate response: %w", err)
+	}
+	if resp.Code != "00000" {
+		logger.Default.Debug("API error fetching futures fee rates", "code", resp.Code, "msg", resp.Msg)
+		return nil, fmt.Errorf("API error: %s", resp.Msg)
+	}
+
+	logger.Default.Debug("fetched futures VIP fee rates", "levels", len(resp.Data))
+	return resp.Data, nil
 }

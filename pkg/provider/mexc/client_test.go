@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/mdnmdn/bits/pkg/config"
+	"github.com/mdnmdn/bits/pkg/provider"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -20,3 +21,12 @@ func TestMEXCClient_Capabilities(t *testing.T) {
 	assert.NotNil(t, caps)
 	assert.True(t, len(caps) > 0)
 }
+
+var _ provider.Provider = (*Client)(nil)
+var _ provider.ExchangeProvider = (*Client)(nil)
+var _ provider.PriceProvider = (*Client)(nil)
+var _ provider.CandleProvider = (*Client)(nil)
+var _ provider.TickerProvider = (*Client)(nil)
+var _ provider.OrderBookProvider = (*Client)(nil)
+var _ provider.PriceStreamProvider = (*Client)(nil)
+var _ provider.OrderBookStreamProvider = (*Client)(nil)

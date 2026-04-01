@@ -5,11 +5,14 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sync"
 	"time"
 
+	"github.com/mdnmdn/bits/internal/ws"
 	"github.com/mdnmdn/bits/pkg/capability"
 	"github.com/mdnmdn/bits/pkg/config"
 	"github.com/mdnmdn/bits/pkg/model"
+	"github.com/mdnmdn/bits/pkg/provider"
 )
 
 const (
@@ -17,6 +20,8 @@ const (
 	defaultBaseURL = "https://api.mexc.com"
 	spotAPIPath    = "/api/v3"
 	futuresAPIPath = "/api/v1/contract"
+	spotWSURL      = "wss://wbs-api.mexc.com/ws"
+	futuresWSURL   = "wss://contract.mexc.com/edge"
 )
 
 // Client is the MEXC provider implementation.
@@ -24,6 +29,23 @@ type Client struct {
 	cfg        config.MEXCConfig
 	httpClient *http.Client
 	userAgent  string
+
+	// Stream management
+	streamMu    sync.RWMutex
+	pricePool   *ws.Pool
+	priceOut    <-chan ws.StreamResponse[any]
+	priceChan   chan *model.CoinPrice
+	priceSubs   map[string]bool
+	priceStatus provider.StreamStatus
+	priceMarket model.MarketType
+
+	bookPool   *ws.Pool
+	bookOut    <-chan ws.StreamResponse[any]
+	bookChan   chan *model.OrderBook
+	bookSubs   map[string]bool
+	bookStatus provider.StreamStatus
+	bookMarket model.MarketType
+	bookDepth  int
 }
 
 // NewClient creates a new MEXC API client from the given config.
@@ -34,6 +56,10 @@ func NewClient(cfg config.MEXCConfig) *Client {
 	return &Client{
 		cfg:        cfg,
 		httpClient: &http.Client{Timeout: 30 * time.Second},
+		priceChan:  make(chan *model.CoinPrice, 100),
+		priceSubs:  make(map[string]bool),
+		bookChan:   make(chan *model.OrderBook, 100),
+		bookSubs:   make(map[string]bool),
 	}
 }
 
@@ -47,21 +73,50 @@ func (c *Client) SetUserAgent(ua string) { c.userAgent = ua }
 func (c *Client) Capabilities() capability.CapabilityMatrix {
 	matrix := capability.CapabilityMatrix{}
 
-	markets := []capability.MarketType{
-		capability.MarketSpot,
-		capability.MarketMargin,
-		capability.MarketFutures,
+	// Check if markets are enabled, default to spot if not configured
+	spotEnabled := c.cfg.IsSpotEnabled()
+	marginEnabled := c.cfg.IsMarginEnabled()
+	futuresEnabled := c.cfg.IsFuturesEnabled()
+
+	// Default to spot enabled if nothing explicitly enabled
+	if !spotEnabled && !marginEnabled && !futuresEnabled {
+		spotEnabled = true
+		marginEnabled = true
+		futuresEnabled = true
 	}
 
-	for _, m := range markets {
-		// Note: MEXC Margin market data is served via Spot REST endpoints.
-		// All markets support these features via REST
-		matrix[capability.CapabilityKey{Market: m, Feature: capability.FeatureServerTime}] = true
-		matrix[capability.CapabilityKey{Market: m, Feature: capability.FeatureExchangeInfo}] = true
-		matrix[capability.CapabilityKey{Market: m, Feature: capability.FeaturePrice}] = true
-		matrix[capability.CapabilityKey{Market: m, Feature: capability.FeatureTicker24h}] = true
-		matrix[capability.CapabilityKey{Market: m, Feature: capability.FeatureCandles}] = true
-		matrix[capability.CapabilityKey{Market: m, Feature: capability.FeatureOrderBook}] = true
+	// Spot
+	if spotEnabled {
+		matrix[capability.CapabilityKey{Market: capability.MarketSpot, Feature: capability.FeatureServerTime}] = true
+		matrix[capability.CapabilityKey{Market: capability.MarketSpot, Feature: capability.FeatureExchangeInfo}] = true
+		matrix[capability.CapabilityKey{Market: capability.MarketSpot, Feature: capability.FeaturePrice}] = true
+		matrix[capability.CapabilityKey{Market: capability.MarketSpot, Feature: capability.FeatureTicker24h}] = true
+		matrix[capability.CapabilityKey{Market: capability.MarketSpot, Feature: capability.FeatureCandles}] = true
+		matrix[capability.CapabilityKey{Market: capability.MarketSpot, Feature: capability.FeatureOrderBook}] = true
+		matrix[capability.CapabilityKey{Market: capability.MarketSpot, Feature: capability.FeatureStreamPrice}] = true
+		matrix[capability.CapabilityKey{Market: capability.MarketSpot, Feature: capability.FeatureStreamOrderBook}] = true
+	}
+
+	// Margin (served via Spot REST endpoints)
+	if marginEnabled {
+		matrix[capability.CapabilityKey{Market: capability.MarketMargin, Feature: capability.FeatureServerTime}] = true
+		matrix[capability.CapabilityKey{Market: capability.MarketMargin, Feature: capability.FeatureExchangeInfo}] = true
+		matrix[capability.CapabilityKey{Market: capability.MarketMargin, Feature: capability.FeaturePrice}] = true
+		matrix[capability.CapabilityKey{Market: capability.MarketMargin, Feature: capability.FeatureTicker24h}] = true
+		matrix[capability.CapabilityKey{Market: capability.MarketMargin, Feature: capability.FeatureCandles}] = true
+		matrix[capability.CapabilityKey{Market: capability.MarketMargin, Feature: capability.FeatureOrderBook}] = true
+	}
+
+	// Futures
+	if futuresEnabled {
+		matrix[capability.CapabilityKey{Market: capability.MarketFutures, Feature: capability.FeatureServerTime}] = true
+		matrix[capability.CapabilityKey{Market: capability.MarketFutures, Feature: capability.FeatureExchangeInfo}] = true
+		matrix[capability.CapabilityKey{Market: capability.MarketFutures, Feature: capability.FeaturePrice}] = true
+		matrix[capability.CapabilityKey{Market: capability.MarketFutures, Feature: capability.FeatureTicker24h}] = true
+		matrix[capability.CapabilityKey{Market: capability.MarketFutures, Feature: capability.FeatureCandles}] = true
+		matrix[capability.CapabilityKey{Market: capability.MarketFutures, Feature: capability.FeatureOrderBook}] = true
+		matrix[capability.CapabilityKey{Market: capability.MarketFutures, Feature: capability.FeatureStreamPrice}] = true
+		matrix[capability.CapabilityKey{Market: capability.MarketFutures, Feature: capability.FeatureStreamOrderBook}] = true
 	}
 
 	return matrix

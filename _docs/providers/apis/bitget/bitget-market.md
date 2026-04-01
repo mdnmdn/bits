@@ -180,6 +180,51 @@ Same parameters as candles. Requires `startTime`.
 
 ---
 
+## VIP Fee Rate
+
+### Spot VIP Fee Rate
+
+**Endpoint**: `GET /api/v2/spot/market/vip-fee-rate`
+
+**Description**: Returns VIP fee rate tiers. The `level` "0" represents the default rate for non-VIP users.
+
+**Parameters**: None (public endpoint, no auth required)
+
+**Response**:
+```json
+{
+  "code": "00000",
+  "msg": "success",
+  "data": [
+    {
+      "level": "0",
+      "dealAmount": "0",
+      "assetAmount": "0",
+      "takerFeeRate": "0.001",
+      "makerFeeRate": "0.001",
+      "btcWithdrawAmount": "2",
+      "usdtWithdrawAmount": "50000"
+    },
+    {
+      "level": "1",
+      "dealAmount": "1000000",
+      "assetAmount": "50000",
+      "takerFeeRate": "0.0008",
+      "makerFeeRate": "0.0006",
+      "btcWithdrawAmount": "300",
+      "usdtWithdrawAmount": "5000000"
+    }
+  ]
+}
+```
+
+**Notes**:
+- Fee rates are returned as decimal fractions (e.g., `0.001` = 0.1%)
+- When `level` is "0", these are the default maker/taker fees for all spot symbols
+- Higher VIP levels (1+) have lower fees based on 30-day trading volume and asset holdings
+
+---
+
 ## Recent Trades
 
 ### Spot Trades

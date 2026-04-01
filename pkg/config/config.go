@@ -27,8 +27,10 @@ var ValidTiers = []string{TierDemo, TierPaid}
 
 // MarketConfig holds settings for a specific market type.
 type MarketConfig struct {
-	Enabled    bool `mapstructure:"enabled"`
-	UseTestnet bool `mapstructure:"use_testnet"`
+	Enabled    bool    `mapstructure:"enabled"`
+	UseTestnet bool    `mapstructure:"use_testnet"`
+	MakerFee   float64 `mapstructure:"maker_fee"`
+	TakerFee   float64 `mapstructure:"taker_fee"`
 }
 
 // CoinGeckoConfig holds CoinGecko API credentials.
@@ -292,13 +294,19 @@ api_secret = ""
 
 [binance.spot]
 enabled = true
+# maker_fee = 0.001    # decimal fraction (0.1% = 0.001)
+# taker_fee = 0.001
 
 [binance.margin]
 enabled = false
+# maker_fee = 0.001
+# taker_fee = 0.001
 
 [binance.futures]
 enabled = false
 use_testnet = false
+# maker_fee = 0.0004
+# taker_fee = 0.0005
 
 # Bitget configuration (shared API key for all markets)
 [bitget]
@@ -309,9 +317,16 @@ api_secret = ""
 
 [bitget.spot]
 enabled = false
+# maker_fee = 0.001    # decimal fraction (0.1% = 0.001)
+# taker_fee = 0.001
+
+[bitget.margin]
+enabled = false
 
 [bitget.futures]
 enabled = false
+# maker_fee = 0.001
+# taker_fee = 0.001
 
 # WhiteBit configuration
 [whitebit]

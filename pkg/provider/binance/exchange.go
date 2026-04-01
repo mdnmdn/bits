@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	binance "github.com/adshao/go-binance/v2"
+	"github.com/adshao/go-binance/v2"
 	"github.com/adshao/go-binance/v2/futures"
 	"github.com/mdnmdn/bits/pkg/model"
 )
@@ -50,9 +50,10 @@ func (c *Client) ExchangeInfo(ctx context.Context, market model.MarketType) (mod
 		if err != nil {
 			return model.Response[model.ExchangeInfo]{}, fmt.Errorf("binance: exchange info (futures): %w", err)
 		}
+		makerFee, takerFee := c.getFeeConfig(market)
 		symbols := make([]model.Symbol, 0, len(info.Symbols))
 		for _, s := range info.Symbols {
-			symbols = append(symbols, convertFuturesSymbol(s))
+			symbols = append(symbols, convertFuturesSymbol(s, makerFee, takerFee))
 		}
 		return model.Response[model.ExchangeInfo]{
 			Kind:     model.KindExchangeInfo,
@@ -73,9 +74,10 @@ func (c *Client) ExchangeInfo(ctx context.Context, market model.MarketType) (mod
 		if err != nil {
 			return model.Response[model.ExchangeInfo]{}, fmt.Errorf("binance: exchange info (spot): %w", err)
 		}
+		makerFee, takerFee := c.getFeeConfig(market)
 		symbols := make([]model.Symbol, 0, len(info.Symbols))
 		for _, s := range info.Symbols {
-			symbols = append(symbols, convertSpotSymbol(s))
+			symbols = append(symbols, convertSpotSymbol(s, makerFee, takerFee))
 		}
 		return model.Response[model.ExchangeInfo]{
 			Kind:     model.KindExchangeInfo,
@@ -105,7 +107,27 @@ func convertStatus(s string) model.SymbolStatus {
 	}
 }
 
-func convertSpotSymbol(s binance.Symbol) model.Symbol {
+func (c *Client) getFeeConfig(market model.MarketType) (makerFee, takerFee float64) {
+	switch market {
+	case model.MarketFutures:
+		if c.cfg.Futures.MakerFee > 0 {
+			return c.cfg.Futures.MakerFee, c.cfg.Futures.TakerFee
+		}
+		return 0.0004, 0.0005 // Binance futures default
+	case model.MarketMargin:
+		if c.cfg.Margin.MakerFee > 0 {
+			return c.cfg.Margin.MakerFee, c.cfg.Margin.TakerFee
+		}
+		return 0.001, 0.001 // Binance margin default
+	default: // spot
+		if c.cfg.Spot.MakerFee > 0 {
+			return c.cfg.Spot.MakerFee, c.cfg.Spot.TakerFee
+		}
+		return 0.001, 0.001 // Binance spot default
+	}
+}
+
+func convertSpotSymbol(s binance.Symbol, makerFee, takerFee float64) model.Symbol {
 	sym := model.Symbol{
 		Symbol:     s.Symbol,
 		BaseAsset:  s.BaseAsset,
@@ -117,6 +139,9 @@ func convertSpotSymbol(s binance.Symbol) model.Symbol {
 	sym.PricePrecision = &pp
 	qp := int(s.BaseAssetPrecision)
 	sym.QtyPrecision = &qp
+
+	sym.MakerFee = &makerFee
+	sym.TakerFee = &takerFee
 
 	if pf := s.PriceFilter(); pf != nil {
 		if minP, ok := parseFloat(pf.MinPrice); ok {
@@ -143,7 +168,7 @@ func convertSpotSymbol(s binance.Symbol) model.Symbol {
 	return sym
 }
 
-func convertFuturesSymbol(s futures.Symbol) model.Symbol {
+func convertFuturesSymbol(s futures.Symbol, makerFee, takerFee float64) model.Symbol {
 	sym := model.Symbol{
 		Symbol:     s.Symbol,
 		BaseAsset:  s.BaseAsset,
@@ -155,6 +180,9 @@ func convertFuturesSymbol(s futures.Symbol) model.Symbol {
 	sym.PricePrecision = &pp
 	qp := s.QuantityPrecision
 	sym.QtyPrecision = &qp
+
+	sym.MakerFee = &makerFee
+	sym.TakerFee = &takerFee
 
 	if pf := s.PriceFilter(); pf != nil {
 		if minP, ok := parseFloat(pf.MinPrice); ok {

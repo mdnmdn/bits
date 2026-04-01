@@ -92,6 +92,8 @@ func (c *Client) ExchangeInfo(_ context.Context, market model.MarketType) (model
 		maxQty := maxPrice
 		makerFee, _ := strconv.ParseFloat(m.MakerFee, 64)
 		takerFee, _ := strconv.ParseFloat(m.TakerFee, 64)
+		makerFee = makerFee / 100
+		takerFee = takerFee / 100
 
 		symbols = append(symbols, model.Symbol{
 			Symbol:         m.Name,

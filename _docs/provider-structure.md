@@ -506,6 +506,28 @@ All public method signatures use types from `pkg/model/`:
 Parse string-encoded floats from exchange APIs with `strconv.ParseFloat(s, 64)`.
 Store provider-specific fields that don't map to model types in `Extra map[string]any`.
 
+## Fee Representation
+
+All fees are stored as **decimal fractions** (not basis points or percentages):
+
+| Field | Type | Example | Meaning |
+|-------|------|---------|---------|
+| `Symbol.MakerFee` | `*float64` | `0.001` | 0.1% maker fee |
+| `Symbol.TakerFee` | `*float64` | `0.001` | 0.1% taker fee |
+
+**Conversion rules:**
+- If API returns basis points (e.g., `10` for 0.1%), divide by 10000
+- If API returns percentage (e.g., `0.1` for 0.1%), divide by 100
+- If API returns ratio (e.g., `0.001`), use as-is
+
+**Priority:** Symbol-specific fees > Default trading fees. When an exchange provides per-symbol fees, use those; otherwise apply the account-level default fees to all symbols.
+
+**Sources by provider:**
+- **Binance**: Use `/api/v3/exchangeInfo` → `filters.COMMISSION_RATE` or account-level `/api/v3/account` → `commissionRates`
+- **Bitget**: Use `/api/v2/spot/market/vip-fee-rate` (spot) or `/api/v2/margin/currencies` (margin)
+- **WhiteBit**: Use `/api/v4/fees` endpoint
+- **Other providers**: See `_docs/providers/` for specific endpoints
+
 ---
 
 ## Testing Patterns
