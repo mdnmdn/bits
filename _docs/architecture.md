@@ -2,7 +2,9 @@
 
 ## Overview
 
-`bits` is a multi-provider crypto CLI tool written in Go. It uses a capability-based provider architecture that allows different data sources (CoinGecko, Binance, Bitget) to be used interchangeably through a unified command interface.
+> ⚠️ **Status: Work in Progress** — The library API may change rapidly.
+
+`bits` is a multi-provider crypto CLI tool written in Go. It uses a capability-based provider architecture that allows different data sources (CoinGecko, Binance, Bitget, WhiteBit, Crypto.com, MEXC) to be used interchangeably through a unified command interface.
 
 All provider responses are wrapped in a typed `Response[T]` envelope carrying provenance (which provider and market actually served the data), enabling transparent fallback and consistent rendering.
 
@@ -19,24 +21,22 @@ provider/
 ├── CandleProvider           → Candles(symbol, market, interval, opts)
 ├── TickerProvider           → Ticker24h(symbol, market)       [fan-out for multi]
 ├── OrderBookProvider        → OrderBook(symbol, market, depth)
-├── PriceStreamProvider      → WatchPrices(ids)
-└── OrderBookStreamProvider  → WatchOrderBook(symbol, market, depth)
+├── PriceStreamProvider      → StartPriceStream, SubscribePrice, StopPriceStream
+└── OrderBookStreamProvider  → StartOrderBookStream, SubscribeOrderBook, StopOrderBookStream
 ```
-
-All market-sensitive calls carry a `model.MarketType` parameter (`"spot"` | `"futures"` | `"margin"`).
 
 ### Provider Capabilities
 
-| Interface              | CoinGecko | Binance spot | Binance futures | Bitget spot | Bitget futures | WhiteBit spot | Crypto.com spot |
-|------------------------|:---------:|:------------:|:---------------:|:-----------:|:--------------:|:-------------:|:---------------:|
-| `ExchangeProvider`     | —         | Yes          | Yes             | Yes         | Yes            | Yes           | Yes             |
-| `AggregatorProvider`   | Yes       | —            | —               | —           | —              | —             | —               |
-| `PriceProvider`        | Yes       | Yes          | Yes             | Yes         | Yes            | Yes           | Yes             |
-| `CandleProvider`       | Yes       | Yes          | Yes             | Yes         | Yes            | Yes           | —               |
-| `TickerProvider`       | —         | Yes          | Yes             | Yes         | Yes            | Yes           | Yes             |
-| `OrderBookProvider`    | —         | Yes          | Yes             | —           | —              | —             | —               |
-| `PriceStreamProvider`  | Yes       | —            | —               | —           | —              | Yes           | Yes             |
-| `OrderBookStreamProvider` | —      | Yes          | —               | —           | —              | Yes           | Yes             |
+| Interface              | CoinGecko | Binance spot | Binance futures | Bitget spot | Bitget futures | WhiteBit spot | WhiteBit futures | Crypto.com | MEXC |
+|------------------------|:---------:|:------------:|:---------------:|:-----------:|:--------------:|:-------------:|:----------------:|:----------:|:----:|
+| `ExchangeProvider`     | —         | Yes          | Yes             | Yes         | Yes            | Yes           | Yes              | Yes        | Yes  |
+| `AggregatorProvider`   | Yes       | —            | —               | —           | —              | —             | —                | —          | —    |
+| `PriceProvider`        | Yes       | Yes          | Yes             | Yes         | Yes            | Yes           | Yes              | Yes        | Yes  |
+| `CandleProvider`       | Yes       | Yes          | Yes             | Yes         | Yes            | Yes           | Yes              | —          | —    |
+| `TickerProvider`       | —         | Yes          | Yes             | Yes         | Yes            | Yes           | Yes              | Yes        | Yes  |
+| `OrderBookProvider`    | —         | Yes          | Yes             | —           | —              | —             | —                | —          | —    |
+| `PriceStreamProvider`  | Yes       | —            | —               | —           | —              | Yes           | Yes              | Yes        | Yes  |
+| `OrderBookStreamProvider` | —      | Yes          | —               | —           | —              | Yes           | Yes              | Yes        | Yes  |
 
 Use `bits capabilities` or `bits caps -p <provider>` to inspect the matrix at runtime.
 
@@ -146,6 +146,31 @@ Available processors: `TimeEnricher` (latency + clock skew), `SpreadCalculator` 
 - Raw HTTP client; spot only
 - Implements: `ExchangeProvider`, `PriceProvider`, `TickerProvider`, `PriceStreamProvider`, `OrderBookStreamProvider`
 
+### MEXC (`provider/mexc/`)
+- Raw HTTP client; spot only with protobuf parsing for some endpoints
+- Implements: `ExchangeProvider`, `PriceProvider`, `TickerProvider`, `PriceStreamProvider`, `OrderBookStreamProvider`
+
+## Library API (`bits/`)
+
+The `bits` package provides a high-level client for library users:
+
+```go
+// Multi-provider client
+client := bits.NewClient(cfg, bits.WithSymbolEngine())
+client.GetPriceWithResolution(ctx, "BTC-USDT", "binance", "spot")
+client.ComparePricesWithResolution(ctx, "BTC-USDT", []string{"binance", "bitget"}, "spot")
+
+// Provider-specific client (stateful, for WebSocket)
+p := bits.NewProvider(cfg, "binance")
+p.ID()
+p.Capabilities()
+p.Price(ctx, []string{"BTCUSDT"}, "")
+p.Ticker24h(ctx, "BTCUSDT", "spot")
+p.StartPriceStream(ctx, []string{"bitcoin"})
+```
+
+When a provider doesn't support a capability, methods return a "not implemented" error instead of panicking.
+
 ## Registry (`provider/registry/`)
 
 Lives in its own package to avoid import cycles (providers must not import the registry that imports them):
@@ -215,6 +240,68 @@ bits ticker BTCUSDT -p coingecko -f             # coingecko lacks ticker → fal
 
 ## Project Structure
 
+```
+bits/
+├── bits.go                   # High-level library API (Client, NewProvider)
+├── cmd/bits/                 # CLI entry point
+│   ├── main.go              # Entry point
+│   ├── root.go              # RootCmd, Execute(), global flags (-p, -m, -o, -l)
+│   ├── factory.go           # loadConfig(), newResolver(), flag helpers
+│   ├── providers.go         # bits providers
+│   ├── capabilities.go      # bits capabilities [--provider id]
+│   ├── time.go              # bits time
+│   ├── price.go             # bits price <id>...
+│   ├── ticker.go            # bits ticker <symbol>...
+│   ├── book.go              # bits book <symbol>
+│   ├── candles.go           # bits candles <symbol>
+│   ├── info.go              # bits info [--symbol S]
+│   ├── markets.go           # bits markets
+│   ├── stream.go            # bits stream (group)
+│   ├── stream_price.go      # bits stream price <id>...
+│   └── stream_book.go       # bits stream book <symbol>
+├── capability/               # MarketType, Feature, CapabilityKey, CapabilityMatrix
+├── config/                  # Multi-provider config (YAML + Env + .env)
+├── model/                   # Provider-agnostic data types
+│   ├── market.go            # MarketType alias + constants
+│   ├── response.go          # Response[T], ItemError
+│   ├── exchange.go          # ServerTime, ExchangeInfo, Symbol
+│   ├── candle.go            # Candle, CandleOpts
+│   ├── ticker.go            # Ticker24h
+│   ├── orderbook.go         # OrderBook, OrderBookEntry
+│   ├── price.go             # CoinPrice
+│   ├── coin.go              # CoinMarket, MarketOpts
+│   └── errors.go            # ErrUnsupportedMarket, ErrUnsupportedFeature
+├── provider/                # Provider interfaces + implementations
+│   ├── provider.go          # Provider base interface
+│   ├── exchange.go          # ExchangeProvider
+│   ├── aggregator.go        # AggregatorProvider
+│   ├── capability.go        # PriceProvider, CandleProvider, TickerProvider, OrderBookProvider
+│   ├── stream.go            # PriceStreamProvider, OrderBookStreamProvider
+│   ├── binance/             # Binance implementation
+│   ├── bitget/              # Bitget implementation
+│   ├── coingecko/           # CoinGecko implementation
+│   ├── whitebit/           # WhiteBit implementation
+│   ├── cryptocom/           # Crypto.com implementation
+│   ├── mexc/                # MEXC implementation
+│   └── registry/             # NewProvider factory (avoids import cycle)
+├── resolve/                 # Resolution layer
+│   ├── resolver.go          # Resolver, ResolutionOpts, Resolve()
+│   ├── require.go           # Require[T] type assertion helper
+│   ├── fanout.go            # FanOut[T] parallel multi-symbol helper
+│   └── symbol/              # Symbol resolution + normalization
+├── internal/                # CLI-only internals
+│   ├── auth/                # HMAC-SHA256 helpers (used by Bitget)
+│   ├── render/              # Output formatters
+│   ├── process/             # Data processors
+│   └── ws/                  # WebSocket infrastructure
+├── examples/                # Example usage
+│   ├── basic_usage/
+│   ├── price_comparison/
+│   └── symbol_resolution/
+├── _docs/                   # Documentation
+├── Makefile
+├── .goreleaser.yml
+└── install.sh
 ```
 bits/
 ├── cmd/                      # CLI entry point
