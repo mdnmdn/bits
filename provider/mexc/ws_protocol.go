@@ -55,22 +55,6 @@ type mexcFuturesDepthData struct {
 	Version int64       `json:"version"`
 }
 
-// Spot depth types (protobuf)
-type mexcSpotDepthData struct {
-	Asks        []mexcSpotDepthEntry `json:"asksList"`
-	Bids        []mexcSpotDepthEntry `json:"bidsList"`
-	EventType   string               `json:"eventtype"`
-	FromVersion string               `json:"fromVersion"`
-	ToVersion   string               `json:"toVersion"`
-}
-
-type mexcSpotDepthEntry struct {
-	Price    string `json:"price"`
-	Quantity string `json:"quantity"`
-}
-
-// parseSpotDepthData parses order book depth data (protobuf format)
-
 // newMEXCProtocol creates a protocol for spot or futures.
 func newMEXCProtocol(providerID string, isFutures bool) *mexcProtocol {
 	return &mexcProtocol{providerID: providerID, isFutures: isFutures}
@@ -222,11 +206,6 @@ func (p *mexcProtocol) parseSpot(raw []byte) (any, error) {
 	return p.parseSpotMiniTickerData("", raw, nil)
 }
 
-func (p *mexcProtocol) parseSpotProtobuf(channel, symbol string, data []byte, ts *time.Time) (any, error) {
-	// Obsolete function - not used
-	return nil, nil
-}
-
 func (p *mexcProtocol) parseSpotMiniTickerData(symbol string, data []byte, ts *time.Time) (any, error) {
 	// The data is a protobuf message with fields:
 	// 1=channel, 3=symbol, 6=sendTime, 21=publicMiniTicker (nested group)
@@ -316,20 +295,6 @@ func (p *mexcProtocol) parseSpotMiniTickerData(symbol string, data []byte, ts *t
 			Time:      ts,
 		},
 	}, nil
-}
-
-// Spot order book types (protobuf)
-type spotDepthEntry struct {
-	Price    string `json:"price"`
-	Quantity string `json:"quantity"`
-}
-
-type spotDepthData struct {
-	Asks        []spotDepthEntry `json:"asksList"`
-	Bids        []spotDepthEntry `json:"bidsList"`
-	EventType   string           `json:"eventtype"`
-	FromVersion string           `json:"fromVersion"`
-	ToVersion   string           `json:"toVersion"`
 }
 
 // parseSpotDepthData parses order book depth data (protobuf format)
@@ -470,9 +435,10 @@ func parseDepthEntries(data []byte) []depthEntry {
 			entryVal := string(fieldData[entryPos : entryPos+int(entryLen)])
 			entryPos += int(entryLen)
 
-			if entryFieldNum == 1 {
+			switch entryFieldNum {
+			case 1:
 				entry.price = entryVal
-			} else if entryFieldNum == 2 {
+			case 2:
 				entry.quantity = entryVal
 			}
 		}
@@ -671,13 +637,4 @@ func decodeVarint(data []byte) (uint64, int) {
 		shift += 7
 	}
 	return result, len(data)
-}
-
-// decodeVarintValue decodes a varint from a byte slice
-func decodeVarintValue(data []byte) uint64 {
-	if len(data) == 0 {
-		return 0
-	}
-	val, _ := decodeVarint(data)
-	return val
 }
