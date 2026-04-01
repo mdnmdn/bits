@@ -8,16 +8,18 @@ Two goals drive this proposal:
 1. **Callers can act on errors** — distinguish auth failures from rate limits from network blips without string parsing.
 2. **Provider specificity is preserved** — the raw provider code/message is always accessible, never silently dropped.
 
+> **Status (2026-04-01):** Phase 1 is partially complete — `ErrorKind` and `ProviderError` exist in `model/errors.go` but `Unwrap`, `Is`, `WrapError`, and the sentinel migration are still pending. Phases 2–6 have not started.
+
 ---
 
 ## Part 1 — Error Handling Structures
 
 ### 1.1 Error Categories
 
-A single `ErrorKind` type covers all recoverable and unrecoverable conditions across every provider:
+`ErrorKind` is already defined in `model/errors.go`. No changes needed here.
 
 ```go
-// pkg/model/errors.go
+// model/errors.go  (already exists)
 
 type ErrorKind int
 
@@ -36,8 +38,6 @@ const (
 )
 
 // Retryable reports whether errors of this kind are worth retrying with backoff.
-// Callers are responsible for applying exponential backoff; this method only
-// signals intent.
 func (k ErrorKind) Retryable() bool {
     return k == ErrKindRateLimit || k == ErrKindServerError || k == ErrKindNetwork
 }
@@ -58,52 +58,22 @@ func (k ErrorKind) Retryable() bool {
 | JSON unmarshal failure | `ErrKindParse` |
 | API-body code ≠ success | kind inferred from code; else `ErrKindUnknown` |
 
-> **Note on 5xx and retryability:** All 5xx are marked `ErrKindServerError` and `Retryable() == true`. In practice, callers should apply exponential backoff and a maximum attempt count. A persistent 500 that never clears is a provider bug; retry logic should give up eventually regardless of this flag.
+> **Note on 5xx and retryability:** All 5xx are marked `ErrKindServerError` and `Retryable() == true`. Callers should apply exponential backoff with a maximum attempt count; retry logic should give up eventually regardless.
 
 > **Note on context errors:** `ErrKindCanceled` is intentionally excluded from `Retryable()`. A canceled context means the caller no longer wants the result; retrying would be wrong.
 
 ### 1.2 The `ProviderError` Type
 
-One concrete type is used everywhere an error crosses a provider boundary:
+`ProviderError` is already defined in `model/errors.go`. Two methods are **missing** and must be added:
 
 ```go
-// pkg/model/errors.go
-
-type ProviderError struct {
-    // Normalized — callers use these without knowing which provider.
-    Kind       ErrorKind
-    ProviderID string // "binance", "bitget", … empty for resolution-layer errors
-
-    // Raw — always preserved, never dropped.
-    ProviderCode    string // provider's native error code ("00000", "400", …)
-    ProviderMessage string // provider's native message text
-
-    // Optional HTTP layer information.
-    HTTPStatus int // 0 when not an HTTP error
-
-    // Underlying cause (network error, json error, …).
-    Cause error
-}
-
-func (e *ProviderError) Error() string {
-    if e.ProviderCode != "" {
-        return fmt.Sprintf("[%s] %s (code %s)", e.ProviderID, e.ProviderMessage, e.ProviderCode)
-    }
-    if e.HTTPStatus != 0 {
-        return fmt.Sprintf("[%s] HTTP %d: %s", e.ProviderID, e.HTTPStatus, e.ProviderMessage)
-    }
-    if e.ProviderID != "" {
-        return fmt.Sprintf("[%s] %s", e.ProviderID, e.ProviderMessage)
-    }
-    return e.ProviderMessage
-}
+// model/errors.go  (ProviderError struct already exists — add these two methods)
 
 func (e *ProviderError) Unwrap() error { return e.Cause }
 
 // Is implements errors.Is matching by Kind for sentinel comparisons.
-// This ensures errors.Is(err, model.ErrUnsupportedMarket) keeps working even
-// when the error is a freshly constructed *ProviderError rather than the exact
-// sentinel pointer.
+// Ensures errors.Is(err, model.ErrUnsupportedMarket) works for any *ProviderError
+// with the matching Kind, not just the exact sentinel pointer.
 func (e *ProviderError) Is(target error) bool {
     t, ok := target.(*ProviderError)
     if !ok {
@@ -133,39 +103,36 @@ if err != nil {
         case model.ErrKindCanceled:
             return // caller canceled, do not retry
         }
-        // always available for logging / telemetry:
         log.Printf("provider=%s code=%s http=%d", pe.ProviderID, pe.ProviderCode, pe.HTTPStatus)
     }
 }
 ```
 
-**Provider-specific code access** is explicit and zero-surprise: `pe.ProviderCode` is the raw string the exchange returned (`"00000"`, `"10001"`, `"429"`, …), and `pe.ProviderMessage` is its description verbatim.
-
 ### 1.3 Sentinel Errors (backward-compat)
 
-The two existing sentinels are promoted into `*ProviderError` values. The `Is` method on §1.2 ensures `errors.Is(err, model.ErrUnsupportedMarket)` keeps working for any `*ProviderError` with `Kind == ErrKindUnsupportedMarket`, not just the exact pointer — so wrapped errors and freshly constructed errors both match.
+Currently the two sentinels are plain `errors.New(...)` values. They must be promoted to `*ProviderError` so that `errors.Is` matching against a freshly constructed error with the same `Kind` works:
 
 ```go
+// model/errors.go  (replace the existing errors.New lines)
+
 var (
     ErrUnsupportedMarket  = &ProviderError{Kind: ErrKindUnsupportedMarket,  ProviderMessage: "unsupported market type"}
     ErrUnsupportedFeature = &ProviderError{Kind: ErrKindUnsupportedFeature, ProviderMessage: "unsupported feature"}
 )
 ```
 
-Existing `errors.Is` call sites require no change. `errors.As` call sites that then inspect `.Kind` also work without change.
+Existing `errors.Is` call sites require no change after `Is()` is added (§1.2).
 
 ### 1.4 `ItemError` — partial failure in batch calls
 
-`ItemError` gains a typed `Err` so JSON serialisation is meaningful and callers can programmatically inspect per-symbol failures.
-
-> **Pre-existing issue fixed by this change:** `ItemError.Err` is currently typed `error` (an interface), which marshals to `{}` in JSON — effectively invisible. Changing to `*ProviderError` fixes serialisation as a side effect.
+`ItemError.Err` is currently typed `error` (an interface), which marshals to `{}` in JSON — effectively invisible. Changing to `*ProviderError` fixes serialisation as a side effect.
 
 ```go
-// pkg/model/response.go
+// model/response.go  (change Err field type)
 
 type ItemError struct {
-    Symbol string         `json:"sym"`
-    Err    *ProviderError `json:"err"` // typed — always a *ProviderError
+    Symbol string         `json:"sym" yaml:"sym" toon:"sym"`
+    Err    *ProviderError `json:"err" yaml:"err" toon:"err"` // was: error
 }
 ```
 
@@ -181,10 +148,10 @@ for _, ie := range res.Errors {
 
 ### 1.5 Provider constructor helpers
 
-Each provider package has a small unexported `errors.go` with construction helpers. The `httpStatusToKind` mapping lives here too — **not** in `pkg/model`, which must remain HTTP-agnostic.
+Each provider package gets a small unexported `errors.go` with construction helpers. The `httpStatusToKind` mapping lives here — **not** in `model/`, which must remain HTTP-agnostic.
 
 ```go
-// pkg/provider/binance/errors.go  (pattern repeated per provider)
+// provider/binance/errors.go  (pattern repeated per provider)
 
 func providerErr(kind model.ErrorKind, msg string, cause error) *model.ProviderError {
     return &model.ProviderError{
@@ -213,7 +180,7 @@ func apiErr(code, msg string) *model.ProviderError {
     }
 }
 
-// httpStatusToKind is local to each provider package (not in pkg/model).
+// httpStatusToKind is local to each provider package (not in model/).
 func httpStatusToKind(status int) model.ErrorKind {
     switch {
     case status == 401 || status == 403:
@@ -232,14 +199,16 @@ func httpStatusToKind(status int) model.ErrorKind {
 }
 ```
 
-> **CoinGecko note:** CoinGecko's `client.go` uses a `get(ctx, path, &result)` helper that decodes JSON internally and returns a plain `error`. It does not follow the two-step fetch-then-unmarshal pattern of the other five providers. Its `errors.go` helpers still apply, but the integration point is inside `get()` rather than a separate `doRequest` method. No structural change to the client is needed — only the error return sites change.
+> **CoinGecko note:** CoinGecko's `client.go` already checks the HTTP status in its `get()` helper (unlike the other four providers that skip status checks). Its `errors.go` helpers still apply; the integration point is inside `get()` rather than a separate `doRequest` method.
+
+> **MEXC note:** MEXC's `doRequest` also already checks the HTTP status code. Its migration is limited to wrapping the existing check with `httpErr(...)` instead of `fmt.Errorf(...)`.
 
 ### 1.6 Migration safety valve — `WrapError`
 
 During the transition, some construction sites (e.g. registry failures in the facade, third-party library errors from `go-binance/v2`) may not yet produce a `*ProviderError`. A single escape-hatch function prevents compile errors and leaves an audit trail:
 
 ```go
-// pkg/model/errors.go
+// model/errors.go  (add this function)
 
 // WrapError wraps an arbitrary error as ErrKindUnknown. Use only as a
 // temporary shim during migration; replace with a typed providerErr call.
@@ -274,33 +243,42 @@ func WrapError(providerID string, err error) *ProviderError {
 
 The transition is additive first, then breaking. Each phase compiles and passes tests independently.
 
-### Phase 1 — Foundation (`pkg/model`)
+> **File path note:** The project has no `pkg/` prefix. All paths below are relative to the module root (e.g. `model/errors.go`, `provider/binance/`, `resolve/`, `client.go`).
 
-**Files:** `pkg/model/errors.go`, `pkg/model/response.go`
+### Phase 1 — Foundation (`model/`)
 
-1. Add `ErrorKind`, `ProviderError` (with `Is` and `Unwrap`), and `WrapError` to `errors.go`.
-2. Re-declare the two sentinel vars as `*ProviderError` values.
-3. **Do not** change `ItemError` yet — leave `Err` typed as `error` to avoid a cascade of compile errors.
+**Files:** `model/errors.go`, `model/response.go`
 
-Result: new types exist, nothing broken, no providers use them yet.
+**Already done:**
+- `ErrorKind` constants and `Retryable()` method
+- `ProviderError` struct and `Error()` method
+
+**Still needed:**
+1. Add `Unwrap()` and `Is()` methods to `ProviderError`.
+2. Add `WrapError` function.
+3. Re-declare the two sentinel vars as `*ProviderError` values (replacing the current `errors.New` lines).
+4. **Do not** change `ItemError.Err` yet — leave typed as `error` to avoid a cascade of compile errors.
+
+Result: remaining model infrastructure exists, nothing broken, no providers use it yet.
 
 ---
 
 ### Phase 2 — Provider HTTP clients (parallel, one PR per provider)
 
-**Files:** `pkg/provider/*/client.go`, `pkg/provider/*/market.go`, `pkg/provider/*/exchange.go`
+**Files:** `provider/*/client.go`, `provider/*/market.go`, `provider/*/exchange.go`
 
 > Phases 2a–2f are fully independent and can land in any order.
 
 For each provider:
 
-1. Add `pkg/provider/<name>/errors.go` with `providerErr`, `httpErr`, `apiErr`, `httpStatusToKind`, and `apiCodeToKind`.
+1. Add `provider/<name>/errors.go` with `providerErr`, `httpErr`, `apiErr`, `httpStatusToKind`, and `apiCodeToKind`.
 2. Update the HTTP execution path to check `resp.StatusCode` on every call and return `httpErr` on non-2xx.
    - **Bug fix:** Bitget, WhiteBit, and Crypto.com currently do not check the HTTP status code at all — a 500 response body is silently passed to `json.Unmarshal`. This change fixes that behavior; add regression tests.
+   - CoinGecko and MEXC already check status; migrate their existing check to use `httpErr`.
 3. Wrap `net.Error` and connection errors with `providerErr(ErrKindNetwork, …, err)`.
 4. Wrap `context.Canceled` / `context.DeadlineExceeded` with `providerErr(ErrKindCanceled, …, err)`.
-5. Replace API-envelope error checks (`code != "00000"`, `!resp.Success`, etc.) with `apiErr(code, msg)`.
-6. Use `WrapError` for any site not yet convertible (e.g. third-party library errors).
+5. Replace API-envelope error checks (`code != "00000"`, `!resp.Success`, `code != 0`, etc.) with `apiErr(code, msg)`.
+6. Use `WrapError` for any site not yet convertible (e.g. third-party library errors from `go-binance/v2`).
 
 Provider-specific code→kind mappings:
 
@@ -321,29 +299,29 @@ Each provider's `errors.go` should include table-driven tests mapping HTTP statu
 
 > **Gate:** Phase 2 must be complete for all six providers before this phase lands. If partial, use `WrapError` to bridge un-migrated paths before opening this PR.
 
-**Files:** `pkg/model/response.go`, all `ItemError` construction sites
+**Files:** `model/response.go`, all `ItemError` construction sites
 
-Change `ItemError.Err` from `error` to `*model.ProviderError`. Update every construction site to pass a `*ProviderError`; use `WrapError` for any remaining raw errors. This includes:
+Change `ItemError.Err` from `error` to `*model.ProviderError`. Update every construction site to pass a `*ProviderError`; use `WrapError` for any remaining raw errors. Key construction sites:
 
-- `pkg/resolve/fanout.go` — wraps per-symbol errors into `ItemError`
-- all provider `market.go` files that append to `Response.Errors`
-- `pkg/bits/client.go` — `ComparePrices` stores errors into `ItemError{Err: err}` where `err` comes from `GetPrice`; this must be `WrapError`-guarded until Phase 5
+- `resolve/fanout.go` — wraps per-symbol errors into `ItemError`
+- provider `market.go` files that append to `Response.Errors`
+- `client.go` (root) — `ComparePrices` stores errors into `ItemError{Err: err}` where `err` comes from provider calls; must be `WrapError`-guarded until Phase 5
 
 ---
 
 ### Phase 4 — Resolver
 
-**Files:** `pkg/resolve/resolver.go`
+**Files:** `resolve/resolver.go`
 
-Replace `fmt.Errorf("no provider supports …")` and similar with `*model.ProviderError`. Use `ErrKindUnsupportedFeature` / `ErrKindUnsupportedMarket` with an empty `ProviderID` (the resolution layer has no single provider to blame).
+Replace `fmt.Errorf("provider %q does not support feature %q …")` and similar with `*model.ProviderError`. Use `ErrKindUnsupportedFeature` / `ErrKindUnsupportedMarket` with an empty `ProviderID` (the resolution layer has no single provider to blame).
 
-`fanout.go` requires no structural change after Phase 3.
+`resolve/fanout.go` requires no structural change after Phase 3.
 
 ---
 
-### Phase 5 — Public `pkg/bits` facade
+### Phase 5 — Public `client.go` facade
 
-**Files:** `pkg/bits/client.go`
+**Files:** `client.go` (root-level bits library)
 
 1. No signature changes — methods still return `(model.Response[T], error)`.
 2. The "no data returned" path wraps with `model.WrapError("", …)` or a direct `*ProviderError{Kind: ErrKindNotFound}`.
@@ -354,7 +332,7 @@ Replace `fmt.Errorf("no provider supports …")` and similar with `*model.Provid
 
 ### Phase 6 — CLI layer (optional)
 
-**Files:** `cmd/*.go`
+**Files:** `command/*.go`
 
 CLI commands can optionally inspect `*model.ProviderError.Kind` for friendlier messages (e.g. "authentication failed — check your API key in config") without breaking anything. Defer until after Phase 5 stabilises.
 
@@ -363,17 +341,18 @@ CLI commands can optionally inspect `*model.ProviderError.Kind` for friendlier m
 ### Migration checklist
 
 ```
-[ ] Phase 1:  pkg/model — ErrorKind, ProviderError (with Is/Unwrap), WrapError, sentinels
-[ ] Phase 2a: pkg/provider/binance   — errors.go + HTTP/API error wrapping + tests
-[ ] Phase 2b: pkg/provider/bitget    — errors.go + HTTP/API error wrapping + tests (bug fix: add HTTP status check)
-[ ] Phase 2c: pkg/provider/coingecko — errors.go + HTTP/API error wrapping + tests (note: get() pattern differs)
-[ ] Phase 2d: pkg/provider/cryptocom — errors.go + HTTP/API error wrapping + tests (bug fix: add HTTP status check)
-[ ] Phase 2e: pkg/provider/mexc      — errors.go + HTTP/API error wrapping + tests
-[ ] Phase 2f: pkg/provider/whitebit  — errors.go + HTTP/API error wrapping + tests (bug fix: add HTTP status check)
+[~] Phase 1:  model/ — ErrorKind ✅, ProviderError struct ✅, Error() ✅
+              PENDING: Unwrap(), Is(), WrapError(), sentinel *ProviderError promotion
+[ ] Phase 2a: provider/binance   — errors.go + HTTP/API error wrapping + tests
+[ ] Phase 2b: provider/bitget    — errors.go + HTTP/API error wrapping + tests (bug fix: add HTTP status check)
+[ ] Phase 2c: provider/coingecko — errors.go + HTTP/API error wrapping + tests (status already checked in get())
+[ ] Phase 2d: provider/cryptocom — errors.go + HTTP/API error wrapping + tests (bug fix: add HTTP status check)
+[ ] Phase 2e: provider/mexc      — errors.go + HTTP/API error wrapping + tests (status already checked in doRequest())
+[ ] Phase 2f: provider/whitebit  — errors.go + HTTP/API error wrapping + tests (bug fix: add HTTP status check)
 [ ] Phase 3:  ItemError.Err → *ProviderError  (gate: all Phase 2 complete)
-[ ] Phase 4:  resolver — ProviderError for resolution failures
-[ ] Phase 5:  pkg/bits facade — WrapError at remaining sites + godoc
-[ ] Phase 6:  (optional) CLI human-readable error messages
+[ ] Phase 4:  resolve/ — ProviderError for resolution failures
+[ ] Phase 5:  client.go facade — WrapError at remaining sites + godoc
+[ ] Phase 6:  (optional) command/ human-readable error messages
 ```
 
 Phases 2a–2f are fully parallel. All other phases are sequential.
