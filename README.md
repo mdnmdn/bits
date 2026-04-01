@@ -6,6 +6,13 @@ One CLI, multiple exchanges. Every format. Real-time streams, snapshots, order b
 
 ---
 
+> ⚠️ **Library Status: Work in Progress**
+>
+> The public API may change rapidly. Semantic versioning is not yet applied. Use at your own risk.
+> The CLI interface is stable; the library API is not.
+
+---
+
 ## What it does
 
 ```sh
