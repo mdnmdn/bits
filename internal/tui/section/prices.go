@@ -7,9 +7,9 @@ import (
 
 	"github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/mdnmdn/bits/pkg/capability"
-	"github.com/mdnmdn/bits/pkg/model"
-	"github.com/mdnmdn/bits/pkg/provider"
+	"github.com/mdnmdn/bits/capability"
+	"github.com/mdnmdn/bits/model"
+	"github.com/mdnmdn/bits/provider"
 )
 
 type PriceProviderWrapper interface {

@@ -107,8 +107,8 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/mdnmdn/bits/pkg/bits"
-	"github.com/mdnmdn/bits/pkg/config"
+	"github.com/mdnmdn/bits"
+	"github.com/mdnmdn/bits/config"
 )
 
 func main() {

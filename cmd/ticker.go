@@ -5,12 +5,12 @@ import (
 	"os"
 
 	rendertable "github.com/mdnmdn/bits/internal/render/table"
-	"github.com/mdnmdn/bits/pkg/capability"
-	"github.com/mdnmdn/bits/pkg/model"
-	"github.com/mdnmdn/bits/pkg/resolve"
+	"github.com/mdnmdn/bits/capability"
+	"github.com/mdnmdn/bits/model"
+	"github.com/mdnmdn/bits/resolve"
 	"github.com/spf13/cobra"
 
-	"github.com/mdnmdn/bits/pkg/provider"
+	"github.com/mdnmdn/bits/provider"
 )
 
 var tickerCmd = &cobra.Command{

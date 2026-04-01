@@ -3,7 +3,7 @@ package rendertoon
 import (
 	"io"
 
-	"github.com/mdnmdn/bits/pkg/model"
+	"github.com/mdnmdn/bits/model"
 )
 
 func RenderPrice(w io.Writer, res model.Response[model.CoinPrice]) error {

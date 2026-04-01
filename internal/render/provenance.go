@@ -2,7 +2,7 @@ package render
 
 import (
 	"fmt"
-	"github.com/mdnmdn/bits/pkg/model"
+	"github.com/mdnmdn/bits/model"
 )
 
 // FallbackFootnote returns a human-readable note when a fallback occurred.

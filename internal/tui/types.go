@@ -2,7 +2,7 @@ package tui
 
 import (
 	"github.com/charmbracelet/bubbletea"
-	"github.com/mdnmdn/bits/pkg/model"
+	"github.com/mdnmdn/bits/model"
 )
 
 type Msg tea.Msg

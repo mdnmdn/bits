@@ -5,7 +5,7 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/mdnmdn/bits/pkg/model"
+	"github.com/mdnmdn/bits/model"
 )
 
 type OrderBookReconstructor struct {

@@ -3,7 +3,7 @@ package renderyaml
 import (
 	"io"
 
-	"github.com/mdnmdn/bits/pkg/model"
+	"github.com/mdnmdn/bits/model"
 	"gopkg.in/yaml.v3"
 )
 

@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/mdnmdn/bits/pkg/bits"
-	"github.com/mdnmdn/bits/pkg/config"
-	"github.com/mdnmdn/bits/pkg/model"
+	"github.com/mdnmdn/bits"
+	"github.com/mdnmdn/bits/config"
+	"github.com/mdnmdn/bits/model"
 )
 
 func main() {
@@ -19,36 +19,44 @@ func main() {
 		},
 	}
 
-	fmt.Println("=== WITHOUT WithSymbolEngine() ===")
+	{
+		fmt.Println("=== WITHOUT WithSymbolEngine() ===")
+		client := bits.NewClient(cfg)
 
-	// WITHOUT WithSymbolEngine() - still works
-	client := bits.NewClient(cfg)
+		sym, err := client.ResolveSymbol(ctx, "ETH-USDT", "binance", model.MarketSpot)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("ResolveSymbol: %s\n", sym)
 
-	// ResolveSymbol still works (creates engine on demand)
-	sym, err := client.ResolveSymbol(ctx, "ETH-USDT", "binance", model.MarketSpot)
-	if err != nil {
-		log.Fatal(err)
+		fmt.Printf("NormalizeSymbol: %s\n", bits.NormalizeSymbol("BTC_USDT"))
+
+		price, err := client.GetPrice(ctx, "ETHUSDT", "binance")
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("GetPrice (manual symbol): $%.2f\n", price.Data.Price)
 	}
-	fmt.Printf("ResolveSymbol: %s\n", sym)
 
-	// NormalizeSymbol works without any engine
-	fmt.Printf("NormalizeSymbol: %s\n", bits.NormalizeSymbol("BTC_USDT"))
+	{
+		fmt.Println("\n=== WITH WithSymbolEngine() ===")
+		client := bits.NewClient(cfg, bits.WithSymbolEngine())
 
-	// GetPrice works (just passes through)
-	price, err := client.GetPrice(ctx, "ETHUSDT", "binance")
-	if err != nil {
-		log.Fatal(err)
+		sym, _ := client.ResolveSymbol(ctx, "ETH-USDT", "binance", model.MarketSpot)
+		fmt.Printf("ResolveSymbol: %s\n", sym)
+
+		price, _ := client.GetPriceWithResolution(ctx, "ETH-USDT", "binance", model.MarketSpot)
+		fmt.Printf("GetPriceWithResolution: $%.2f\n", price.Data.Price)
 	}
-	fmt.Printf("GetPrice (manual symbol): $%.2f\n", price.Data.Price)
 
-	fmt.Println("\n=== WITH WithSymbolEngine() ===")
+	{
+		fmt.Println("\n=== Provider-Specific Client ===")
+		p := bits.NewProvider(cfg, "binance")
 
-	// WITH WithSymbolEngine() - shared cache
-	client2 := bits.NewClient(cfg, bits.WithSymbolEngine())
+		sym, _ := p.ResolveSymbol(ctx, "ETH-USDT", "binance", model.MarketSpot)
+		fmt.Printf("ResolveSymbol: %s\n", sym)
 
-	sym2, _ := client2.ResolveSymbol(ctx, "ETH-USDT", "binance", model.MarketSpot)
-	fmt.Printf("ResolveSymbol: %s\n", sym2)
-
-	price2, _ := client2.GetPriceWithResolution(ctx, "ETH-USDT", "binance", model.MarketSpot)
-	fmt.Printf("GetPriceWithResolution: $%.2f\n", price2.Data.Price)
+		price, _ := p.Price(ctx, []string{"ETHUSDT"}, "")
+		fmt.Printf("Price: $%.2f\n", price.Data[0].Price)
+	}
 }

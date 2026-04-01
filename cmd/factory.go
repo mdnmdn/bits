@@ -1,12 +1,12 @@
 package cmd
 
 import (
+	"github.com/mdnmdn/bits/config"
 	"github.com/mdnmdn/bits/internal/render"
-	"github.com/mdnmdn/bits/pkg/config"
-	"github.com/mdnmdn/bits/pkg/model"
-	"github.com/mdnmdn/bits/pkg/provider/registry"
-	"github.com/mdnmdn/bits/pkg/resolve"
-	"github.com/mdnmdn/bits/pkg/resolve/symbol"
+	"github.com/mdnmdn/bits/model"
+	"github.com/mdnmdn/bits/provider/registry"
+	"github.com/mdnmdn/bits/resolve"
+	"github.com/mdnmdn/bits/resolve/symbol"
 	"github.com/spf13/cobra"
 )
 

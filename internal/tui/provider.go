@@ -4,12 +4,12 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/mdnmdn/bits/pkg/capability"
-	"github.com/mdnmdn/bits/pkg/config"
-	"github.com/mdnmdn/bits/pkg/model"
-	"github.com/mdnmdn/bits/pkg/provider"
-	"github.com/mdnmdn/bits/pkg/provider/registry"
-	"github.com/mdnmdn/bits/pkg/resolve"
+	"github.com/mdnmdn/bits/capability"
+	"github.com/mdnmdn/bits/config"
+	"github.com/mdnmdn/bits/model"
+	"github.com/mdnmdn/bits/provider"
+	"github.com/mdnmdn/bits/provider/registry"
+	"github.com/mdnmdn/bits/resolve"
 )
 
 type TUIProvider struct {

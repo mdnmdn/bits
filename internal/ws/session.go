@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/mdnmdn/bits/internal/logger"
-	"github.com/mdnmdn/bits/pkg/model"
+	"github.com/mdnmdn/bits/model"
 )
 
 // Session represents one live WebSocket connection with full lifecycle management.

@@ -95,8 +95,8 @@ Or download a binary from [Releases](https://github.com/mdnmdn/bits/releases).
 import (
 	"context"
 	"fmt"
-	"github.com/mdnmdn/bits/pkg/bits"
-	"github.com/mdnmdn/bits/pkg/config"
+	"github.com/mdnmdn/bits"
+	"github.com/mdnmdn/bits/config"
 )
 
 func main() {

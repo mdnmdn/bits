@@ -3,7 +3,7 @@ package tui
 import (
 	"time"
 
-	"github.com/mdnmdn/bits/pkg/model"
+	"github.com/mdnmdn/bits/model"
 )
 
 type Section string

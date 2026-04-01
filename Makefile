@@ -7,7 +7,7 @@ LDFLAGS=-ldflags "-s -w -X github.com/mdnmdn/bits/cmd.version=$(VERSION) -X gith
 .PHONY: build test lint clean explorer
 
 build:
-	go build $(LDFLAGS) -o $(BINARY_NAME) .
+	go build $(LDFLAGS) -o $(BINARY_NAME) ./cmd/bits
 
 test:
 	go test -race ./...

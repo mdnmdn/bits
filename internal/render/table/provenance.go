@@ -5,7 +5,7 @@ import (
 	"io"
 
 	"github.com/mdnmdn/bits/internal/render"
-	"github.com/mdnmdn/bits/pkg/model"
+	"github.com/mdnmdn/bits/model"
 )
 
 // printProvenance writes a provider/market header line and, if a fallback

@@ -89,7 +89,7 @@ bits ticker BTCUSDT -p binance -m spot
 - Output normalization is applied in all table renderers (ticker, price, orderbook, exchange_info)
 - Cache directory: platform-specific temp dir + `/bits/symbols/` (configurable via `symbol.cache_dir`)
 - Library integration: `pkg/bits` exposes the engine with optional `WithSymbolEngine()` option
-- Godoc with examples: `go doc github.com/mdnmdn/bits/pkg/bits`
+- Godoc with examples: `go doc github.com/mdnmdn/bits`
 - Examples: `examples/basic_usage`, `examples/symbol_resolution`
 
 ## Feedback (Addressed)

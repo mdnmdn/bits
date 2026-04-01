@@ -5,7 +5,7 @@ import (
 	"io"
 	"text/tabwriter"
 
-	"github.com/mdnmdn/bits/pkg/model"
+	"github.com/mdnmdn/bits/model"
 )
 
 func RenderExchangeInfo(w io.Writer, res model.Response[model.ExchangeInfo]) error {

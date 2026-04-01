@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/mdnmdn/bits/pkg/config"
+	"github.com/mdnmdn/bits/config"
 )
 
 // ErrPlanRestricted is returned when streaming requires a paid CoinGecko plan.

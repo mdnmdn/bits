@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/mdnmdn/bits/pkg/model"
+	"github.com/mdnmdn/bits/model"
 )
 
 type CRC32Validator struct {

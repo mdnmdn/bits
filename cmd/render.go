@@ -8,7 +8,7 @@ import (
 	rendermd "github.com/mdnmdn/bits/internal/render/markdown"
 	rendertoon "github.com/mdnmdn/bits/internal/render/toon"
 	renderyaml "github.com/mdnmdn/bits/internal/render/yaml"
-	"github.com/mdnmdn/bits/pkg/model"
+	"github.com/mdnmdn/bits/model"
 )
 
 // renderGeneric handles all non-table output formats generically.

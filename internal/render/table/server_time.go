@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/mdnmdn/bits/pkg/model"
+	"github.com/mdnmdn/bits/model"
 )
 
 func RenderServerTime(w io.Writer, res model.Response[model.ServerTime]) error {

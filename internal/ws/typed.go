@@ -1,7 +1,7 @@
 package ws
 
 import (
-	"github.com/mdnmdn/bits/pkg/model"
+	"github.com/mdnmdn/bits/model"
 )
 
 // TypedChan filters a raw output channel into typed responses and errors.

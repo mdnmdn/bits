@@ -1,6 +1,6 @@
 package process
 
-import "github.com/mdnmdn/bits/pkg/model"
+import "github.com/mdnmdn/bits/model"
 
 // Processor is a function that enriches a Response[T] and returns it.
 type Processor[T any] func(model.Response[T]) model.Response[T]

@@ -236,8 +236,8 @@ import (
     "net/http"
     "time"
 
-    "github.com/mdnmdn/bits/pkg/capability"
-    "github.com/mdnmdn/bits/pkg/config"
+    "github.com/mdnmdn/bits/capability"
+    "github.com/mdnmdn/bits/config"
 )
 
 const providerID = "myexchange"
@@ -392,7 +392,7 @@ import (
     "context"
     "encoding/json"
 
-    "github.com/mdnmdn/bits/pkg/model"
+    "github.com/mdnmdn/bits/model"
     "github.com/mdnmdn/bits/internal/ws"
 )
 

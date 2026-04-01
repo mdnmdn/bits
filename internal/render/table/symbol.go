@@ -1,7 +1,7 @@
 package rendertable
 
 import (
-	"github.com/mdnmdn/bits/pkg/resolve/symbol/translators"
+	"github.com/mdnmdn/bits/resolve/symbol/translators"
 )
 
 func NormalizeSymbol(symbol string) string {

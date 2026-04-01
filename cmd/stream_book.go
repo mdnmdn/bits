@@ -7,17 +7,17 @@ import (
 	"syscall"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/mdnmdn/bits/capability"
 	"github.com/mdnmdn/bits/internal/render"
 	renderjson "github.com/mdnmdn/bits/internal/render/json"
 	rendertoon "github.com/mdnmdn/bits/internal/render/toon"
-	"github.com/mdnmdn/bits/pkg/capability"
-	"github.com/mdnmdn/bits/pkg/model"
-	"github.com/mdnmdn/bits/pkg/resolve"
-	"github.com/mdnmdn/bits/pkg/resolve/symbol"
+	"github.com/mdnmdn/bits/model"
+	"github.com/mdnmdn/bits/resolve"
+	"github.com/mdnmdn/bits/resolve/symbol"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 
-	"github.com/mdnmdn/bits/pkg/provider"
+	"github.com/mdnmdn/bits/provider"
 )
 
 var streamBookCmd = &cobra.Command{

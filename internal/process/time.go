@@ -3,7 +3,7 @@ package process
 import (
 	"time"
 
-	"github.com/mdnmdn/bits/pkg/model"
+	"github.com/mdnmdn/bits/model"
 )
 
 // TimeEnricher populates ServerTime.LocalTime, Latency, and ClockSkew.
