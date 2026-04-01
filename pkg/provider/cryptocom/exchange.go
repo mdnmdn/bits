@@ -63,6 +63,8 @@ func (c *Client) ExchangeInfo(_ context.Context, market model.MarketType) (model
 		return model.Response[model.ExchangeInfo]{}, fmt.Errorf("API error (code %d)", resp.Code)
 	}
 
+	makerFee, takerFee := c.getFeeConfig(market)
+
 	symbols := make([]model.Symbol, 0)
 	for _, inst := range resp.Result.Data {
 		if inst.InstType != "CCY_PAIR" {
@@ -97,6 +99,8 @@ func (c *Client) ExchangeInfo(_ context.Context, market model.MarketType) (model
 			QtyPrecision:   &qp,
 			MinPrice:       &minPrice,
 			MinQty:         &minQty,
+			MakerFee:       &makerFee,
+			TakerFee:       &takerFee,
 		})
 	}
 
@@ -110,4 +114,11 @@ func (c *Client) ExchangeInfo(_ context.Context, market model.MarketType) (model
 			Symbols:    symbols,
 		},
 	}, nil
+}
+
+func (c *Client) getFeeConfig(market model.MarketType) (makerFee, takerFee float64) {
+	if c.cfg.Spot.MakerFee > 0 {
+		return c.cfg.Spot.MakerFee, c.cfg.Spot.TakerFee
+	}
+	return 0.001, 0.002 // Crypto.com default: 0.1% maker, 0.2% taker
 }

@@ -345,6 +345,8 @@ api_secret = ""
 
 [cryptocom.spot]
 enabled = false
+# maker_fee = 0.001    # decimal fraction (0.1% = 0.001)
+# taker_fee = 0.002
 
 # MEXC configuration
 [mexc]
@@ -354,12 +356,16 @@ api_secret = ""
 
 [mexc.spot]
 enabled = false
+# maker_fee = 0.002    # decimal fraction (0.2% = 0.002)
+# taker_fee = 0.002
 
 [mexc.margin]
 enabled = false
 
 [mexc.futures]
 enabled = false
+# maker_fee = 0.002
+# taker_fee = 0.002
 
 # Symbol resolution cache settings
 [symbol]

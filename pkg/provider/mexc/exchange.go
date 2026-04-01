@@ -59,9 +59,8 @@ func (c *Client) ExchangeInfo(ctx context.Context, market model.MarketType) (mod
 			return resp, err
 		}
 
+		makerFee, takerFee := c.getFeeConfig(market)
 		var symbols []model.Symbol
-		makerFee := 0.002
-		takerFee := 0.002
 		for _, s := range infoResp.Data {
 			pp := s.PricePrecision
 			symbols = append(symbols, model.Symbol{
@@ -95,9 +94,8 @@ func (c *Client) ExchangeInfo(ctx context.Context, market model.MarketType) (mod
 		return resp, err
 	}
 
+	makerFee, takerFee := c.getFeeConfig(market)
 	var symbols []model.Symbol
-	makerFee := 0.002
-	takerFee := 0.002
 	for _, s := range info.Symbols {
 		status := model.SymbolStatusTrading
 		if s.Status != "ENABLED" {
@@ -132,4 +130,18 @@ func (c *Client) ExchangeInfo(ctx context.Context, market model.MarketType) (mod
 	}
 
 	return resp, nil
+}
+
+func (c *Client) getFeeConfig(market model.MarketType) (makerFee, takerFee float64) {
+	switch market {
+	case model.MarketFutures:
+		if c.cfg.Futures.MakerFee > 0 {
+			return c.cfg.Futures.MakerFee, c.cfg.Futures.TakerFee
+		}
+	default: // spot/margin
+		if c.cfg.Spot.MakerFee > 0 {
+			return c.cfg.Spot.MakerFee, c.cfg.Spot.TakerFee
+		}
+	}
+	return 0.002, 0.002 // MEXC default
 }
