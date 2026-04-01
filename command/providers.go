@@ -1,4 +1,4 @@
-package cmd
+package command
 
 import (
 	"fmt"
@@ -10,7 +10,36 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var capabilitiesCmd = &cobra.Command{
+var ProvidersCmd = &cobra.Command{
+	Use:   "providers",
+	Short: "List registered providers",
+	RunE:  runProviders,
+}
+
+func init() {
+	Root.AddCommand(ProvidersCmd)
+}
+
+func runProviders(cmd *cobra.Command, args []string) error {
+	cfg, err := LoadConfig()
+	if err != nil {
+		return err
+	}
+
+	ids := registry.AllProviderIDs()
+	tw := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	_, _ = fmt.Fprintln(tw, "PROVIDER\tACTIVE")
+	for _, id := range ids {
+		active := ""
+		if id == cfg.ActiveProvider() {
+			active = "*"
+		}
+		_, _ = fmt.Fprintf(tw, "%s\t%s\n", id, active)
+	}
+	return tw.Flush()
+}
+
+var CapabilitiesCmd = &cobra.Command{
 	Use:     "capabilities",
 	Aliases: []string{"caps"},
 	Short:   "Show provider capability matrix",
@@ -18,11 +47,11 @@ var capabilitiesCmd = &cobra.Command{
 }
 
 func init() {
-	RootCmd.AddCommand(capabilitiesCmd)
+	Root.AddCommand(CapabilitiesCmd)
 }
 
 func runCapabilities(cmd *cobra.Command, args []string) error {
-	cfg, err := loadConfig()
+	cfg, err := LoadConfig()
 	if err != nil {
 		return err
 	}

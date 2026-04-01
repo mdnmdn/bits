@@ -1,4 +1,4 @@
-package cmd
+package command
 
 import (
 	"encoding/json"
@@ -7,19 +7,24 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/mdnmdn/bits/capability"
-	"github.com/mdnmdn/bits/internal/render"
-	rendertoon "github.com/mdnmdn/bits/internal/render/toon"
+	"github.com/mdnmdn/bits"
 	"github.com/mdnmdn/bits/model"
-	"github.com/mdnmdn/bits/resolve"
-	"github.com/mdnmdn/bits/resolve/symbol"
+	"github.com/mdnmdn/bits/render"
+	rendertoon "github.com/mdnmdn/bits/render/toon"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
-
-	"github.com/mdnmdn/bits/provider"
 )
 
-var streamPriceCmd = &cobra.Command{
+var StreamCmd = &cobra.Command{
+	Use:   "stream",
+	Short: "Live streaming commands",
+}
+
+func init() {
+	Root.AddCommand(StreamCmd)
+}
+
+var StreamPriceCmd = &cobra.Command{
 	Use:   "price <id|symbol>...",
 	Short: "Live price feed",
 	Args:  cobra.MinimumNArgs(1),
@@ -27,46 +32,26 @@ var streamPriceCmd = &cobra.Command{
 }
 
 func init() {
-	streamCmd.AddCommand(streamPriceCmd)
+	StreamCmd.AddCommand(StreamPriceCmd)
 }
 
 func runStreamPrice(cmd *cobra.Command, args []string) error {
-	cfg, err := loadConfig()
+	cfg, err := LoadConfig()
 	if err != nil {
 		return err
 	}
 
-	opts := resolveOpts(cmd)
-	format := resolveFormat(cmd)
-	resolver := newResolver(cfg)
-
-	p, _, _, rerr := resolver.Resolve(cmd.Context(), capability.FeatureStreamPrice, resolve.ResolutionOpts{
-		Provider:   opts.Provider,
-		Market:     opts.Market,
-		NoFallback: opts.NoFallback,
-	})
-	if rerr != nil {
-		return rerr
+	providerID, _, format, err := ResolveOptions(cmd)
+	if err != nil {
+		return err
 	}
 
-	sp, rerr := resolve.Require[provider.PriceStreamProvider](p, "stream-price")
-	if rerr != nil {
-		return rerr
-	}
+	client := bits.NewProvider(cfg, providerID, bits.WithSymbolEngine())
 
 	ctx, cancel := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
-	ids := make([]string, len(args))
-	for i, arg := range args {
-		sym, _ := symbol.New(p).Resolve(ctx, arg, opts.Market)
-		if sym == "" {
-			sym = arg
-		}
-		ids[i] = sym
-	}
-
-	ch, err := sp.StartPriceStream(ctx, ids)
+	ch, err := client.StartPriceStream(ctx, args)
 	if err != nil {
 		return err
 	}
@@ -82,19 +67,16 @@ func runStreamPrice(cmd *cobra.Command, args []string) error {
 
 		switch format {
 		case render.FormatJSON:
-			// JSONL: one compact JSON object per line
 			b, _ := json.Marshal(update)
 			_, _ = fmt.Fprintf(os.Stdout, "%s\n", b)
 
 		case render.FormatYAML:
-			// one YAML document per update, separated by ---
 			enc := yaml.NewEncoder(os.Stdout)
 			enc.SetIndent(2)
 			_ = enc.Encode(update)
 			_ = enc.Close()
 
 		case render.FormatMarkdown:
-			// one markdown bullet per update with bid/ask and volume
 			bidAsk := ""
 			if update.BidPrice != nil && update.AskPrice != nil {
 				bidAsk = fmt.Sprintf(" | bid:%.4f ask:%.4f", *update.BidPrice, *update.AskPrice)
@@ -107,15 +89,13 @@ func runStreamPrice(cmd *cobra.Command, args []string) error {
 				update.ID, update.Price, update.Currency, change, bidAsk, vol)
 
 		case render.FormatToon:
-			res := model.Response[model.CoinPrice]{
+			_ = rendertoon.Render(os.Stdout, model.Response[model.CoinPrice]{
 				Kind:     model.KindPrice,
-				Provider: p.ID(),
+				Provider: client.ID(),
 				Data:     *update,
-			}
-			_ = rendertoon.RenderPrice(os.Stdout, res)
+			})
 
 		default:
-			// table: compact plain line with bid/ask and volume
 			bidAsk := ""
 			if update.BidPrice != nil && update.AskPrice != nil {
 				bidAsk = fmt.Sprintf(" | bid:%.4f ask:%.4f", *update.BidPrice, *update.AskPrice)

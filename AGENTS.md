@@ -1,8 +1,10 @@
-# CLAUDE.md
+# AGENTS.md
 
 ## Project Overview
 
-`bits` is a multi-provider crypto CLI tool written in Go. It supports CoinGecko, Binance, Bitget, WhiteBit, Crypto.com, and MEXC as data providers through a unified capability-based interface. All provider responses are wrapped in a typed `Response[T]` envelope with provenance tracking and automatic fallback.
+`bits` is a multi-provider crypto library and CLI tool written in Go. It supports CoinGecko, Binance, Bitget, WhiteBit, Crypto.com, and MEXC as data providers through a unified capability-based interface. All provider responses are wrapped in a typed `Response[T]` envelope with provenance tracking and automatic fallback.
+
+**Architectural Principle**: The bits library (`github.com/mdnmdn/bits`) is the first citizen of this project. The CLI is a thin wrapper that uses the public library interface. External projects can import and extend the CLI commands.
 
 ## Build & Test
 
@@ -16,7 +18,7 @@ make clean       # Remove binary
 Or directly:
 
 ```sh
-go build -o bits .
+go build -o bits ./cmd/bits
 go test -race ./...
 ```
 
@@ -24,84 +26,84 @@ go test -race ./...
 
 ```
 bits/
-├── main.go
-├── cmd/
-│   ├── root.go              # RootCmd, Execute(), global flags (-p, -m, -o, -l)
-│   ├── factory.go           # loadConfig(), newResolver(), flag helpers
-│   ├── render.go            # shared render dispatch helper
-│   ├── tui.go               # bits tui
-│   ├── providers.go         # bits providers
-│   ├── capabilities.go      # bits capabilities [--provider id]
-│   ├── time.go              # bits time
-│   ├── price.go             # bits price <id>...
-│   ├── ticker.go            # bits ticker <symbol>...
-│   ├── book.go              # bits book <symbol>
-│   ├── candles.go           # bits candles <symbol>
-│   ├── info.go              # bits info [--symbol S]
-│   ├── markets.go           # bits markets
-│   ├── stream.go            # bits stream (group)
-│   ├── stream_price.go      # bits stream price <id>...
-│   └── stream_book.go       # bits stream book <symbol>
-├── pkg/                     # Public library packages (importable by external tools)
-│   ├── bits/                # High-level facade: Client, GetPrice, ComparePrices
-│   ├── capability/
-│   │   └── capability.go    # MarketType, Feature, CapabilityKey, CapabilityMatrix
-│   ├── config/
-│   │   └── config.go        # Multi-provider config (YAML + Env + .env)
-│   ├── model/               # Provider-agnostic data types
-│   │   ├── market.go        # MarketType alias + constants
-│   │   ├── response.go      # Response[T], ItemError
-│   │   ├── exchange.go      # ServerTime, ExchangeInfo, Symbol
-│   │   ├── candle.go        # Candle, CandleOpts
-│   │   ├── ticker.go        # Ticker24h
-│   │   ├── orderbook.go     # OrderBook, OrderBookEntry
-│   │   ├── price.go         # CoinPrice
-│   │   ├── coin.go          # CoinMarket, MarketOpts
-│   │   └── errors.go        # ErrUnsupportedMarket, ErrUnsupportedFeature
-│   ├── provider/            # Provider interfaces + implementations
-│   │   ├── provider.go      # Provider base interface
-│   │   ├── exchange.go      # ExchangeProvider
-│   │   ├── aggregator.go    # AggregatorProvider
-│   │   ├── capability.go    # PriceProvider, CandleProvider, TickerProvider, OrderBookProvider
-│   │   ├── stream.go        # PriceStreamProvider, OrderBookStreamProvider
-│   │   ├── binance/         # Binance implementation (spot + futures)
-│   │   ├── bitget/          # Bitget implementation (spot + futures)
-│   │   ├── coingecko/       # CoinGecko implementation
-│   │   ├── whitebit/        # WhiteBit implementation
-│   │   ├── cryptocom/       # Crypto.com implementation
-│   │   ├── mexc/            # MEXC implementation
-│   │   └── registry/
-│   │       └── registry.go  # NewProvider factory (separate pkg to avoid import cycle)
-│   └── resolve/
-│       ├── resolver.go      # Resolver, ResolutionOpts, Resolve() with fallback
-│       ├── require.go       # Require[T] type assertion helper
-│       ├── fanout.go        # FanOut[T] parallel multi-symbol helper
-│       └── symbol/          # Symbol resolution + normalization
-├── internal/                # CLI-only internals (not importable by external tools)
-│   ├── auth/
-│   │   └── signature.go     # HMAC-SHA256 helpers (used by Bitget)
-│   ├── logger/              # Structured logging helpers
-│   ├── render/
-│   │   ├── renderer.go      # Format type + ParseFormat
-│   │   ├── provenance.go    # FallbackFootnote, ProviderLabel
-│   │   ├── json/            # Generic JSON renderer
-│   │   ├── yaml/            # Generic YAML renderer
-│   │   ├── toon/            # Generic TOON renderer
-│   │   ├── markdown/        # Generic Markdown renderer
-│   │   └── table/           # Table renderers per data type
-│   ├── process/
-│   │   ├── process.go       # Processor[T] type + Apply combinator
-│   │   ├── time.go          # TimeEnricher (latency + clock skew)
-│   │   ├── orderbook.go     # SpreadCalculator
-│   │   └── candles.go       # CandleStats
-│   ├── tui/                 # Terminal UI components
-│   │   └── section/
-│   └── ws/
-│       ├── base_client.go   # Generic WebSocket client (reconnect, backoff)
-│       └── client.go        # CoinGecko WebSocket client (ActionCable)
-├── examples/
-│   ├── basic_usage/         # Fetch price from a single provider
-│   └── price_comparison/    # Compare prices across multiple exchanges
+├── bits.go                     # Main library: Client, NewProvider, NullProvider
+├── client.go                  # Client implementation (alias of bits.go)
+├── command/                   # CLI commands (exported for external use)
+│   ├── commands.go            # Root command definition
+│   ├── helpers.go             # Config loading, option resolution, render dispatch
+│   ├── price.go              # price command
+│   ├── ticker.go             # ticker command
+│   ├── book.go               # book command
+│   ├── candles.go            # candles command
+│   ├── info.go               # info command
+│   ├── time.go               # time command
+│   ├── markets.go            # markets command
+│   ├── stream.go             # stream commands
+│   └── providers.go          # providers, capabilities commands
+├── cmd/bits/main.go            # CLI entry point
+├── capability/                # Capability system
+├── config/                    # Multi-provider config (YAML + Env + .env)
+├── model/                     # Provider-agnostic data types
+├── provider/                  # Provider interfaces + implementations
+│   ├── binance/               # Binance implementation (spot + futures)
+│   ├── bitget/                # Bitget implementation (spot + futures)
+│   ├── coingecko/             # CoinGecko implementation
+│   ├── whitebit/              # WhiteBit implementation
+│   ├── cryptocom/             # Crypto.com implementation
+│   ├── mexc/                  # MEXC implementation
+│   └── registry/              # NewProvider factory
+├── resolve/                   # Resolver, symbol resolution
+├── render/                    # Output renderers (exported)
+│   ├── renderer.go            # Format type + ParseFormat
+│   ├── provenance.go          # FallbackFootnote, ProviderLabel
+│   ├── table/                 # Table renderers
+│   ├── json/                  # JSON renderer
+│   ├── yaml/                  # YAML renderer
+│   ├── markdown/              # Markdown renderer
+│   └── toon/                  # TOON renderer
+├── process/                   # Data processors (exported)
+│   ├── process.go             # Processor[T] type + Apply
+│   ├── time.go                # TimeEnricher
+│   ├── orderbook.go           # SpreadCalculator
+│   └── candles.go             # CandleStats
+├── internal/                  # CLI-only internals
+│   ├── auth/                  # HMAC-SHA256 helpers
+│   ├── logger/                # Structured logging
+│   ├── tui/                   # Terminal UI components
+│   └── ws/                    # WebSocket clients
+└── examples/                   # Example applications
+```
+
+## Using the Library
+
+```go
+import "github.com/mdnmdn/bits"
+
+// Create a provider-specific client
+cfg := &config.Config{
+    Binance: config.BinanceConfig{
+        Spot: config.MarketConfig{Enabled: true},
+    },
+}
+client := bits.NewProvider(cfg, "binance", bits.WithSymbolEngine())
+
+// Use public methods
+price, err := client.Price(ctx, []string{"btc", "eth"}, "usd")
+```
+
+## Using the CLI
+
+External projects can import and extend the CLI:
+
+```go
+import "github.com/mdnmdn/bits/command"
+
+func main() {
+    command.Root.AddCommand(myCustomCmd)
+    if err := command.Root.Execute(); err != nil {
+        // handle error
+    }
+}
 ```
 
 ## Conventions
@@ -118,29 +120,22 @@ bits/
 - **Formatting**: all code must be `gofmt`-clean
 - **Commits**: conventional commit style (`feat:`, `fix:`, `chore:`)
 
-## Command Pattern
+## Command Pattern (CLI)
 
-Every command follows this pattern:
+Every CLI command uses the public bits library:
 
 ```go
-func runXxx(cmd *cobra.Command, args []string) error {
-    cfg, err := loadConfig()                        // load config
-    opts := resolveOpts(cmd)                        // read -p, -m, -l flags
-    format := resolveFormat(cmd)                    // read -o flag
-    resolver := newResolver(cfg)
+func runPrice(cmd *cobra.Command, args []string) error {
+    cfg, _, err := command.LoadConfig()           // load config
+    providerID, market, format := command.ResolveOptions(cmd)
 
-    p, market, fallback, err := resolver.Resolve(ctx, capability.FeatureXxx, opts)
-    tp, err := resolve.Require[provider.XxxProvider](p, "xxx")
+    client := bits.NewProvider(cfg, providerID, bits.WithSymbolEngine())
+    res, err := client.Price(ctx, args, currency)
 
-    res, err := tp.XxxMethod(ctx, args[0], market)  // or FanOut for multi-symbol
-
-    if fallback { res.Fallback = true; ... }         // annotate if fallback
-    res = process.Apply(res, process.XxxEnricher)    // optional enrichment
-
-    switch format {
-    case "json": return renderjson.Render(os.Stdout, res)
-    default:     return rendertable.RenderXxx(os.Stdout, res)
+    if ok, err := command.RenderGeneric(w, format, res); ok || err != nil {
+        return err
     }
+    return table.RenderPrices(w, res)
 }
 ```
 
