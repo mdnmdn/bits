@@ -159,6 +159,18 @@ func (c *Client) PriceProvider() provider.PriceProvider {
 
 // Price retrieves the current price for the given IDs or symbols.
 func (c *Client) Price(ctx context.Context, ids []string, currency string) (model.Response[[]model.CoinPrice], error) {
+	if c.symbolEngine != nil && len(ids) > 0 {
+		resolvedIDs := make([]string, len(ids))
+		for i, id := range ids {
+			resolved := c.resolveSymbolForPrice(ctx, id)
+			if resolved == "" {
+				resolvedIDs[i] = id
+			} else {
+				resolvedIDs[i] = resolved
+			}
+		}
+		ids = resolvedIDs
+	}
 	pp := c.PriceProvider()
 	if _, ok := pp.(*nullPriceProvider); ok {
 		return model.Response[[]model.CoinPrice]{
@@ -167,6 +179,17 @@ func (c *Client) Price(ctx context.Context, ids []string, currency string) (mode
 		}, nil
 	}
 	return pp.Price(ctx, ids, currency)
+}
+
+func (c *Client) resolveSymbolForPrice(ctx context.Context, input string) string {
+	markets := []model.MarketType{model.MarketSpot, model.MarketFutures, model.MarketMargin}
+	for _, market := range markets {
+		resolved, err := c.symbolEngine.Resolve(ctx, c.ID(), input, market)
+		if err == nil && resolved != "" {
+			return resolved
+		}
+	}
+	return ""
 }
 
 // CandleProvider returns the CandleProvider interface if supported.
@@ -179,6 +202,7 @@ func (c *Client) CandleProvider() provider.CandleProvider {
 
 // Candles retrieves OHLCV candle data.
 func (c *Client) Candles(ctx context.Context, symbol string, market model.MarketType, interval string, opts model.CandleOpts) (model.Response[[]model.Candle], error) {
+	resolved := c.resolveSymbolIfNeeded(ctx, symbol, market)
 	cp := c.CandleProvider()
 	if _, ok := cp.(*nullCandleProvider); ok {
 		return model.Response[[]model.Candle]{
@@ -186,7 +210,7 @@ func (c *Client) Candles(ctx context.Context, symbol string, market model.Market
 			Errors:   []model.ItemError{{Err: errNotImplemented}},
 		}, nil
 	}
-	return cp.Candles(ctx, symbol, market, interval, opts)
+	return cp.Candles(ctx, resolved, market, interval, opts)
 }
 
 // TickerProvider returns the TickerProvider interface if supported.
@@ -199,6 +223,7 @@ func (c *Client) TickerProvider() provider.TickerProvider {
 
 // Ticker24h retrieves 24h rolling ticker statistics.
 func (c *Client) Ticker24h(ctx context.Context, symbol string, market model.MarketType) (model.Response[model.Ticker24h], error) {
+	resolved := c.resolveSymbolIfNeeded(ctx, symbol, market)
 	tp := c.TickerProvider()
 	if _, ok := tp.(*nullTickerProvider); ok {
 		return model.Response[model.Ticker24h]{
@@ -206,7 +231,7 @@ func (c *Client) Ticker24h(ctx context.Context, symbol string, market model.Mark
 			Errors:   []model.ItemError{{Err: errNotImplemented}},
 		}, nil
 	}
-	return tp.Ticker24h(ctx, symbol, market)
+	return tp.Ticker24h(ctx, resolved, market)
 }
 
 // OrderBookProvider returns the OrderBookProvider interface if supported.
@@ -219,6 +244,7 @@ func (c *Client) OrderBookProvider() provider.OrderBookProvider {
 
 // OrderBook retrieves order book depth snapshot.
 func (c *Client) OrderBook(ctx context.Context, symbol string, market model.MarketType, depth int) (model.Response[model.OrderBook], error) {
+	resolved := c.resolveSymbolIfNeeded(ctx, symbol, market)
 	obp := c.OrderBookProvider()
 	if _, ok := obp.(*nullOrderBookProvider); ok {
 		return model.Response[model.OrderBook]{
@@ -226,7 +252,7 @@ func (c *Client) OrderBook(ctx context.Context, symbol string, market model.Mark
 			Errors:   []model.ItemError{{Err: errNotImplemented}},
 		}, nil
 	}
-	return obp.OrderBook(ctx, symbol, market, depth)
+	return obp.OrderBook(ctx, resolved, market, depth)
 }
 
 // PriceStreamProvider returns the PriceStreamProvider interface if supported.
@@ -587,6 +613,17 @@ func (c *Client) getSymbolEngine() *symbol.SymbolEngine {
 		return c.symbolEngine
 	}
 	return symbol.NewSymbolEngine(c.Config)
+}
+
+func (c *Client) resolveSymbolIfNeeded(ctx context.Context, symbol string, market model.MarketType) string {
+	if c.symbolEngine == nil || symbol == "" {
+		return symbol
+	}
+	resolved, err := c.symbolEngine.Resolve(ctx, c.ID(), symbol, market)
+	if err != nil || resolved == "" {
+		return symbol
+	}
+	return resolved
 }
 
 // GetPrice retrieves the price for a symbol from a specific provider.

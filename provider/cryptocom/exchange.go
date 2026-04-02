@@ -15,7 +15,7 @@ import (
 // server-time endpoint; uses the timestamp from ticker response as approximation.
 func (c *Client) ServerTime(_ context.Context) (model.Response[model.ServerTime], error) {
 	before := time.Now()
-	body, err := c.doRequest("public/get-ticker", "instrument_name=BTC_USDT")
+	body, err := c.doRequest("public/get-tickers", "instrument_name=BTC_USDT")
 	after := time.Now()
 
 	if err != nil {
@@ -34,8 +34,17 @@ func (c *Client) ServerTime(_ context.Context) (model.Response[model.ServerTime]
 		return model.Response[model.ServerTime]{}, fmt.Errorf("API error (code %d)", code)
 	}
 
+	var result apiTickerResult
+	if err := json.Unmarshal(env.Result, &result); err != nil {
+		return model.Response[model.ServerTime]{}, fmt.Errorf("failed to parse ticker result: %w", err)
+	}
+	if len(result.Data) == 0 {
+		return model.Response[model.ServerTime]{}, fmt.Errorf("no ticker data for BTC_USDT")
+	}
+
+	serverTimeMs := result.Data[0].T
+	serverTime := time.UnixMilli(serverTimeMs)
 	latency := after.Sub(before)
-	serverTime := before.Add(latency / 2)
 
 	return model.Response[model.ServerTime]{
 		Kind:     model.KindServerTime,
@@ -73,9 +82,6 @@ func (c *Client) ExchangeInfo(_ context.Context, market model.MarketType) (model
 
 		isMargin := inst.MarginBuyEnabled || inst.MarginSellEnabled
 		if market == model.MarketMargin && !isMargin {
-			continue
-		}
-		if market == model.MarketSpot && isMargin {
 			continue
 		}
 

@@ -171,7 +171,7 @@ func main() {
 		calledProviders := map[string]bool{}
 
 		for _, providerID := range providers {
-			client := bits.NewProvider(cfg, providerID)
+			client := bits.NewProvider(cfg, providerID, bits.WithSymbolEngine())
 			caps := client.Capabilities()
 
 			for _, market := range markets {

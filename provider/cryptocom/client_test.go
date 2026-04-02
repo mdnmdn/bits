@@ -369,7 +369,7 @@ func TestExchangeInfo(t *testing.T) {
 
 func TestServerTime(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assertEqual(t, "path", r.URL.Path, "/public/get-ticker")
+		assertEqual(t, "path", r.URL.Path, "/public/get-tickers")
 		_, _ = w.Write(envelope(sampleTicker))
 	}))
 	defer srv.Close()
