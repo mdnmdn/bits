@@ -25,12 +25,19 @@ import (
 
 	"github.com/mdnmdn/bits/capability"
 	"github.com/mdnmdn/bits/config"
+	"github.com/mdnmdn/bits/internal/logger"
 	"github.com/mdnmdn/bits/model"
 	"github.com/mdnmdn/bits/provider"
 	"github.com/mdnmdn/bits/provider/registry"
 	"github.com/mdnmdn/bits/resolve/symbol"
 	"github.com/mdnmdn/bits/resolve/symbol/translators"
 )
+
+// SetLogLevel sets the default log level for the library.
+// The CLI sets this via --log flag.
+func SetLogLevel(level string) {
+	logger.SetLevel(level)
+}
 
 var errNotImplemented = &model.ProviderError{
 	Kind:            model.ErrKindUnsupportedFeature,
@@ -358,6 +365,8 @@ func (c *Client) OrderBookStreamProvider() provider.OrderBookStreamProvider {
 
 // StartOrderBookStream initiates an order book stream for multiple symbols.
 func (c *Client) StartOrderBookStream(ctx context.Context, symbols []string, market model.MarketType, depth int) (<-chan *model.OrderBook, error) {
+	logger.Default.Debug("client: StartOrderBookStream called", "symbols", symbols, "market", market, "depth", depth)
+
 	obsp := c.OrderBookStreamProvider()
 	if _, ok := obsp.(*nullOrderBookStreamProvider); ok {
 		return nil, errNotImplemented
@@ -365,6 +374,7 @@ func (c *Client) StartOrderBookStream(ctx context.Context, symbols []string, mar
 	resolved := make([]string, len(symbols))
 	for i, sym := range symbols {
 		resolved[i] = c.resolveSymbolIfNeeded(ctx, sym, market)
+		logger.Default.Debug("client: resolved symbol", "input", sym, "resolved", resolved[i])
 	}
 	return obsp.StartOrderBookStream(ctx, resolved, market, depth)
 }

@@ -134,10 +134,11 @@ type wsTickerData struct {
 
 // wsBookData is a single order book snapshot from the WebSocket "book" channel.
 // Each bid/ask entry is [price, qty, num_orders]; num_orders is optional.
+// All numeric values are returned as strings from the WebSocket API.
 type wsBookData struct {
-	Bids [][]float64 `json:"bids"`
-	Asks [][]float64 `json:"asks"`
-	T    int64       `json:"t"` // snapshot timestamp (ms)
+	Bids [][]string `json:"bids"`
+	Asks [][]string `json:"asks"`
+	T    int64      `json:"t"` // snapshot timestamp (ms)
 }
 
 type apiCandlestickResult struct {

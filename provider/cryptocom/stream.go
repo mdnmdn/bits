@@ -63,18 +63,23 @@ func (h *cryptocomHandler) Handle(_ context.Context, raw []byte) (any, error) {
 
 	// Only "subscribe" method carries data pushes and confirmations.
 	if msg.Method != "subscribe" || len(msg.Result) == 0 {
+		logger.Default.Debug("cryptocom: non-subscribe message", "method", msg.Method)
 		return nil, nil
 	}
 
 	var result wsResult
 	if err := json.Unmarshal(msg.Result, &result); err != nil {
+		logger.Default.Debug("cryptocom: failed to parse result", "error", err)
 		return nil, nil
 	}
+
+	logger.Default.Debug("cryptocom: got result", "channel", result.Channel, "instrument", result.InstrumentName)
 
 	switch result.Channel {
 	case "ticker":
 		return h.handleTicker(result)
 	case "book":
+		logger.Default.Debug("cryptocom: calling handleBook")
 		return h.handleBook(result)
 	}
 
@@ -116,17 +121,22 @@ func (h *cryptocomHandler) handleTicker(result wsResult) (any, error) {
 }
 
 func (h *cryptocomHandler) handleBook(result wsResult) (any, error) {
+	logger.Default.Debug("cryptocom: handleBook called", "channel", result.Channel, "instrument", result.InstrumentName)
+
 	var data []wsBookData
 	if err := json.Unmarshal(result.Data, &data); err != nil || len(data) == 0 {
+		logger.Default.Debug("cryptocom: no book data", "error", err, "dataLen", len(data))
 		return nil, nil
 	}
 	d := data[0]
 
-	parseEntries := func(raw [][]float64) []model.OrderBookEntry {
+	parseEntries := func(raw [][]string) []model.OrderBookEntry {
 		entries := make([]model.OrderBookEntry, 0, len(raw))
 		for _, e := range raw {
 			if len(e) >= 2 {
-				entries = append(entries, model.OrderBookEntry{Price: e[0], Quantity: e[1]})
+				price, _ := strconv.ParseFloat(e[0], 64)
+				qty, _ := strconv.ParseFloat(e[1], 64)
+				entries = append(entries, model.OrderBookEntry{Price: price, Quantity: qty})
 			}
 		}
 		return entries
@@ -257,12 +267,21 @@ func (c *Client) WatchPrices(ctx context.Context, ids []string) (<-chan *model.C
 
 // WatchOrderBook implements provider.OrderBookStreamProvider.
 // depth 0 defaults to 10 levels; max is 150.
+// Note: Crypto.com only supports depth 10 or 50.
 func (c *Client) WatchOrderBook(ctx context.Context, symbol string, market model.MarketType, depth int) (<-chan *model.OrderBook, error) {
+	logger.Default.Debug("cryptocom: WatchOrderBook called", "symbol", symbol, "market", market, "depth", depth)
+
 	if depth <= 0 {
+		depth = 10
+	}
+	// Crypto.com only supports depth 10 or 50
+	if depth != 10 && depth != 50 {
 		depth = 10
 	}
 
 	channel := fmt.Sprintf("book.%s.%d", symbol, depth)
+	logger.Default.Debug("cryptocom: orderbook channel", "channel", channel)
+
 	cmdChan := make(chan ws.Command, 1)
 	cmdChan <- ws.Command{
 		Kind:   ws.CommandSubscribe,
