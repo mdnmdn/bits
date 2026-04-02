@@ -1,13 +1,16 @@
 package cryptocom
 
 import (
+	"context"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"time"
 
 	"github.com/mdnmdn/bits/capability"
 	"github.com/mdnmdn/bits/config"
+	"github.com/mdnmdn/bits/model"
 )
 
 const (
@@ -90,6 +93,16 @@ func (c *Client) doRequest(path, query string) ([]byte, error) {
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
+		// Wrap context and network errors with proper ErrorKind
+		if err == context.Canceled {
+			return nil, providerErr(model.ErrKindCanceled, "context canceled", err)
+		}
+		if err == context.DeadlineExceeded {
+			return nil, providerErr(model.ErrKindCanceled, "context deadline exceeded", err)
+		}
+		if _, ok := err.(net.Error); ok {
+			return nil, providerErr(model.ErrKindNetwork, err.Error(), err)
+		}
 		return nil, fmt.Errorf("request failed: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
@@ -97,6 +110,11 @@ func (c *Client) doRequest(path, query string) ([]byte, error) {
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response: %w", err)
+	}
+
+	// Check HTTP status code and return error if not 2xx
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, httpErr(resp.StatusCode, string(body))
 	}
 
 	return body, nil

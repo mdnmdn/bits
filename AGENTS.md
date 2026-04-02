@@ -114,6 +114,7 @@ func main() {
 - **Test framework**: `testify/assert` + `net/http/httptest`
 - **Provider pattern**: implement `provider.Provider` + capability interfaces; return `model.Response[T]`
 - **Response pattern**: every provider call returns `model.Response[T]` with `Provider` and `Market` populated
+- **Error pattern**: all errors cross provider boundaries as `*model.ProviderError`; use `errors.As` to inspect; never `fmt.Errorf` at provider boundaries
 - **Config location**: platform-specific (`~/Library/Application Support/bits-cli/` on macOS, `~/.config/bits/` on Linux)
 - **Output modes**: global `-o table` / `-o json` / `-o yaml` / `-o toon` / `-o markdown` flag
 - **Stream contract**: stdout = data only, stderr = diagnostics/warnings
@@ -141,19 +142,19 @@ func runPrice(cmd *cobra.Command, args []string) error {
 
 ## Adding a New Provider
 
-
-
-See `_docs/provider-structure.md` for the full step-by-step guide 
+See `_docs/provider-structure.md` for the full step-by-step guide.
 
 ## References
 
 The _docs folder contains all the documentation:
 - `_docs` general documents
-- `_docs/wip` work in progress
-- `_docs/backlog` future tasks
-- `_docs/_old` old docs kept for historical reason
-- `_docs/providers` dirty documentationg
- 
+- `_docs/wip/` work in progress folder
+- `_docs/backlog/` future tasks
+- `_docs/_old/` old docs kept for historical reason
+- `_docs/providers/` provider documentation
+    - `provider-index.md`  index of the documentation
+    - `_drafts/`  documentation drafts  
 - Use `bits capabilities` to inspect the live capability matrix
 - See `_docs/renderers.md` for output format specifications (table, json, yaml, toon, markdown)
 - See `_docs/architecture.md` for full architecture and provider capability matrix
+- See `_docs/error-handling.md` for error handling design (`ProviderError`, `ErrorKind`, provider helpers)

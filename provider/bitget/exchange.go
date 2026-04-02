@@ -105,7 +105,7 @@ func (c *Client) ServerTime(_ context.Context) (model.Response[model.ServerTime]
 		return model.Response[model.ServerTime]{}, fmt.Errorf("failed to parse server time response: %w", err)
 	}
 	if resp.Code != "00000" {
-		return model.Response[model.ServerTime]{}, fmt.Errorf("API error: %s", resp.Msg)
+		return model.Response[model.ServerTime]{}, apiErr(resp.Code, resp.Msg)
 	}
 
 	tsMs, err := strconv.ParseInt(resp.Data.ServerTime, 10, 64)
@@ -146,7 +146,7 @@ func (c *Client) marginExchangeInfo(market model.MarketType) (model.Response[mod
 		return model.Response[model.ExchangeInfo]{}, fmt.Errorf("failed to parse margin symbols response: %w", err)
 	}
 	if resp.Code != "00000" {
-		return model.Response[model.ExchangeInfo]{}, fmt.Errorf("API error: %s", resp.Msg)
+		return model.Response[model.ExchangeInfo]{}, apiErr(resp.Code, resp.Msg)
 	}
 
 	symbols := make([]model.Symbol, 0, len(resp.Data))
@@ -203,7 +203,7 @@ func (c *Client) spotExchangeInfo(market model.MarketType) (model.Response[model
 		return model.Response[model.ExchangeInfo]{}, fmt.Errorf("failed to parse spot symbols response: %w", err)
 	}
 	if symbolsResp.Code != "00000" {
-		return model.Response[model.ExchangeInfo]{}, fmt.Errorf("API error: %s", symbolsResp.Msg)
+		return model.Response[model.ExchangeInfo]{}, apiErr(symbolsResp.Code, symbolsResp.Msg)
 	}
 
 	feeRates, err := c.getSpotFeeRates()
@@ -263,7 +263,7 @@ func (c *Client) futuresExchangeInfo(market model.MarketType) (model.Response[mo
 		return model.Response[model.ExchangeInfo]{}, fmt.Errorf("failed to parse futures contracts response: %w", err)
 	}
 	if resp.Code != "00000" {
-		return model.Response[model.ExchangeInfo]{}, fmt.Errorf("API error: %s", resp.Msg)
+		return model.Response[model.ExchangeInfo]{}, apiErr(resp.Code, resp.Msg)
 	}
 
 	makerFee, takerFee := getDefaultFees(feeRates)
@@ -343,7 +343,7 @@ func (c *Client) getSpotFeeRates() ([]bitgetVIPFeeRate, error) {
 	}
 	if resp.Code != "00000" {
 		logger.Default.Debug("API error fetching fee rates", "code", resp.Code, "msg", resp.Msg)
-		return nil, fmt.Errorf("API error: %s", resp.Msg)
+		return nil, apiErr(resp.Code, resp.Msg)
 	}
 
 	logger.Default.Debug("fetched VIP fee rates", "levels", len(resp.Data))
@@ -376,7 +376,7 @@ func (c *Client) getFuturesFeeRates() ([]bitgetVIPFeeRate, error) {
 	}
 	if resp.Code != "00000" {
 		logger.Default.Debug("API error fetching futures fee rates", "code", resp.Code, "msg", resp.Msg)
-		return nil, fmt.Errorf("API error: %s", resp.Msg)
+		return nil, apiErr(resp.Code, resp.Msg)
 	}
 
 	logger.Default.Debug("fetched futures VIP fee rates", "levels", len(resp.Data))

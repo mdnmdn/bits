@@ -45,7 +45,8 @@
       "Bash(/opt/homebrew/Cellar/gh/2.64.0_1/bin/gh repo:*)",
       "Bash(go mod:*)",
       "Bash(make lint:*)",
-      "Bash(echo \"exit: $?\")"
+      "Bash(echo \"exit: $?\")",
+      "Bash(ls provider/*/errors.go)"
     ]
   }
 }

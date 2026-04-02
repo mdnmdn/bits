@@ -73,9 +73,11 @@ func (r *Resolver) Resolve(
 	}
 
 	if opts.NoFallback {
-		return nil, "", false, fmt.Errorf(
-			"provider %q does not support feature %q for market %q", requestedID, feature, market,
-		)
+		return nil, "", false, &model.ProviderError{
+			Kind:            model.ErrKindUnsupportedFeature,
+			ProviderID:      requestedID,
+			ProviderMessage: fmt.Sprintf("provider %q does not support feature %q for market %q", requestedID, feature, market),
+		}
 	}
 
 	// Fallback: try all other registered providers.
@@ -100,7 +102,8 @@ func (r *Resolver) Resolve(
 		}
 	}
 
-	return nil, "", false, fmt.Errorf(
-		"no provider supports feature %q for market %q", feature, market,
-	)
+	return nil, "", false, &model.ProviderError{
+		Kind:            model.ErrKindUnsupportedFeature,
+		ProviderMessage: fmt.Sprintf("no provider supports feature %q for market %q", feature, market),
+	}
 }

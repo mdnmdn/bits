@@ -39,7 +39,7 @@ func FanOut[T any](
 	out := model.Response[[]T]{}
 	for r := range ch {
 		if r.err != nil {
-			out.Errors = append(out.Errors, model.ItemError{Symbol: r.sym, Err: r.err})
+			out.Errors = append(out.Errors, model.ItemError{Symbol: r.sym, Err: model.WrapError("", r.err)})
 			continue
 		}
 		out.Data = append(out.Data, r.res.Data)

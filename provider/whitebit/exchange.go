@@ -3,7 +3,6 @@ package whitebit
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"strconv"
 	"time"
 
@@ -47,7 +46,7 @@ func (c *Client) ServerTime(_ context.Context) (model.Response[model.ServerTime]
 
 	var resp whitebitTimeResponse
 	if err := json.Unmarshal(body, &resp); err != nil {
-		return model.Response[model.ServerTime]{}, fmt.Errorf("failed to parse server time response: %w", err)
+		return model.Response[model.ServerTime]{}, providerErr(model.ErrKindParse, "failed to parse server time response", err)
 	}
 
 	serverTime := time.Unix(resp.Time, 0)
@@ -74,7 +73,7 @@ func (c *Client) ExchangeInfo(_ context.Context, market model.MarketType) (model
 
 	var resp []whitebitMarket
 	if err := json.Unmarshal(body, &resp); err != nil {
-		return model.Response[model.ExchangeInfo]{}, fmt.Errorf("failed to parse markets response: %w", err)
+		return model.Response[model.ExchangeInfo]{}, providerErr(model.ErrKindParse, "failed to parse markets response", err)
 	}
 
 	symbols := make([]model.Symbol, 0, len(resp))
@@ -135,7 +134,7 @@ func (c *Client) futuresExchangeInfo(market model.MarketType) (model.Response[mo
 		Result  []whitebitFuturesMarket `json:"result"`
 	}
 	if err := json.Unmarshal(body, &resp); err != nil {
-		return model.Response[model.ExchangeInfo]{}, fmt.Errorf("failed to parse futures response: %w", err)
+		return model.Response[model.ExchangeInfo]{}, providerErr(model.ErrKindParse, "failed to parse futures response", err)
 	}
 
 	symbols := make([]model.Symbol, 0, len(resp.Result))

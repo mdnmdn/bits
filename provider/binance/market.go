@@ -2,7 +2,6 @@ package binance
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -22,7 +21,7 @@ func (c *Client) Price(ctx context.Context, ids []string, currency string) (mode
 		sym := strings.ToUpper(id)
 		cp, err := c.fetchPrice(ctx, sym)
 		if err != nil {
-			errs = append(errs, model.ItemError{Symbol: sym, Err: err})
+			errs = append(errs, model.ItemError{Symbol: sym, Err: model.WrapError(providerID, err)})
 			continue
 		}
 		prices = append(prices, *cp)
@@ -43,10 +42,10 @@ func (c *Client) fetchPrice(ctx context.Context, sym string) (*model.CoinPrice, 
 	if c.spotClient != nil {
 		tickerPrices, err := c.spotClient.NewListPricesService().Symbol(sym).Do(ctx)
 		if err != nil {
-			return nil, fmt.Errorf("price for %s: %w", sym, err)
+			return nil, model.WrapError(providerID, err)
 		}
 		if len(tickerPrices) == 0 {
-			return nil, fmt.Errorf("no price data for %s", sym)
+			return nil, providerErr(model.ErrKindNotFound, "no price data for "+sym, nil)
 		}
 		priceStr = tickerPrices[0].Price
 
@@ -57,10 +56,10 @@ func (c *Client) fetchPrice(ctx context.Context, sym string) (*model.CoinPrice, 
 	} else if c.futuresClient != nil {
 		tickerPrices, err := c.futuresClient.NewListPricesService().Symbol(sym).Do(ctx)
 		if err != nil {
-			return nil, fmt.Errorf("futures price for %s: %w", sym, err)
+			return nil, model.WrapError(providerID, err)
 		}
 		if len(tickerPrices) == 0 {
-			return nil, fmt.Errorf("no futures price data for %s", sym)
+			return nil, providerErr(model.ErrKindNotFound, "no futures price data for "+sym, nil)
 		}
 		priceStr = tickerPrices[0].Price
 
@@ -69,7 +68,7 @@ func (c *Client) fetchPrice(ctx context.Context, sym string) (*model.CoinPrice, 
 			changePctStr = stats[0].PriceChangePercent
 		}
 	} else {
-		return nil, fmt.Errorf("binance: no client configured")
+		return nil, providerErr(model.ErrKindUnsupportedMarket, "no client configured", nil)
 	}
 
 	price, _ := strconv.ParseFloat(priceStr, 64)
@@ -99,12 +98,12 @@ func (c *Client) Candles(ctx context.Context, symbol string, market model.Market
 	switch market {
 	case model.MarketFutures:
 		if c.futuresClient == nil {
-			return model.Response[[]model.Candle]{}, fmt.Errorf("binance: futures client not configured")
+			return model.Response[[]model.Candle]{}, providerErr(model.ErrKindUnsupportedMarket, "futures client not configured", nil)
 		}
 		candles, err = c.fetchFuturesCandles(ctx, sym, interval, opts)
 	default:
 		if c.spotClient == nil {
-			return model.Response[[]model.Candle]{}, fmt.Errorf("binance: spot client not configured")
+			return model.Response[[]model.Candle]{}, providerErr(model.ErrKindUnsupportedMarket, "spot client not configured", nil)
 		}
 		candles, err = c.fetchSpotCandles(ctx, sym, interval, opts)
 	}
@@ -136,7 +135,7 @@ func (c *Client) fetchSpotCandles(ctx context.Context, sym, interval string, opt
 
 	klines, err := svc.Do(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("binance: spot candles for %s: %w", sym, err)
+		return nil, model.WrapError(providerID, err)
 	}
 
 	return convertKlines(klines), nil
@@ -157,7 +156,7 @@ func (c *Client) fetchFuturesCandles(ctx context.Context, sym, interval string, 
 
 	klines, err := svc.Do(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("binance: futures candles for %s: %w", sym, err)
+		return nil, model.WrapError(providerID, err)
 	}
 
 	return convertFuturesKlines(klines), nil
@@ -214,14 +213,14 @@ func (c *Client) Ticker24h(ctx context.Context, symbol string, market model.Mark
 	switch market {
 	case model.MarketFutures:
 		if c.futuresClient == nil {
-			return model.Response[model.Ticker24h]{}, fmt.Errorf("binance: futures client not configured")
+			return model.Response[model.Ticker24h]{}, providerErr(model.ErrKindUnsupportedMarket, "futures client not configured", nil)
 		}
 		stats, err := c.futuresClient.NewListPriceChangeStatsService().Symbol(sym).Do(ctx)
 		if err != nil {
-			return model.Response[model.Ticker24h]{}, fmt.Errorf("binance: futures ticker for %s: %w", sym, err)
+			return model.Response[model.Ticker24h]{}, model.WrapError(providerID, err)
 		}
 		if len(stats) == 0 {
-			return model.Response[model.Ticker24h]{}, fmt.Errorf("binance: no futures ticker stats for %s", sym)
+			return model.Response[model.Ticker24h]{}, providerErr(model.ErrKindNotFound, "no futures ticker stats for "+sym, nil)
 		}
 		s := stats[0]
 		t := convertFuturesTicker(s, market)
@@ -229,14 +228,14 @@ func (c *Client) Ticker24h(ctx context.Context, symbol string, market model.Mark
 
 	default:
 		if c.spotClient == nil {
-			return model.Response[model.Ticker24h]{}, fmt.Errorf("binance: spot client not configured")
+			return model.Response[model.Ticker24h]{}, providerErr(model.ErrKindUnsupportedMarket, "spot client not configured", nil)
 		}
 		stats, err := c.spotClient.NewListPriceChangeStatsService().Symbol(sym).Do(ctx)
 		if err != nil {
-			return model.Response[model.Ticker24h]{}, fmt.Errorf("binance: ticker for %s: %w", sym, err)
+			return model.Response[model.Ticker24h]{}, model.WrapError(providerID, err)
 		}
 		if len(stats) == 0 {
-			return model.Response[model.Ticker24h]{}, fmt.Errorf("binance: no ticker stats for %s", sym)
+			return model.Response[model.Ticker24h]{}, providerErr(model.ErrKindNotFound, "no ticker stats for "+sym, nil)
 		}
 		s := stats[0]
 		t := convertSpotTicker(s, market)
@@ -318,11 +317,11 @@ func (c *Client) OrderBook(ctx context.Context, symbol string, market model.Mark
 	switch market {
 	case model.MarketFutures:
 		if c.futuresClient == nil {
-			return model.Response[model.OrderBook]{}, fmt.Errorf("binance: futures client not configured")
+			return model.Response[model.OrderBook]{}, providerErr(model.ErrKindUnsupportedMarket, "futures client not configured", nil)
 		}
 		d, err := c.futuresClient.NewDepthService().Symbol(sym).Limit(depth).Do(ctx)
 		if err != nil {
-			return model.Response[model.OrderBook]{}, fmt.Errorf("binance: futures order book for %s: %w", sym, err)
+			return model.Response[model.OrderBook]{}, model.WrapError(providerID, err)
 		}
 		uid := d.LastUpdateID
 		ob := model.OrderBook{
@@ -336,11 +335,11 @@ func (c *Client) OrderBook(ctx context.Context, symbol string, market model.Mark
 
 	default:
 		if c.spotClient == nil {
-			return model.Response[model.OrderBook]{}, fmt.Errorf("binance: spot client not configured")
+			return model.Response[model.OrderBook]{}, providerErr(model.ErrKindUnsupportedMarket, "spot client not configured", nil)
 		}
 		d, err := c.spotClient.NewDepthService().Symbol(sym).Limit(depth).Do(ctx)
 		if err != nil {
-			return model.Response[model.OrderBook]{}, fmt.Errorf("binance: order book for %s: %w", sym, err)
+			return model.Response[model.OrderBook]{}, model.WrapError(providerID, err)
 		}
 		uid := d.LastUpdateID
 		ob := model.OrderBook{

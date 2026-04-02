@@ -20,7 +20,7 @@ func (c *Client) Price(_ context.Context, ids []string, currency string) (model.
 	for _, symbol := range ids {
 		data, err := c.fetchTicker(symbol)
 		if err != nil {
-			itemErrors = append(itemErrors, model.ItemError{Symbol: symbol, Err: err})
+			itemErrors = append(itemErrors, model.ItemError{Symbol: symbol, Err: model.WrapError(providerID, err)})
 			continue
 		}
 
@@ -119,7 +119,7 @@ func (c *Client) OrderBook(_ context.Context, symbol string, market model.Market
 		return model.Response[model.OrderBook]{}, fmt.Errorf("failed to parse code: %w", err)
 	}
 	if code != 0 {
-		return model.Response[model.OrderBook]{}, fmt.Errorf("API error (code %d): %s", code, env.Msg)
+		return model.Response[model.OrderBook]{}, apiErr(code, env.Msg)
 	}
 
 	var result apiBookResult
@@ -189,7 +189,7 @@ func (c *Client) fetchTicker(symbol string) (*apiTickerData, error) {
 		return nil, fmt.Errorf("failed to parse code: %w", err)
 	}
 	if code != 0 {
-		return nil, fmt.Errorf("API error (code %d): %s", code, env.Msg)
+		return nil, apiErr(code, env.Msg)
 	}
 
 	var result apiTickerResult
@@ -228,7 +228,7 @@ func (c *Client) Candles(_ context.Context, symbol string, market model.MarketTy
 		return resp, fmt.Errorf("failed to parse code: %w", err)
 	}
 	if code != 0 {
-		return resp, fmt.Errorf("API error (code %d): %s", code, env.Msg)
+		return resp, apiErr(code, env.Msg)
 	}
 
 	var result apiCandlestickResult

@@ -60,7 +60,43 @@ func (e *ProviderError) Error() string {
 	return e.ProviderMessage
 }
 
+// Unwrap returns the underlying cause, enabling errors.Is/As chaining.
+func (e *ProviderError) Unwrap() error { return e.Cause }
+
+// Is implements errors.Is matching by Kind for sentinel comparisons.
+// This ensures errors.Is(err, model.ErrUnsupportedMarket) works for any
+// *ProviderError with the matching Kind, not just the exact sentinel pointer.
+func (e *ProviderError) Is(target error) bool {
+	t, ok := target.(*ProviderError)
+	if !ok {
+		return false
+	}
+	// Match sentinels by Kind when the target has no ProviderID.
+	if t.ProviderID == "" {
+		return e.Kind == t.Kind
+	}
+	return e == t
+}
+
 var (
-	ErrUnsupportedMarket  = errors.New("unsupported market type")
-	ErrUnsupportedFeature = errors.New("unsupported feature")
+	ErrUnsupportedMarket  = &ProviderError{Kind: ErrKindUnsupportedMarket, ProviderMessage: "unsupported market type"}
+	ErrUnsupportedFeature = &ProviderError{Kind: ErrKindUnsupportedFeature, ProviderMessage: "unsupported feature"}
 )
+
+// WrapError wraps an arbitrary error as ErrKindUnknown. Use only as a
+// temporary shim during migration; replace with a typed providerErr call.
+func WrapError(providerID string, err error) *ProviderError {
+	if err == nil {
+		return nil
+	}
+	var pe *ProviderError
+	if errors.As(err, &pe) {
+		return pe
+	}
+	return &ProviderError{
+		Kind:            ErrKindUnknown,
+		ProviderID:      providerID,
+		ProviderMessage: err.Error(),
+		Cause:           err,
+	}
+}

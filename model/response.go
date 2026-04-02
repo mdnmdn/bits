@@ -25,6 +25,6 @@ type Response[T any] struct {
 
 // ItemError pairs a symbol (or id) with the error that occurred for it.
 type ItemError struct {
-	Symbol string `json:"sym" yaml:"sym" toon:"sym"`
-	Err    error  `json:"err" yaml:"err" toon:"err"`
+	Symbol string         `json:"sym" yaml:"sym" toon:"sym"`
+	Err    *ProviderError `json:"err" yaml:"err" toon:"err"`
 }

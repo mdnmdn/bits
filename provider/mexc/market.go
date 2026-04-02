@@ -36,7 +36,7 @@ func (c *Client) Price(ctx context.Context, symbols []string, currency string) (
 	}
 
 	if hasSpot && hasFutures {
-		return resp, fmt.Errorf("MEXC provider does not support mixed spot/futures batches in a single Price() call")
+		return resp, providerErr(model.ErrKindInvalidRequest, "MEXC provider does not support mixed spot/futures batches in a single Price() call", nil)
 	}
 
 	if hasFutures {
@@ -54,7 +54,7 @@ func (c *Client) Price(ctx context.Context, symbols []string, currency string) (
 
 		price, err := c.fetchPrice(ctx, symbol, market)
 		if err != nil {
-			resp.Errors = append(resp.Errors, model.ItemError{Symbol: symbol, Err: err})
+			resp.Errors = append(resp.Errors, model.ItemError{Symbol: symbol, Err: model.WrapError(providerID, err)})
 			continue
 		}
 		prices = append(prices, price)
@@ -73,7 +73,7 @@ func (c *Client) fetchPrice(ctx context.Context, symbol string, market model.Mar
 
 		var tickerResp mexcFuturesTickerResponse
 		if err := json.Unmarshal(data, &tickerResp); err != nil {
-			return model.CoinPrice{}, err
+			return model.CoinPrice{}, providerErr(model.ErrKindParse, "failed to parse futures ticker response", err)
 		}
 
 		return model.CoinPrice{
@@ -90,7 +90,7 @@ func (c *Client) fetchPrice(ctx context.Context, symbol string, market model.Mar
 
 	var ticker mexcSpotTicker
 	if err := json.Unmarshal(data, &ticker); err != nil {
-		return model.CoinPrice{}, err
+		return model.CoinPrice{}, providerErr(model.ErrKindParse, "failed to parse spot ticker response", err)
 	}
 
 	price, _ := strconv.ParseFloat(ticker.Price, 64)
@@ -116,7 +116,7 @@ func (c *Client) Ticker24h(ctx context.Context, symbol string, market model.Mark
 
 		var tickerResp mexcFuturesTickerResponse
 		if err := json.Unmarshal(data, &tickerResp); err != nil {
-			return resp, err
+			return resp, providerErr(model.ErrKindParse, "failed to parse futures ticker response", err)
 		}
 
 		t := tickerResp.Data
@@ -142,7 +142,7 @@ func (c *Client) Ticker24h(ctx context.Context, symbol string, market model.Mark
 
 	var t mexcSpotTicker24h
 	if err := json.Unmarshal(data, &t); err != nil {
-		return resp, err
+		return resp, providerErr(model.ErrKindParse, "failed to parse spot ticker response", err)
 	}
 
 	last, _ := strconv.ParseFloat(t.LastPrice, 64)
@@ -196,7 +196,7 @@ func (c *Client) Candles(ctx context.Context, symbol string, market model.Market
 
 		var candlesResp mexcFuturesCandlesResponse
 		if err := json.Unmarshal(data, &candlesResp); err != nil {
-			return resp, err
+			return resp, providerErr(model.ErrKindParse, "failed to parse futures kline response", err)
 		}
 
 		var candles []model.Candle
@@ -205,7 +205,7 @@ func (c *Client) Candles(ctx context.Context, symbol string, market model.Market
 		// MEXC Futures return parallel slices; ensure they all have the same length
 		// before indexing into them.
 		if len(d.Open) < n || len(d.High) < n || len(d.Low) < n || len(d.Close) < n || len(d.Vol) < n {
-			return resp, fmt.Errorf("invalid futures kline response: inconsistent slice lengths")
+			return resp, providerErr(model.ErrKindParse, "invalid futures kline response: inconsistent slice lengths", nil)
 		}
 
 		for i := 0; i < n; i++ {
@@ -258,7 +258,7 @@ func (c *Client) Candles(ctx context.Context, symbol string, market model.Market
 
 	var rawCandles [][]interface{}
 	if err := json.Unmarshal(data, &rawCandles); err != nil {
-		return resp, err
+		return resp, providerErr(model.ErrKindParse, "failed to parse spot kline response", err)
 	}
 
 	candles := parseSpotCandles(rawCandles)
@@ -356,7 +356,7 @@ func (c *Client) OrderBook(ctx context.Context, symbol string, market model.Mark
 
 		var obResp mexcFuturesOrderBookResponse
 		if err := json.Unmarshal(data, &obResp); err != nil {
-			return resp, err
+			return resp, providerErr(model.ErrKindParse, "failed to parse futures order book response", err)
 		}
 
 		resp.Data = model.OrderBook{
@@ -379,7 +379,7 @@ func (c *Client) OrderBook(ctx context.Context, symbol string, market model.Mark
 
 	var ob mexcSpotOrderBook
 	if err := json.Unmarshal(data, &ob); err != nil {
-		return resp, err
+		return resp, providerErr(model.ErrKindParse, "failed to parse spot order book response", err)
 	}
 
 	resp.Data = model.OrderBook{

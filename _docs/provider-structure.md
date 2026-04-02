@@ -185,6 +185,7 @@ A provider lives in `provider/<name>/`. Follow this file-per-concern convention:
 ```
 provider/<name>/
 ├── client.go          — Client struct, NewClient(), ID(), SetUserAgent(), Capabilities(), doRequest()
+├── errors.go          — providerErr, httpErr, apiErr, httpStatusToKind, apiCodeToKind helpers
 ├── types.go           — provider-specific JSON structs (internal; never exported to model)
 ├── market.go          — PriceProvider, CandleProvider, TickerProvider, OrderBookProvider methods
 ├── exchange.go        — (optional) ExchangeProvider methods (ServerTime, ExchangeInfo)
@@ -193,12 +194,13 @@ provider/<name>/
 
 Additional files (`auth.go`, `trading.go`, etc.) are fine. Keep `client.go` focused on
 construction, identity, and capabilities; keep API logic in `market.go` / `exchange.go`.
+Keep error construction helpers in `errors.go` — never use `fmt.Errorf` at provider boundaries.
 
 ---
 
 ## Step-by-Step: Adding a New Provider
 
-### 1. Config — `pkg/config/config.go`
+### 1. Config — `config/config.go`
 
 Add a config struct with `mapstructure` tags. Include `Spot`/`Futures`/`Margin` sub-structs
 as needed, with `IsXxxEnabled()` helpers:
@@ -277,7 +279,8 @@ func (c *Client) Capabilities() capability.CapabilityMatrix {
 }
 ```
 
-Add a `doRequest` helper for all HTTP calls:
+Add a `doRequest` helper for all HTTP calls. It must check the HTTP status code and wrap
+every error path with a typed helper from `errors.go`:
 
 ```go
 func (c *Client) doRequest(ctx context.Context, path, query string) ([]byte, error) {
@@ -287,7 +290,7 @@ func (c *Client) doRequest(ctx context.Context, path, query string) ([]byte, err
     }
     req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
     if err != nil {
-        return nil, err
+        return nil, providerErr(model.ErrKindUnknown, "build request: "+err.Error(), err)
     }
     req.Header.Set("Content-Type", "application/json")
     if c.userAgent != "" {
@@ -296,14 +299,94 @@ func (c *Client) doRequest(ctx context.Context, path, query string) ([]byte, err
     // add auth headers here if needed (see internal/auth/signature.go for HMAC helpers)
     resp, err := c.httpClient.Do(req)
     if err != nil {
-        return nil, err
+        if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+            return nil, providerErr(model.ErrKindCanceled, err.Error(), err)
+        }
+        return nil, providerErr(model.ErrKindNetwork, err.Error(), err)
     }
     defer resp.Body.Close()
-    return io.ReadAll(resp.Body)
+    body, err := io.ReadAll(resp.Body)
+    if err != nil {
+        return nil, providerErr(model.ErrKindNetwork, "read response: "+err.Error(), err)
+    }
+    if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+        return nil, httpErr(resp.StatusCode, string(body))
+    }
+    return body, nil
 }
 ```
 
-### 3. `types.go` — internal JSON shapes
+### 3. `errors.go` — error construction helpers
+
+Every provider package must have an `errors.go` with unexported helpers that construct
+`*model.ProviderError` values. Never use `fmt.Errorf` at provider boundaries.
+
+```go
+package myexchange
+
+import "github.com/mdnmdn/bits/model"
+
+func providerErr(kind model.ErrorKind, msg string, cause error) *model.ProviderError {
+    return &model.ProviderError{
+        Kind:            kind,
+        ProviderID:      providerID,
+        ProviderMessage: msg,
+        Cause:           cause,
+    }
+}
+
+func httpErr(status int, body string) *model.ProviderError {
+    return &model.ProviderError{
+        Kind:            httpStatusToKind(status),
+        ProviderID:      providerID,
+        ProviderMessage: body,
+        HTTPStatus:      status,
+    }
+}
+
+// apiErr maps the provider's native error code to a ProviderError.
+// Adjust the signature to match the provider's envelope: string code, int code, etc.
+func apiErr(code, msg string) *model.ProviderError {
+    return &model.ProviderError{
+        Kind:            apiCodeToKind(code),
+        ProviderID:      providerID,
+        ProviderCode:    code,
+        ProviderMessage: msg,
+    }
+}
+
+func httpStatusToKind(status int) model.ErrorKind {
+    switch {
+    case status == 401 || status == 403:
+        return model.ErrKindAuth
+    case status == 404:
+        return model.ErrKindNotFound
+    case status == 429:
+        return model.ErrKindRateLimit
+    case status == 400:
+        return model.ErrKindInvalidRequest
+    case status >= 500:
+        return model.ErrKindServerError
+    default:
+        return model.ErrKindUnknown
+    }
+}
+
+func apiCodeToKind(code string) model.ErrorKind {
+    switch code {
+    case "40001", "40003": // auth errors — adjust per provider
+        return model.ErrKindAuth
+    default:
+        return model.ErrKindUnknown
+    }
+}
+```
+
+Only define `apiErr` / `apiCodeToKind` if the provider returns structured error codes in the
+response body (Bitget, Crypto.com, WhiteBit). HTTP-only providers (MEXC, CoinGecko) need only
+`providerErr`, `httpErr`, and `httpStatusToKind`.
+
+### 4. `types.go` — internal JSON shapes
 
 Define private structs for deserialising the exchange's API responses. Never expose them
 outside the package; convert to `model.*` types in `market.go`.
@@ -322,27 +405,56 @@ type myexchangeTickerData struct {
 }
 ```
 
-### 4. `market.go` — implement capability interfaces
+### 5. `market.go` — implement capability interfaces
 
 All methods return `model.Response[T]` with `Provider`, `Market`, and `Kind` populated.
 Collect per-symbol failures in `[]model.ItemError` rather than returning a top-level error.
+All error values must be `*model.ProviderError` — use the helpers from `errors.go`.
 
 ```go
 func (c *Client) Price(ctx context.Context, ids []string, currency string) (model.Response[[]model.CoinPrice], error) {
-    // call API, parse response, map to []model.CoinPrice
+    prices := make([]model.CoinPrice, 0, len(ids))
+    var errs []model.ItemError
+
+    for _, id := range ids {
+        data, err := c.fetchTicker(id) // doRequest + JSON decode inside
+        if err != nil {
+            // WrapError preserves *ProviderError as-is; wraps plain errors as ErrKindUnknown.
+            errs = append(errs, model.ItemError{Symbol: id, Err: model.WrapError(providerID, err)})
+            continue
+        }
+        prices = append(prices, convertPrice(data))
+    }
+
     return model.Response[[]model.CoinPrice]{
         Kind:     model.KindPrice,
         Data:     prices,
         Provider: providerID,
         Market:   model.MarketSpot,
+        Errors:   errs,
     }, nil
 }
 
 func (c *Client) Ticker24h(ctx context.Context, symbol string, market model.MarketType) (model.Response[model.Ticker24h], error) {
-    // …
+    body, err := c.doRequest(ctx, "ticker", "symbol="+symbol)
+    if err != nil {
+        // Total failure — return as the method error, not in Errors slice.
+        return model.Response[model.Ticker24h]{}, err
+    }
+    var envelope struct {
+        Code string          `json:"code"`
+        Msg  string          `json:"msg"`
+        Data myexchangeTicker `json:"data"`
+    }
+    if err := json.Unmarshal(body, &envelope); err != nil {
+        return model.Response[model.Ticker24h]{}, providerErr(model.ErrKindParse, err.Error(), err)
+    }
+    if envelope.Code != "0" {
+        return model.Response[model.Ticker24h]{}, apiErr(envelope.Code, envelope.Msg)
+    }
     return model.Response[model.Ticker24h]{
         Kind:     model.KindTicker,
-        Data:     ticker,
+        Data:     convertTicker(envelope.Data, market),
         Provider: providerID,
         Market:   market,
     }, nil
@@ -356,11 +468,13 @@ Rules for all methods:
 - Use `strconv.ParseFloat(s, 64)` for string-encoded numbers
 - Use `time.UnixMilli(ms)` for millisecond timestamps
 - Map standard intervals (`1m`, `5m`, `1h`, `4h`, `1d`) to the provider's format in `Candles`
+- Total call failures → return as `error`; per-symbol failures → append to `Response.Errors`
+- Never use `fmt.Errorf` — always use `providerErr`, `httpErr`, `apiErr`, or `model.WrapError`
 
 Implement only the interfaces the exchange actually supports. Commands check at runtime via
 `resolve.Require[T]`; unsupported interfaces cause a clean error or fallback.
 
-### 5. `exchange.go` — ExchangeProvider (optional)
+### 6. `exchange.go` — ExchangeProvider (optional)
 
 Implement if the exchange supports `bits time` and `bits info`:
 
@@ -383,7 +497,7 @@ func (c *Client) ExchangeInfo(ctx context.Context, market model.MarketType) (mod
 }
 ```
 
-### 6. `stream.go` — streaming (optional)
+### 7. `stream.go` — streaming (optional)
 
 Use `ws.BaseClient` from `internal/ws/base_client.go`. Implement `OnConnect` (subscriptions)
 and `OnMessage` (parsing), then push results onto a channel.
@@ -448,7 +562,7 @@ func (c *Client) WatchOrderBook(ctx context.Context, symbol string, market model
 > **Always use `ws.BaseClient` for new providers.** `ws.Client` is CoinGecko-specific.
 > Implement protocol handshakes in `OnConnect` — it is re-called on every reconnect.
 
-### 7. Register the provider — `provider/registry/registry.go`
+### 8. Register the provider — `provider/registry/registry.go`
 
 Add a case to `NewProvider`, and the provider ID to `AllProviderIDs` and `AllProviderIDsWithAliases`.
 Also add any short aliases to the `providerAliases` map:
@@ -483,7 +597,7 @@ func AllProviderIDsWithAliases() []string {
 }
 ```
 
-### 8. Documentation
+### 9. Documentation
 
 - Create `_docs/providers/myexchange-api.md` — capabilities table, API notes, auth details, config examples, usage examples
 - Update `_docs/architecture.md` — add a row to the provider capabilities table
@@ -585,13 +699,16 @@ go run . book BTC_USDT -p myexchange
 | ExchangeInfo returns all symbols | Filter by product type / status in the loop |
 | `bits time -p myexchange` falls back | Implement `ExchangeProvider` and register `FeatureServerTime` |
 | Import cycle | Never import registry from a provider package; only registry imports providers |
+| Linter: `func httpErr is unused` | Remove helpers not called anywhere — only define what is actually used |
+| HTTP 500 silently parsed as success | Check `resp.StatusCode` in `doRequest` and return `httpErr(status, body)` |
+| `ItemError.Err` compile error | `Err` field is `*model.ProviderError`, not `error` — use `model.WrapError` to adapt |
 
 ---
 
 ## File Checklist
 
 ```
-□ pkg/config/config.go
+□ config/config.go
   □ MyExchangeConfig struct (APIKey, APISecret, BaseURL, Spot/Futures MarketConfig)
   □ IsSpotEnabled() / IsFuturesEnabled() helpers
   □ Add MyExchange to top-level Config struct
@@ -601,9 +718,10 @@ go run . book BTC_USDT -p myexchange
   □ ConfigTemplate — add commented [myexchange] section
 
 □ provider/myexchange/
-  □ client.go     — Client struct, NewClient, defaultBaseURL, ID, SetUserAgent, Capabilities, doRequest
+  □ client.go     — Client struct, NewClient, defaultBaseURL, ID, SetUserAgent, Capabilities, doRequest (with HTTP status check)
+  □ errors.go     — providerErr, httpErr, httpStatusToKind; add apiErr/apiCodeToKind if provider has structured error codes
   □ types.go      — private JSON response structs (prefixed names, string fields for quoted numbers)
-  □ market.go     — Price / Ticker24h / Candles / OrderBook (set Kind, Provider, Market on every Response)
+  □ market.go     — Price / Ticker24h / Candles / OrderBook (set Kind, Provider, Market on every Response; use error helpers, not fmt.Errorf)
   □ exchange.go   — (optional) ServerTime (with Latency) + ExchangeInfo (with SymbolStatus mapping)
   □ stream.go     — (optional) WatchPrices / WatchOrderBook via ws.NewBaseClient
   □ client_test.go — httptest mocks for each capability method

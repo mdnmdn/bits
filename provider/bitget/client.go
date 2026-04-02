@@ -146,13 +146,19 @@ func (c *Client) doRequest(method, path, query string) ([]byte, error) {
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("request failed: %w", err)
+		err = wrapContextError(err)
+		err = wrapNetError(err)
+		return nil, err
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response: %w", err)
+	}
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, httpErr(resp.StatusCode, string(body))
 	}
 
 	return body, nil

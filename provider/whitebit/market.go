@@ -53,10 +53,10 @@ func (c *Client) fetchTicker(symbol string) (*whitebitTicker, error) {
 	}
 	var resp whitebitV1TickerResponse
 	if err := json.Unmarshal(body, &resp); err != nil {
-		return nil, fmt.Errorf("failed to parse ticker response: %w", err)
+		return nil, providerErr(model.ErrKindParse, "failed to parse ticker response", err)
 	}
 	if !resp.Success {
-		return nil, fmt.Errorf("ticker not found for symbol %s", symbol)
+		return nil, apiErr("ticker not found for symbol " + symbol)
 	}
 	return &resp.Result, nil
 }
@@ -78,7 +78,8 @@ func (c *Client) Price(ctx context.Context, ids []string, currency string) (mode
 	for _, symbol := range ids {
 		ticker, err := c.fetchTicker(symbol)
 		if err != nil {
-			itemErrors = append(itemErrors, model.ItemError{Symbol: symbol, Err: err})
+			wrappedErr := model.WrapError(providerID, err)
+			itemErrors = append(itemErrors, model.ItemError{Symbol: symbol, Err: wrappedErr})
 			continue
 		}
 		price, _ := strconv.ParseFloat(ticker.Last, 64)
@@ -109,7 +110,7 @@ func (c *Client) Ticker24h(ctx context.Context, symbol string, market model.Mark
 
 	ticker, err := c.fetchTicker(symbol)
 	if err != nil {
-		return model.Response[model.Ticker24h]{}, err
+		return model.Response[model.Ticker24h]{}, model.WrapError(providerID, err)
 	}
 
 	lastPrice, _ := strconv.ParseFloat(ticker.Last, 64)
@@ -168,17 +169,17 @@ func (c *Client) Candles(_ context.Context, symbol string, market model.MarketTy
 
 	var resp whitebitCandleResponse
 	if err := json.Unmarshal(body, &resp); err != nil {
-		return model.Response[[]model.Candle]{}, fmt.Errorf("failed to parse candles response: %w", err)
+		return model.Response[[]model.Candle]{}, providerErr(model.ErrKindParse, "failed to parse candles response", err)
 	}
 
 	if !resp.Success {
-		return model.Response[[]model.Candle]{}, fmt.Errorf("API returned success=false")
+		return model.Response[[]model.Candle]{}, apiErr("API returned success=false")
 	}
 
 	candles := make([]model.Candle, 0, len(resp.Result))
 	for i, row := range resp.Result {
 		if len(row) < 5 {
-			return model.Response[[]model.Candle]{}, fmt.Errorf("invalid candle data at index %d: expected at least 5 fields, got %d", i, len(row))
+			return model.Response[[]model.Candle]{}, providerErr(model.ErrKindParse, fmt.Sprintf("invalid candle data at index %d: expected at least 5 fields, got %d", i, len(row)), nil)
 		}
 
 		// Column order: [ts, open, close, high, low, vol, amount]
@@ -226,7 +227,7 @@ func (c *Client) OrderBook(_ context.Context, symbol string, market model.Market
 
 	var resp whitebitOrderBookResponse
 	if err := json.Unmarshal(body, &resp); err != nil {
-		return model.Response[model.OrderBook]{}, fmt.Errorf("failed to parse orderbook response: %w", err)
+		return model.Response[model.OrderBook]{}, providerErr(model.ErrKindParse, "failed to parse orderbook response", err)
 	}
 
 	parseEntries := func(raw [][]string) []model.OrderBookEntry {
@@ -288,7 +289,7 @@ func (c *Client) futuresTicker24h(ctx context.Context, symbol string, market mod
 		} `json:"result"`
 	}
 	if err := json.Unmarshal(body, &resp); err != nil {
-		return model.Response[model.Ticker24h]{}, fmt.Errorf("failed to parse futures ticker: %w", err)
+		return model.Response[model.Ticker24h]{}, providerErr(model.ErrKindParse, "failed to parse futures ticker", err)
 	}
 
 	for _, t := range resp.Result {
@@ -320,7 +321,7 @@ func (c *Client) futuresTicker24h(ctx context.Context, symbol string, market mod
 		}
 	}
 
-	return model.Response[model.Ticker24h]{}, fmt.Errorf("ticker not found for symbol %s", symbol)
+	return model.Response[model.Ticker24h]{}, apiErr("ticker not found for symbol " + symbol)
 }
 
 func convertInterval(interval string) string {

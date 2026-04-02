@@ -2,7 +2,6 @@ package mexc
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"net/http"
 	"sync"
@@ -138,7 +137,7 @@ func (c *Client) doRequest(ctx context.Context, market model.MarketType, path st
 
 	req, err := http.NewRequestWithContext(ctx, "GET", fullURL, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
+		return nil, classifyError(err)
 	}
 
 	req.Header.Set("Content-Type", "application/json")
@@ -153,17 +152,17 @@ func (c *Client) doRequest(ctx context.Context, market model.MarketType, path st
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("request failed: %w", err)
+		return nil, classifyError(err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read response: %w", err)
+		return nil, classifyError(err)
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("API request failed with status %d: %s", resp.StatusCode, string(body))
+		return nil, httpErr(resp.StatusCode, string(body))
 	}
 
 	return body, nil

@@ -1,7 +1,6 @@
 package whitebit
 
 import (
-	"fmt"
 	"io"
 	"net/http"
 	"sync"
@@ -107,7 +106,13 @@ func (c *Client) doRequest(path string) ([]byte, error) {
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
+		if isContextError(err) {
+			return nil, contextErr(err)
+		}
+		if isNetworkError(err) {
+			return nil, networkErr(err)
+		}
+		return nil, providerErr(model.ErrKindUnknown, "failed to create request", err)
 	}
 
 	req.Header.Set("Content-Type", "application/json")
@@ -118,13 +123,27 @@ func (c *Client) doRequest(path string) ([]byte, error) {
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("request failed: %w", err)
+		if isContextError(err) {
+			return nil, contextErr(err)
+		}
+		if isNetworkError(err) {
+			return nil, networkErr(err)
+		}
+		return nil, providerErr(model.ErrKindNetwork, "request failed", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read response: %w", err)
+		if isContextError(err) {
+			return nil, contextErr(err)
+		}
+		return nil, providerErr(model.ErrKindParse, "failed to read response", err)
+	}
+
+	// Check HTTP status code
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, httpErr(resp.StatusCode, string(body))
 	}
 
 	return body, nil

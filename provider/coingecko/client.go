@@ -3,7 +3,6 @@ package coingecko
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"sync"
@@ -60,14 +59,16 @@ func (c *Client) Capabilities() capability.CapabilityMatrix {
 // get makes an authenticated GET request and decodes the JSON response.
 func (c *Client) get(ctx context.Context, path string, result any) error {
 	if c.cfg.CoinGecko.APIKey == "" {
-		return fmt.Errorf("CoinGecko API key not configured — set coingecko.api_key in config or BITS_COINGECKO_API_KEY env var (free demo key at coingecko.com/api)")
+		return providerErr(model.ErrKindInvalidRequest,
+			"CoinGecko API key not configured — set coingecko.api_key in config or BITS_COINGECKO_API_KEY env var (free demo key at coingecko.com/api)",
+			nil)
 	}
 
 	url := c.cfg.CoinGecko.GetBaseURL() + path
 
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
-		return fmt.Errorf("creating request: %w", err)
+		return providerErr(model.ErrKindUnknown, "creating request", err)
 	}
 
 	key, val := c.cfg.CoinGecko.GetAuthHeader()
@@ -77,14 +78,26 @@ func (c *Client) get(ctx context.Context, path string, result any) error {
 
 	resp, err := c.http.Do(req)
 	if err != nil {
-		return err
+		// Check for context errors first
+		if cerr := contextErr(err); cerr != nil {
+			return cerr
+		}
+		// Check for network errors
+		if isNetworkErr(err) {
+			return providerErr(model.ErrKindNetwork, "network error", err)
+		}
+		// Generic unknown error
+		return providerErr(model.ErrKindUnknown, "HTTP request failed", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
-		return fmt.Errorf("API error %d: %s", resp.StatusCode, string(body))
+		return httpErr(resp.StatusCode, string(body))
 	}
 
-	return json.NewDecoder(resp.Body).Decode(result)
+	if err := json.NewDecoder(resp.Body).Decode(result); err != nil {
+		return providerErr(model.ErrKindParse, "decoding JSON response", err)
+	}
+	return nil
 }

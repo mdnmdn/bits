@@ -22,11 +22,11 @@ func (c *Client) ServerTime(ctx context.Context) (model.Response[model.ServerTim
 	} else if c.futuresClient != nil {
 		ms, err = c.futuresClient.NewServerTimeService().Do(ctx)
 	} else {
-		return model.Response[model.ServerTime]{}, fmt.Errorf("binance: no client configured")
+		return model.Response[model.ServerTime]{}, providerErr(model.ErrKindUnsupportedMarket, "no client configured", nil)
 	}
 
 	if err != nil {
-		return model.Response[model.ServerTime]{}, fmt.Errorf("binance: server time: %w", err)
+		return model.Response[model.ServerTime]{}, model.WrapError(providerID, err)
 	}
 
 	t := time.UnixMilli(ms)
@@ -44,11 +44,11 @@ func (c *Client) ExchangeInfo(ctx context.Context, market model.MarketType) (mod
 	switch market {
 	case model.MarketFutures:
 		if c.futuresClient == nil {
-			return model.Response[model.ExchangeInfo]{}, fmt.Errorf("binance: futures client not configured")
+			return model.Response[model.ExchangeInfo]{}, providerErr(model.ErrKindUnsupportedMarket, "futures client not configured", nil)
 		}
 		info, err := c.futuresClient.NewExchangeInfoService().Do(ctx)
 		if err != nil {
-			return model.Response[model.ExchangeInfo]{}, fmt.Errorf("binance: exchange info (futures): %w", err)
+			return model.Response[model.ExchangeInfo]{}, model.WrapError(providerID, err)
 		}
 		makerFee, takerFee := c.getFeeConfig(market)
 		symbols := make([]model.Symbol, 0, len(info.Symbols))
@@ -68,11 +68,11 @@ func (c *Client) ExchangeInfo(ctx context.Context, market model.MarketType) (mod
 
 	default: // spot or margin use spotClient
 		if c.spotClient == nil {
-			return model.Response[model.ExchangeInfo]{}, fmt.Errorf("binance: spot client not configured")
+			return model.Response[model.ExchangeInfo]{}, providerErr(model.ErrKindUnsupportedMarket, "spot client not configured", nil)
 		}
 		info, err := c.spotClient.NewExchangeInfoService().Do(ctx)
 		if err != nil {
-			return model.Response[model.ExchangeInfo]{}, fmt.Errorf("binance: exchange info (spot): %w", err)
+			return model.Response[model.ExchangeInfo]{}, model.WrapError(providerID, err)
 		}
 		makerFee, takerFee := c.getFeeConfig(market)
 		symbols := make([]model.Symbol, 0, len(info.Symbols))

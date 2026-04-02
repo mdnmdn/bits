@@ -85,7 +85,7 @@ func (c *Client) Price(ctx context.Context, ids []string, currency string) (mode
 		// For Bitget, we'll try spot first.
 		entry, err := c.fetchTicker(symbol, model.MarketSpot)
 		if err != nil {
-			itemErrors = append(itemErrors, model.ItemError{Symbol: symbol, Err: err})
+			itemErrors = append(itemErrors, model.ItemError{Symbol: symbol, Err: model.WrapError(providerID, err)})
 			continue
 		}
 
@@ -156,7 +156,7 @@ func (c *Client) Candles(_ context.Context, symbol string, market model.MarketTy
 		return model.Response[[]model.Candle]{}, fmt.Errorf("failed to parse candles response: %w", err)
 	}
 	if resp.Code != "00000" {
-		return model.Response[[]model.Candle]{}, fmt.Errorf("API error: %s", resp.Msg)
+		return model.Response[[]model.Candle]{}, apiErr(resp.Code, resp.Msg)
 	}
 
 	candles := make([]model.Candle, 0, len(resp.Data))
@@ -218,7 +218,7 @@ func (c *Client) OrderBook(_ context.Context, symbol string, market model.Market
 		return model.Response[model.OrderBook]{}, fmt.Errorf("failed to parse orderbook response: %w", err)
 	}
 	if resp.Code != "00000" {
-		return model.Response[model.OrderBook]{}, fmt.Errorf("API error: %s", resp.Msg)
+		return model.Response[model.OrderBook]{}, apiErr(resp.Code, resp.Msg)
 	}
 
 	parseEntries := func(raw [][]string) []model.OrderBookEntry {
@@ -341,7 +341,7 @@ func (c *Client) fetchTicker(symbol string, market model.MarketType) (*bitgetTic
 		return nil, fmt.Errorf("failed to parse ticker response: %w", err)
 	}
 	if resp.Code != "00000" {
-		return nil, fmt.Errorf("API error: %s", resp.Msg)
+		return nil, apiErr(resp.Code, resp.Msg)
 	}
 	if len(resp.Data) == 0 {
 		return nil, fmt.Errorf("no ticker data returned for symbol %s", symbol)
@@ -387,7 +387,7 @@ func (c *Client) fetchMarginTicker(symbol string) (*bitgetTickerEntry, error) {
 		return nil, fmt.Errorf("failed to parse margin ticker response: %w", err)
 	}
 	if resp.Code != "00000" {
-		return nil, fmt.Errorf("API error: %s", resp.Msg)
+		return nil, apiErr(resp.Code, resp.Msg)
 	}
 	if len(resp.Data) == 0 {
 		return nil, fmt.Errorf("no margin ticker data returned for symbol %s", symbol)

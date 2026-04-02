@@ -54,6 +54,12 @@ type Response[T any] struct {
     RequestedMarket   MarketType   // populated only when Fallback is true
     Errors            []ItemError  // partial failures in batch/multi-symbol calls
 }
+
+// ItemError pairs a symbol with its typed error.
+type ItemError struct {
+    Symbol string
+    Err    *ProviderError
+}
 ```
 
 Renderers use provenance to display footnotes (table), top-level keys (JSON/YAML), or annotations (markdown).
@@ -63,6 +69,8 @@ Renderers use provenance to display footnotes (table), top-level keys (JSON/YAML
 All providers return types from `model/`. Key types:
 
 - `Response[T]` — generic envelope with provenance fields
+- `ItemError` — per-symbol failure: `Symbol string` + `Err *ProviderError`
+- `ProviderError` — typed cross-provider error (see Error Handling section below)
 - `MarketType` — type alias for `capability.MarketType` (`"spot"` | `"futures"` | `"margin"`)
 - `ServerTime` — exchange server timestamp with optional latency/skew fields
 - `ExchangeInfo` / `Symbol` — exchange symbol catalogue
@@ -71,9 +79,96 @@ All providers return types from `model/`. Key types:
 - `OrderBook` / `OrderBookEntry` — order book depth snapshot
 - `CoinPrice` — current price (aggregators use coin IDs; exchanges use symbols)
 - `CoinMarket` / `MarketOpts` — ranked coin listing with market metadata
-- `ErrUnsupportedMarket`, `ErrUnsupportedFeature` — typed errors
 
 Optional values use pointer types (`*float64`, `*time.Time`, `*int`). Provider-specific data is preserved in `Extra map[string]any`.
+
+## Error Handling
+
+All errors that cross a provider boundary are `*model.ProviderError`. This type normalises
+heterogeneous provider errors (HTTP status codes, API envelope codes, network failures) into a
+single inspectable value without losing raw provider detail.
+
+### `ErrorKind` — normalised category
+
+```go
+type ErrorKind int
+
+const (
+    ErrKindUnknown           ErrorKind = iota // unclassified
+    ErrKindAuth                               // 401 / 403 / invalid API key
+    ErrKindRateLimit                          // 429 / quota exceeded
+    ErrKindNotFound                           // 404 / symbol not found
+    ErrKindInvalidRequest                     // 400 / bad parameters
+    ErrKindServerError                        // 5xx / provider-side transient failure
+    ErrKindNetwork                            // connection refused, DNS failure
+    ErrKindCanceled                           // context.Canceled / DeadlineExceeded
+    ErrKindParse                              // unexpected response shape
+    ErrKindUnsupportedMarket                  // market type not supported by this provider
+    ErrKindUnsupportedFeature                 // feature not supported by this provider
+)
+
+func (k ErrorKind) Retryable() bool  // true for RateLimit, ServerError, Network
+```
+
+### `ProviderError` — the error type
+
+```go
+type ProviderError struct {
+    Kind            ErrorKind // normalised category
+    ProviderID      string    // "binance", "bitget", … empty for resolution-layer errors
+    ProviderCode    string    // provider's native error code ("00000", "40001", …)
+    ProviderMessage string    // provider's native message text
+    HTTPStatus      int       // 0 when not an HTTP error
+    Cause           error     // underlying cause (net error, json error, …)
+}
+```
+
+`ProviderError` implements `Unwrap()` and `Is()` so standard `errors.As` / `errors.Is` chains
+work correctly. The sentinel vars `ErrUnsupportedMarket` and `ErrUnsupportedFeature` are
+`*ProviderError` values and match via `Kind` comparison.
+
+### Caller usage
+
+```go
+res, err := client.Price(ctx, []string{"BTCUSDT"}, "")
+if err != nil {
+    var pe *model.ProviderError
+    if errors.As(err, &pe) {
+        switch pe.Kind {
+        case model.ErrKindRateLimit:
+            // back off and retry
+        case model.ErrKindAuth:
+            // surface config problem to user
+        case model.ErrKindCanceled:
+            return // caller canceled — do not retry
+        }
+    }
+}
+
+// Partial failures in batch calls:
+for _, ie := range res.Errors {
+    if ie.Err.Kind == model.ErrKindNotFound {
+        // skip missing symbols gracefully
+    }
+}
+```
+
+### `WrapError` — migration shim
+
+`model.WrapError(providerID, err)` wraps any `error` as `*ProviderError{Kind: ErrKindUnknown}`.
+If the error is already a `*ProviderError` it is returned as-is. Use this at sites where a
+typed error is required but only a plain `error` is available (e.g. third-party library errors).
+
+### Provider responsibility
+
+- Providers **never** log errors — they return them.
+- Every `fmt.Errorf` at a provider boundary is a bug; use `providerErr` / `httpErr` / `apiErr`
+  helpers defined in each provider's `errors.go`.
+- HTTP status codes are checked on every response; non-2xx is returned as `httpErr(status, body)`.
+- API-envelope failures (`code != "00000"`, `!success`, etc.) are returned as `apiErr(code, msg)`.
+- Network and context errors are wrapped with the appropriate `ErrKindNetwork` / `ErrKindCanceled`.
+
+See `_docs/error-handling.md` for the full reference.
 
 ## Library API (`bits/`)
 
