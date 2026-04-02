@@ -41,6 +41,7 @@ bits/
 │   ├── stream.go             # stream commands
 │   └── providers.go          # providers, capabilities commands
 ├── cmd/bits/main.go            # CLI entry point
+├── cmd/test-providers/main.go  # Integration test / diagnostic tool
 ├── capability/                # Capability system
 ├── config/                    # Multi-provider config (YAML + Env + .env)
 ├── model/                     # Provider-agnostic data types
@@ -139,6 +140,26 @@ func runPrice(cmd *cobra.Command, args []string) error {
     return table.RenderPrices(w, res)
 }
 ```
+
+## Diagnostic Tool: test-providers
+
+`cmd/test-providers` exercises every capability across all providers and markets. Not part of the production CLI.
+
+**Two modes**: checklist (default) — validates responses against live Bitget reference values and outputs `ok / warn / error` per capability; raw — prints API responses in a chosen format.
+
+**Tested capabilities**: `server_time`, `exchange_info`, `price`, `candles`, `ticker_24h`, `order_book`, `markets_list`, `stream_price`, `stream_order_book`
+
+```sh
+go run ./cmd/test-providers                                          # all providers, all markets
+go run ./cmd/test-providers --provider binance --markets spot,futures
+go run ./cmd/test-providers --capabilities price,ticker_24h --symbols ETHUSDT
+go run ./cmd/test-providers --output dashboard                       # summary totals
+go run ./cmd/test-providers --checklist=false --output yaml          # raw mode
+```
+
+Key flags: `--provider`, `--markets`, `--symbols` (default `BTCUSDT`), `--capabilities`, `--stream-length` (default 3), `--output` (`json`/`yaml`/`markdown`/`toon`/`dashboard`), `--checklist`.
+
+Stream timeouts are usually symbol-engine mismatches (see `_docs/symbol-engine.md`), not provider failures. Current results are tracked in `_docs/wip/provider-backlog.md`.
 
 ## Adding a New Provider
 
