@@ -35,11 +35,12 @@ func (c *Client) Price(ctx context.Context, ids []string, currency string) (mode
 		change := vals[changeKey]
 
 		cp := model.CoinPrice{
-			ID:        id,
-			Symbol:    id,
-			Currency:  currency,
-			Price:     price,
-			Change24h: &change,
+			ID:             id,
+			Symbol:         strings.ToUpper(id),
+			OriginalSymbol: id,
+			Currency:       currency,
+			Price:          price,
+			Change24h:      &change,
 		}
 		prices = append(prices, cp)
 	}

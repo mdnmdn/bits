@@ -129,11 +129,12 @@ func (c *Client) getFeeConfig(market model.MarketType) (makerFee, takerFee float
 
 func convertSpotSymbol(s binance.Symbol, makerFee, takerFee float64) model.Symbol {
 	sym := model.Symbol{
-		Symbol:     s.Symbol,
-		BaseAsset:  s.BaseAsset,
-		QuoteAsset: s.QuoteAsset,
-		Status:     convertStatus(s.Status),
-		Market:     model.MarketSpot,
+		Symbol:           s.Symbol,
+		NormalizedSymbol: s.BaseAsset + "-" + s.QuoteAsset,
+		BaseAsset:        s.BaseAsset,
+		QuoteAsset:       s.QuoteAsset,
+		Status:           convertStatus(s.Status),
+		Market:           model.MarketSpot,
 	}
 	pp := s.QuotePrecision
 	sym.PricePrecision = &pp
@@ -170,11 +171,12 @@ func convertSpotSymbol(s binance.Symbol, makerFee, takerFee float64) model.Symbo
 
 func convertFuturesSymbol(s futures.Symbol, makerFee, takerFee float64) model.Symbol {
 	sym := model.Symbol{
-		Symbol:     s.Symbol,
-		BaseAsset:  s.BaseAsset,
-		QuoteAsset: s.QuoteAsset,
-		Status:     convertStatus(s.Status),
-		Market:     model.MarketFutures,
+		Symbol:           s.Symbol,
+		NormalizedSymbol: s.BaseAsset + "-" + s.QuoteAsset,
+		BaseAsset:        s.BaseAsset,
+		QuoteAsset:       s.QuoteAsset,
+		Status:           convertStatus(s.Status),
+		Market:           model.MarketFutures,
 	}
 	pp := s.PricePrecision
 	sym.PricePrecision = &pp

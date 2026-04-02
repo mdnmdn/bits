@@ -13,8 +13,9 @@ const (
 )
 
 type Symbol struct {
-	Symbol         string         `json:"sym"              yaml:"sym"              toon:"sym"`
-	BaseAsset      string         `json:"base"             yaml:"base"             toon:"base"`  // e.g. "BTC"
+	Symbol           string         `json:"sym"              yaml:"sym"              toon:"sym"`
+	NormalizedSymbol string         `json:"norm_sym,omitempty" yaml:"norm_sym,omitempty" toon:"norm_sym,omitempty"`
+	BaseAsset        string         `json:"base"             yaml:"base"             toon:"base"`  // e.g. "BTC"
 	QuoteAsset     string         `json:"quote"            yaml:"quote"            toon:"quote"` // e.g. "USDT"
 	Status         SymbolStatus   `json:"status"           yaml:"status"           toon:"status"`
 	Market         MarketType     `json:"mkt"              yaml:"mkt"              toon:"mkt"`

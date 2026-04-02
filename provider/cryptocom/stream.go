@@ -110,12 +110,13 @@ func (h *cryptocomHandler) handleTicker(result wsResult) (any, error) {
 		Provider: h.providerID,
 		Market:   model.MarketSpot,
 		Data: model.CoinPrice{
-			ID:        d.I,
-			Symbol:    d.I,
-			Price:     price,
-			BidPrice:  &bid,
-			AskPrice:  &ask,
-			Change24h: &changePct,
+			ID:             d.I,
+			Symbol:         model.NormalizeSymbol(d.I),
+			OriginalSymbol: d.I,
+			Price:          price,
+			BidPrice:       &bid,
+			AskPrice:       &ask,
+			Change24h:      &changePct,
 		},
 	}, nil
 }
@@ -153,11 +154,12 @@ func (h *cryptocomHandler) handleBook(result wsResult) (any, error) {
 		Provider: h.providerID,
 		Market:   model.MarketSpot,
 		Data: model.OrderBook{
-			Symbol: result.InstrumentName,
-			Market: model.MarketSpot,
-			Bids:   parseEntries(d.Bids),
-			Asks:   parseEntries(d.Asks),
-			Time:   ts,
+			Symbol:         model.NormalizeSymbol(result.InstrumentName),
+			OriginalSymbol: result.InstrumentName,
+			Market:         model.MarketSpot,
+			Bids:           parseEntries(d.Bids),
+			Asks:           parseEntries(d.Asks),
+			Time:           ts,
 		},
 	}, nil
 }

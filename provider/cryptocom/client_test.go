@@ -163,7 +163,8 @@ func TestTicker24h(t *testing.T) {
 	assertEqual(t, "provider", res.Provider, "cryptocom")
 	assertEqual(t, "market", string(res.Market), "spot")
 	assertEqual(t, "kind", res.Kind, model.KindTicker)
-	assertEqual(t, "symbol", res.Data.Symbol, "BTC_USDT")
+	assertEqual(t, "symbol", res.Data.Symbol, "BTC-USDT")
+	assertEqual(t, "original symbol", res.Data.OriginalSymbol, "BTC_USDT")
 	assertInDelta(t, "last price", res.Data.LastPrice, 68000.50, 0.01)
 
 	if res.Data.OpenPrice == nil {
@@ -238,7 +239,8 @@ func TestPrice_SingleSymbol(t *testing.T) {
 		t.Fatalf("expected 1 price entry, got %d", len(res.Data))
 	}
 	assertInDelta(t, "price", res.Data[0].Price, 68000.50, 0.01)
-	assertEqual(t, "symbol", res.Data[0].Symbol, "BTC_USDT")
+	assertEqual(t, "symbol", res.Data[0].Symbol, "BTC-USDT")
+	assertEqual(t, "original symbol", res.Data[0].OriginalSymbol, "BTC_USDT")
 	if res.Data[0].Change24h == nil {
 		t.Fatal("Change24h must not be nil")
 	}
@@ -294,7 +296,8 @@ func TestOrderBook(t *testing.T) {
 
 	assertEqual(t, "kind", res.Kind, model.KindOrderBook)
 	assertEqual(t, "provider", res.Provider, "cryptocom")
-	assertEqual(t, "symbol", res.Data.Symbol, "BTC_USDT")
+	assertEqual(t, "symbol", res.Data.Symbol, "BTC-USDT")
+	assertEqual(t, "original symbol", res.Data.OriginalSymbol, "BTC_USDT")
 	if len(res.Data.Bids) != 2 {
 		t.Fatalf("expected 2 bids, got %d", len(res.Data.Bids))
 	}

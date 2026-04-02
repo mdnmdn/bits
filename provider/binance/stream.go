@@ -50,10 +50,11 @@ func (h *binanceHandler) Handle(ctx context.Context, raw []byte) (any, error) {
 			Kind:     model.KindPrice,
 			Provider: h.providerID,
 			Data: model.CoinPrice{
-				ID:        data.Symbol,
-				Symbol:    data.Symbol,
-				Price:     price,
-				Change24h: &changePct,
+				ID:             data.Symbol,
+				Symbol:         model.NormalizeSymbol(data.Symbol),
+				OriginalSymbol: data.Symbol,
+				Price:          price,
+				Change24h:      &changePct,
 			},
 		}, nil
 	}
@@ -71,10 +72,11 @@ func (h *binanceHandler) Handle(ctx context.Context, raw []byte) (any, error) {
 			Kind:     model.KindOrderBook,
 			Provider: h.providerID,
 			Data: model.OrderBook{
-				Symbol:       sym,
-				LastUpdateID: &uid,
-				Bids:         parseStringPairs(data.Bids),
-				Asks:         parseStringPairs(data.Asks),
+				Symbol:         model.NormalizeSymbol(sym),
+				OriginalSymbol: sym,
+				LastUpdateID:   &uid,
+				Bids:           parseStringPairs(data.Bids),
+				Asks:           parseStringPairs(data.Asks),
 			},
 		}, nil
 	}

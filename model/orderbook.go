@@ -3,8 +3,9 @@ package model
 import "time"
 
 type OrderBook struct {
-	Symbol       string           `json:"sym"              yaml:"sym"              toon:"sym"`
-	Market       MarketType       `json:"mkt"              yaml:"mkt"              toon:"mkt"`
+	Symbol         string           `json:"sym"              yaml:"sym"              toon:"sym"`
+	OriginalSymbol string           `json:"orig_sym,omitempty" yaml:"orig_sym,omitempty" toon:"orig_sym,omitempty"`
+	Market         MarketType       `json:"mkt"              yaml:"mkt"              toon:"mkt"`
 	Bids         []OrderBookEntry `json:"bids"           yaml:"bids"             toon:"bids"`
 	Asks         []OrderBookEntry `json:"asks"           yaml:"asks"             toon:"asks"`
 	LastUpdateID *int64           `json:"uid,omitempty"    yaml:"uid,omitempty"    toon:"uid,omitempty"`

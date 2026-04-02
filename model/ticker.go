@@ -4,6 +4,7 @@ import "time"
 
 type Ticker24h struct {
 	Symbol             string         `json:"sym"               yaml:"sym"               toon:"sym"`
+	OriginalSymbol     string         `json:"orig_sym,omitempty" yaml:"orig_sym,omitempty" toon:"orig_sym,omitempty"`
 	Market             MarketType     `json:"mkt"               yaml:"mkt"               toon:"mkt"`
 	LastPrice          float64        `json:"last"              yaml:"last"              toon:"last"`
 	PriceChange        *float64       `json:"chg,omitempty"     yaml:"chg,omitempty"     toon:"chg,omitempty"`

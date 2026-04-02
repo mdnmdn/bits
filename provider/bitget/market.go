@@ -94,11 +94,12 @@ func (c *Client) Price(ctx context.Context, ids []string, currency string) (mode
 		changePct *= 100 // Convert ratio to percentage
 
 		prices = append(prices, model.CoinPrice{
-			ID:        symbol,
-			Symbol:    symbol,
-			Currency:  currency,
-			Price:     price,
-			Change24h: &changePct,
+			ID:               symbol,
+			Symbol:           model.NormalizeSymbol(symbol),
+			OriginalSymbol:   symbol,
+			Currency:         currency,
+			Price:            price,
+			Change24h:        &changePct,
 		})
 	}
 
@@ -242,11 +243,12 @@ func (c *Client) OrderBook(_ context.Context, symbol string, market model.Market
 	}
 
 	orderbook := model.OrderBook{
-		Symbol: symbol,
-		Market: market,
-		Bids:   parseEntries(resp.Data.Bids),
-		Asks:   parseEntries(resp.Data.Asks),
-		Time:   ts,
+		Symbol:         model.NormalizeSymbol(symbol),
+		OriginalSymbol: symbol,
+		Market:         market,
+		Bids:           parseEntries(resp.Data.Bids),
+		Asks:           parseEntries(resp.Data.Asks),
+		Time:           ts,
 	}
 
 	return model.Response[model.OrderBook]{
@@ -292,7 +294,8 @@ func (c *Client) Ticker24h(_ context.Context, symbol string, market model.Market
 	}
 
 	ticker := model.Ticker24h{
-		Symbol:             symbol,
+		Symbol:             model.NormalizeSymbol(symbol),
+		OriginalSymbol:     symbol,
 		Market:             market,
 		LastPrice:          lastPrice,
 		PriceChange:        &priceChange,

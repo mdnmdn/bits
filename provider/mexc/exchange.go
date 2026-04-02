@@ -64,15 +64,16 @@ func (c *Client) ExchangeInfo(ctx context.Context, market model.MarketType) (mod
 		for _, s := range infoResp.Data {
 			pp := s.PricePrecision
 			symbols = append(symbols, model.Symbol{
-				Symbol:         s.Symbol,
-				Status:         model.SymbolStatusTrading,
-				BaseAsset:      s.BaseCoin,
-				QuoteAsset:     s.QuoteCoin,
-				PricePrecision: &pp,
-				MinQty:         &s.VolUnit,
-				Market:         market,
-				MakerFee:       &makerFee,
-				TakerFee:       &takerFee,
+				Symbol:           s.Symbol,
+				NormalizedSymbol: s.BaseCoin + "-" + s.QuoteCoin,
+				Status:           model.SymbolStatusTrading,
+				BaseAsset:        s.BaseCoin,
+				QuoteAsset:       s.QuoteCoin,
+				PricePrecision:   &pp,
+				MinQty:           &s.VolUnit,
+				Market:           market,
+				MakerFee:         &makerFee,
+				TakerFee:         &takerFee,
 			})
 		}
 		resp.Data = model.ExchangeInfo{
@@ -109,15 +110,16 @@ func (c *Client) ExchangeInfo(ctx context.Context, market model.MarketType) (mod
 		}
 
 		symbols = append(symbols, model.Symbol{
-			Symbol:         s.Symbol,
-			Status:         status,
-			BaseAsset:      s.BaseAsset,
-			QuoteAsset:     s.QuoteAsset,
-			PricePrecision: &pp,
-			QtyPrecision:   &qp,
-			Market:         market,
-			MakerFee:       &makerFee,
-			TakerFee:       &takerFee,
+			Symbol:           s.Symbol,
+			NormalizedSymbol: s.BaseAsset + "-" + s.QuoteAsset,
+			Status:           status,
+			BaseAsset:        s.BaseAsset,
+			QuoteAsset:       s.QuoteAsset,
+			PricePrecision:   &pp,
+			QtyPrecision:     &qp,
+			Market:           market,
+			MakerFee:         &makerFee,
+			TakerFee:         &takerFee,
 		})
 	}
 

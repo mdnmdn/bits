@@ -167,16 +167,17 @@ func (c *Client) marginExchangeInfo(market model.MarketType) (model.Response[mod
 		takerFee, _ := strconv.ParseFloat(s.TakerFeeRate, 64)
 
 		symbols = append(symbols, model.Symbol{
-			Symbol:         s.Symbol,
-			BaseAsset:      s.BaseCoin,
-			QuoteAsset:     s.QuoteCoin,
-			Status:         status,
-			Market:         market,
-			PricePrecision: &pp,
-			QtyPrecision:   &qp,
-			MinPrice:       &minPrice,
-			MakerFee:       &makerFee,
-			TakerFee:       &takerFee,
+			Symbol:           s.Symbol,
+			NormalizedSymbol: s.BaseCoin + "-" + s.QuoteCoin,
+			BaseAsset:        s.BaseCoin,
+			QuoteAsset:       s.QuoteCoin,
+			Status:           status,
+			Market:           market,
+			PricePrecision:   &pp,
+			QtyPrecision:     &qp,
+			MinPrice:         &minPrice,
+			MakerFee:         &makerFee,
+			TakerFee:         &takerFee,
 		})
 	}
 
@@ -221,17 +222,18 @@ func (c *Client) spotExchangeInfo(market model.MarketType) (model.Response[model
 		makerFee, takerFee := getDefaultFees(feeRates)
 
 		symbols = append(symbols, model.Symbol{
-			Symbol:         s.Symbol,
-			BaseAsset:      s.BaseCoin,
-			QuoteAsset:     s.QuoteCoin,
-			Status:         convertSpotStatus(s.Status),
-			Market:         market,
-			PricePrecision: &pp,
-			QtyPrecision:   &qp,
-			MinQty:         &minQty,
-			MaxQty:         &maxQty,
-			MakerFee:       &makerFee,
-			TakerFee:       &takerFee,
+			Symbol:           s.Symbol,
+			NormalizedSymbol: s.BaseCoin + "-" + s.QuoteCoin,
+			BaseAsset:        s.BaseCoin,
+			QuoteAsset:       s.QuoteCoin,
+			Status:           convertSpotStatus(s.Status),
+			Market:           market,
+			PricePrecision:   &pp,
+			QtyPrecision:     &qp,
+			MinQty:           &minQty,
+			MaxQty:           &maxQty,
+			MakerFee:         &makerFee,
+			TakerFee:         &takerFee,
 		})
 	}
 
@@ -276,17 +278,18 @@ func (c *Client) futuresExchangeInfo(market model.MarketType) (model.Response[mo
 		maxQty, _ := strconv.ParseFloat(s.MaxOrderQty, 64)
 
 		symbols = append(symbols, model.Symbol{
-			Symbol:         s.Symbol,
-			BaseAsset:      s.BaseCoin,
-			QuoteAsset:     s.QuoteCoin,
-			Status:         convertFuturesStatus(s.ContractStatus),
-			Market:         market,
-			PricePrecision: &pp,
-			QtyPrecision:   &qp,
-			MinQty:         &minQty,
-			MaxQty:         &maxQty,
-			MakerFee:       &makerFee,
-			TakerFee:       &takerFee,
+			Symbol:           s.Symbol,
+			NormalizedSymbol: s.BaseCoin + "-" + s.QuoteCoin,
+			BaseAsset:        s.BaseCoin,
+			QuoteAsset:       s.QuoteCoin,
+			Status:           convertFuturesStatus(s.ContractStatus),
+			Market:           market,
+			PricePrecision:   &pp,
+			QtyPrecision:     &qp,
+			MinQty:           &minQty,
+			MaxQty:           &maxQty,
+			MakerFee:         &makerFee,
+			TakerFee:         &takerFee,
 		})
 	}
 

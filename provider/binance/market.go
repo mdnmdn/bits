@@ -73,9 +73,10 @@ func (c *Client) fetchPrice(ctx context.Context, sym string) (*model.CoinPrice, 
 
 	price, _ := strconv.ParseFloat(priceStr, 64)
 	cp := &model.CoinPrice{
-		ID:     sym,
-		Symbol: sym,
-		Price:  price,
+		ID:             sym,
+		Symbol:         model.NormalizeSymbol(sym),
+		OriginalSymbol: sym,
+		Price:          price,
 	}
 
 	if changePctStr != "" {
@@ -259,7 +260,8 @@ func convertSpotTicker(s *goBinance.PriceChangeStats, market model.MarketType) m
 	ct := time.UnixMilli(s.CloseTime)
 
 	return model.Ticker24h{
-		Symbol:             s.Symbol,
+		Symbol:             model.NormalizeSymbol(s.Symbol),
+		OriginalSymbol:     s.Symbol,
 		Market:             market,
 		LastPrice:          lastPrice,
 		PriceChange:        &priceChange,
@@ -291,7 +293,8 @@ func convertFuturesTicker(s *futures.PriceChangeStats, market model.MarketType) 
 	ct := time.UnixMilli(s.CloseTime)
 
 	return model.Ticker24h{
-		Symbol:             s.Symbol,
+		Symbol:             model.NormalizeSymbol(s.Symbol),
+		OriginalSymbol:     s.Symbol,
 		Market:             market,
 		LastPrice:          lastPrice,
 		PriceChange:        &priceChange,
@@ -325,11 +328,12 @@ func (c *Client) OrderBook(ctx context.Context, symbol string, market model.Mark
 		}
 		uid := d.LastUpdateID
 		ob := model.OrderBook{
-			Symbol:       sym,
-			Market:       market,
-			LastUpdateID: &uid,
-			Bids:         convertFuturesDepth(d.Bids),
-			Asks:         convertFuturesDepth(d.Asks),
+			Symbol:         model.NormalizeSymbol(sym),
+			OriginalSymbol: sym,
+			Market:         market,
+			LastUpdateID:   &uid,
+			Bids:           convertFuturesDepth(d.Bids),
+			Asks:           convertFuturesDepth(d.Asks),
 		}
 		return model.Response[model.OrderBook]{Kind: model.KindOrderBook, Provider: providerID, Market: market, Data: ob}, nil
 
@@ -343,11 +347,12 @@ func (c *Client) OrderBook(ctx context.Context, symbol string, market model.Mark
 		}
 		uid := d.LastUpdateID
 		ob := model.OrderBook{
-			Symbol:       sym,
-			Market:       market,
-			LastUpdateID: &uid,
-			Bids:         convertSpotDepth(d.Bids),
-			Asks:         convertSpotDepth(d.Asks),
+			Symbol:         model.NormalizeSymbol(sym),
+			OriginalSymbol: sym,
+			Market:         market,
+			LastUpdateID:   &uid,
+			Bids:           convertSpotDepth(d.Bids),
+			Asks:           convertSpotDepth(d.Asks),
 		}
 		return model.Response[model.OrderBook]{Kind: model.KindOrderBook, Provider: providerID, Market: market, Data: ob}, nil
 	}

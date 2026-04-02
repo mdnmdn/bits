@@ -77,8 +77,9 @@ func (c *Client) fetchPrice(ctx context.Context, symbol string, market model.Mar
 		}
 
 		return model.CoinPrice{
-			Symbol: tickerResp.Data.Symbol,
-			Price:  tickerResp.Data.LastPrice,
+			Symbol:         model.NormalizeSymbol(tickerResp.Data.Symbol),
+			OriginalSymbol: tickerResp.Data.Symbol,
+			Price:          tickerResp.Data.LastPrice,
 		}, nil
 	}
 
@@ -95,8 +96,9 @@ func (c *Client) fetchPrice(ctx context.Context, symbol string, market model.Mar
 
 	price, _ := strconv.ParseFloat(ticker.Price, 64)
 	return model.CoinPrice{
-		Symbol: ticker.Symbol,
-		Price:  price,
+		Symbol:         model.NormalizeSymbol(ticker.Symbol),
+		OriginalSymbol: ticker.Symbol,
+		Price:          price,
 	}, nil
 }
 
@@ -121,7 +123,8 @@ func (c *Client) Ticker24h(ctx context.Context, symbol string, market model.Mark
 
 		t := tickerResp.Data
 		resp.Data = model.Ticker24h{
-			Symbol:             t.Symbol,
+			Symbol:             model.NormalizeSymbol(t.Symbol),
+			OriginalSymbol:     t.Symbol,
 			Market:             market,
 			LastPrice:          t.LastPrice,
 			HighPrice:          &t.High24Price,
@@ -154,7 +157,8 @@ func (c *Client) Ticker24h(ctx context.Context, symbol string, market model.Mark
 	percent, _ := strconv.ParseFloat(t.PriceChangePercent, 64)
 
 	resp.Data = model.Ticker24h{
-		Symbol:             t.Symbol,
+		Symbol:             model.NormalizeSymbol(t.Symbol),
+		OriginalSymbol:     t.Symbol,
 		Market:             market,
 		LastPrice:          last,
 		HighPrice:          &high,
@@ -360,9 +364,10 @@ func (c *Client) OrderBook(ctx context.Context, symbol string, market model.Mark
 		}
 
 		resp.Data = model.OrderBook{
-			Symbol: symbol,
-			Bids:   parseFuturesOrders(obResp.Data.Bids),
-			Asks:   parseFuturesOrders(obResp.Data.Asks),
+			Symbol:         model.NormalizeSymbol(symbol),
+			OriginalSymbol: symbol,
+			Bids:           parseFuturesOrders(obResp.Data.Bids),
+			Asks:           parseFuturesOrders(obResp.Data.Asks),
 		}
 		return resp, nil
 	}
@@ -383,9 +388,10 @@ func (c *Client) OrderBook(ctx context.Context, symbol string, market model.Mark
 	}
 
 	resp.Data = model.OrderBook{
-		Symbol: symbol,
-		Bids:   parseSpotOrders(ob.Bids),
-		Asks:   parseSpotOrders(ob.Asks),
+		Symbol:         model.NormalizeSymbol(symbol),
+		OriginalSymbol: symbol,
+		Bids:           parseSpotOrders(ob.Bids),
+		Asks:           parseSpotOrders(ob.Asks),
 	}
 
 	return resp, nil

@@ -85,11 +85,12 @@ func (c *Client) Price(ctx context.Context, ids []string, currency string) (mode
 		price, _ := strconv.ParseFloat(ticker.Last, 64)
 		changePct, _ := strconv.ParseFloat(ticker.Change, 64)
 		prices = append(prices, model.CoinPrice{
-			ID:        symbol,
-			Symbol:    symbol,
-			Currency:  currency,
-			Price:     price,
-			Change24h: &changePct,
+			ID:             symbol,
+			Symbol:         model.NormalizeSymbol(symbol),
+			OriginalSymbol: symbol,
+			Currency:       currency,
+			Price:          price,
+			Change24h:      &changePct,
 		})
 	}
 
@@ -125,7 +126,8 @@ func (c *Client) Ticker24h(ctx context.Context, symbol string, market model.Mark
 	priceChange := lastPrice - openPrice
 
 	t24h := model.Ticker24h{
-		Symbol:             symbol,
+		Symbol:             model.NormalizeSymbol(symbol),
+		OriginalSymbol:     symbol,
 		Market:             market,
 		LastPrice:          lastPrice,
 		PriceChange:        &priceChange,
@@ -252,11 +254,12 @@ func (c *Client) OrderBook(_ context.Context, symbol string, market model.Market
 	}
 
 	orderbook := model.OrderBook{
-		Symbol: symbol,
-		Market: market,
-		Bids:   bids,
-		Asks:   asks,
-		Time:   ts,
+		Symbol:         model.NormalizeSymbol(symbol),
+		OriginalSymbol: symbol,
+		Market:         market,
+		Bids:           bids,
+		Asks:           asks,
+		Time:           ts,
 	}
 
 	return model.Response[model.OrderBook]{
@@ -307,15 +310,16 @@ func (c *Client) futuresTicker24h(ctx context.Context, symbol string, market mod
 				Provider: providerID,
 				Market:   market,
 				Data: model.Ticker24h{
-					Symbol:      symbol,
-					Market:      market,
-					LastPrice:   lastPrice,
-					HighPrice:   &highPrice,
-					LowPrice:    &lowPrice,
-					Volume:      &baseVol,
-					QuoteVolume: &quoteVol,
-					BidPrice:    &bidPrice,
-					AskPrice:    &askPrice,
+					Symbol:         model.NormalizeSymbol(symbol),
+					OriginalSymbol: symbol,
+					Market:         market,
+					LastPrice:      lastPrice,
+					HighPrice:      &highPrice,
+					LowPrice:       &lowPrice,
+					Volume:         &baseVol,
+					QuoteVolume:    &quoteVol,
+					BidPrice:       &bidPrice,
+					AskPrice:       &askPrice,
 				},
 			}, nil
 		}

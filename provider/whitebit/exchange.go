@@ -95,19 +95,20 @@ func (c *Client) ExchangeInfo(_ context.Context, market model.MarketType) (model
 		takerFee = takerFee / 100
 
 		symbols = append(symbols, model.Symbol{
-			Symbol:         m.Name,
-			BaseAsset:      m.Stock,
-			QuoteAsset:     m.Money,
-			Status:         status,
-			Market:         market,
-			QtyPrecision:   &qp,
-			PricePrecision: &pp,
-			MinQty:         &minQty,
-			MinPrice:       &minPrice,
-			MaxPrice:       &maxPrice,
-			MaxQty:         &maxQty,
-			MakerFee:       &makerFee,
-			TakerFee:       &takerFee,
+			Symbol:           m.Name,
+			NormalizedSymbol: m.Stock + "-" + m.Money,
+			BaseAsset:        m.Stock,
+			QuoteAsset:       m.Money,
+			Status:           status,
+			Market:           market,
+			QtyPrecision:     &qp,
+			PricePrecision:   &pp,
+			MinQty:           &minQty,
+			MinPrice:         &minPrice,
+			MaxPrice:         &maxPrice,
+			MaxQty:           &maxQty,
+			MakerFee:         &makerFee,
+			TakerFee:         &takerFee,
 		})
 	}
 
@@ -153,13 +154,14 @@ func (c *Client) futuresExchangeInfo(market model.MarketType) (model.Response[mo
 		}
 
 		symbols = append(symbols, model.Symbol{
-			Symbol:     m.TickerID,
-			BaseAsset:  m.StockCurrency,
-			QuoteAsset: m.MoneyCurrency,
-			Status:     model.SymbolStatusTrading,
-			Market:     market,
-			MinQty:     &minQty,
-			MaxQty:     &maxQty,
+			Symbol:           m.TickerID,
+			NormalizedSymbol: m.StockCurrency + "-" + m.MoneyCurrency,
+			BaseAsset:        m.StockCurrency,
+			QuoteAsset:       m.MoneyCurrency,
+			Status:           model.SymbolStatusTrading,
+			Market:           market,
+			MinQty:           &minQty,
+			MaxQty:           &maxQty,
 		})
 	}
 

@@ -96,17 +96,18 @@ func (c *Client) ExchangeInfo(_ context.Context, market model.MarketType) (model
 		minQty, _ := strconv.ParseFloat(inst.QtyTickSize, 64)
 
 		symbols = append(symbols, model.Symbol{
-			Symbol:         inst.Symbol,
-			BaseAsset:      inst.BaseCcy,
-			QuoteAsset:     inst.QuoteCcy,
-			Status:         status,
-			Market:         market,
-			PricePrecision: &pp,
-			QtyPrecision:   &qp,
-			MinPrice:       &minPrice,
-			MinQty:         &minQty,
-			MakerFee:       &makerFee,
-			TakerFee:       &takerFee,
+			Symbol:           inst.Symbol,
+			NormalizedSymbol: inst.BaseCcy + "-" + inst.QuoteCcy,
+			BaseAsset:        inst.BaseCcy,
+			QuoteAsset:       inst.QuoteCcy,
+			Status:           status,
+			Market:           market,
+			PricePrecision:   &pp,
+			QtyPrecision:     &qp,
+			MinPrice:         &minPrice,
+			MinQty:           &minQty,
+			MakerFee:         &makerFee,
+			TakerFee:         &takerFee,
 		})
 	}
 
