@@ -119,16 +119,17 @@ type wsResult struct {
 
 // wsTickerData is a single ticker update from the WebSocket "ticker" channel.
 // IMPORTANT: unlike the REST ticker where t = trade count, here t = timestamp (ms).
+// All numeric fields are returned as strings from the WebSocket API.
 type wsTickerData struct {
-	I string  `json:"i"` // instrument name
-	B float64 `json:"b"` // best bid price
-	K float64 `json:"k"` // best ask price
-	A float64 `json:"a"` // latest trade price
-	T int64   `json:"t"` // timestamp (ms)
-	V float64 `json:"v"` // volume 24h (base)
-	H float64 `json:"h"` // high 24h
-	L float64 `json:"l"` // low 24h
-	C float64 `json:"c"` // last / close price
+	I string `json:"i"` // instrument name
+	B string `json:"b"` // best bid price
+	K string `json:"k"` // best ask price
+	A string `json:"a"` // latest trade price
+	T int64  `json:"t"` // timestamp (ms)
+	V string `json:"v"` // volume 24h (base)
+	H string `json:"h"` // high 24h
+	L string `json:"l"` // low 24h
+	C string `json:"c"` // last / close price
 }
 
 // wsBookData is a single order book snapshot from the WebSocket "book" channel.

@@ -269,7 +269,11 @@ func (c *Client) StartPriceStream(ctx context.Context, ids []string) (<-chan *mo
 	if _, ok := psp.(*nullPriceStreamProvider); ok {
 		return nil, errNotImplemented
 	}
-	return psp.StartPriceStream(ctx, ids)
+	resolved := make([]string, len(ids))
+	for i, id := range ids {
+		resolved[i] = c.resolveSymbolIfNeeded(ctx, id, model.MarketSpot)
+	}
+	return psp.StartPriceStream(ctx, resolved)
 }
 
 // SubscribePrice adds new symbols to an existing price stream.
@@ -358,7 +362,11 @@ func (c *Client) StartOrderBookStream(ctx context.Context, symbols []string, mar
 	if _, ok := obsp.(*nullOrderBookStreamProvider); ok {
 		return nil, errNotImplemented
 	}
-	return obsp.StartOrderBookStream(ctx, symbols, market, depth)
+	resolved := make([]string, len(symbols))
+	for i, sym := range symbols {
+		resolved[i] = c.resolveSymbolIfNeeded(ctx, sym, market)
+	}
+	return obsp.StartOrderBookStream(ctx, resolved, market, depth)
 }
 
 // SubscribeOrderBook adds new symbols to an existing order book stream.

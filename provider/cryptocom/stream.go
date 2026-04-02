@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"time"
 
+	"github.com/mdnmdn/bits/internal/logger"
 	"github.com/mdnmdn/bits/internal/ws"
 	"github.com/mdnmdn/bits/model"
 	"github.com/mdnmdn/bits/provider"
@@ -40,10 +42,15 @@ func newCryptocomHandler(providerID, userAgent string) *cryptocomHandler {
 // Handle parses an incoming WebSocket frame and returns a typed model value.
 // Returns nil, nil for control messages (heartbeats, confirmations).
 func (h *cryptocomHandler) Handle(_ context.Context, raw []byte) (any, error) {
+	logger.Default.Debug("cryptocom: received raw message", "len", len(raw), "msg", string(raw[:min(200, len(raw))]))
+
 	var msg wsEnvelope
 	if err := json.Unmarshal(raw, &msg); err != nil {
+		logger.Default.Debug("cryptocom: failed to parse message", "error", err)
 		return nil, nil
 	}
+
+	logger.Default.Debug("cryptocom: parsed message", "method", msg.Method, "id", msg.ID)
 
 	// Heartbeat: queue the ID for OnPing to acknowledge.
 	if msg.Method == "public/heartbeat" {
@@ -75,26 +82,35 @@ func (h *cryptocomHandler) Handle(_ context.Context, raw []byte) (any, error) {
 }
 
 func (h *cryptocomHandler) handleTicker(result wsResult) (any, error) {
+	logger.Default.Debug("cryptocom: handleTicker called", "result", result)
+
 	var data []wsTickerData
 	if err := json.Unmarshal(result.Data, &data); err != nil || len(data) == 0 {
+		logger.Default.Debug("cryptocom: no ticker data", "error", err, "dataLen", len(data))
 		return nil, nil
 	}
 	d := data[0]
 
-	var changePct *float64
-	if d.A != 0 { // derive percent change from bid/ask midpoint not available; skip
-		// The WebSocket ticker does not carry an open price — use 0-safe guard.
-		_ = changePct
-	}
+	price, _ := strconv.ParseFloat(d.A, 64)
+	bid, _ := strconv.ParseFloat(d.B, 64)
+	ask, _ := strconv.ParseFloat(d.K, 64)
+
+	changePct, _ := strconv.ParseFloat(d.C, 64)
+	changePct *= 100
+
+	logger.Default.Debug("cryptocom: ticker data", "instrument", d.I, "price", price, "bid", bid, "ask", ask, "changePct", changePct)
 
 	return &model.Response[model.CoinPrice]{
 		Kind:     model.KindPrice,
 		Provider: h.providerID,
 		Market:   model.MarketSpot,
 		Data: model.CoinPrice{
-			ID:     d.I,
-			Symbol: d.I,
-			Price:  d.C,
+			ID:        d.I,
+			Symbol:    d.I,
+			Price:     price,
+			BidPrice:  &bid,
+			AskPrice:  &ask,
+			Change24h: &changePct,
 		},
 	}, nil
 }
@@ -183,24 +199,33 @@ func (h *cryptocomHandler) OnPing(_ context.Context, client *ws.BaseClient) erro
 // Stream starts the WebSocket manager and returns a channel of raw stream
 // responses.  cmdChan is forwarded to the manager's command channel.
 func (c *Client) Stream(ctx context.Context, cmdChan <-chan ws.Command) (<-chan ws.StreamResponse[any], error) {
+	logger.Default.Debug("cryptocom: Stream called", "url", wsMarketURL)
+
 	handler := newCryptocomHandler(providerID, c.userAgent)
 	mgr := ws.NewManager(wsMarketURL, handler)
 
 	go func() {
 		for cmd := range cmdChan {
+			logger.Default.Debug("cryptocom: sending command", "kind", cmd.Kind, "method", cmd.Method, "params", cmd.Params)
 			mgr.Commands() <- cmd
 		}
 	}()
 
-	return mgr.Start(ctx)
+	out, err := mgr.Start(ctx)
+	logger.Default.Debug("cryptocom: Stream started", "hasChannel", out != nil, "err", err)
+	return out, err
 }
 
 // WatchPrices implements provider.PriceStreamProvider.
 // ids must be Crypto.com instrument names (e.g. "BTC_USDT").
 func (c *Client) WatchPrices(ctx context.Context, ids []string) (<-chan *model.CoinPrice, error) {
+	logger.Default.Debug("cryptocom: WatchPrices called", "ids", ids)
+
 	channels := make([]string, 0, len(ids))
 	for _, id := range ids {
-		channels = append(channels, "ticker."+id)
+		ch := "ticker." + id
+		logger.Default.Debug("cryptocom: channel", "channel", ch)
+		channels = append(channels, ch)
 	}
 
 	cmdChan := make(chan ws.Command, 1)

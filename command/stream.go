@@ -8,6 +8,7 @@ import (
 	"syscall"
 
 	"github.com/mdnmdn/bits"
+	"github.com/mdnmdn/bits/internal/logger"
 	"github.com/mdnmdn/bits/model"
 	"github.com/mdnmdn/bits/render"
 	rendertoon "github.com/mdnmdn/bits/render/toon"
@@ -58,8 +59,11 @@ func runStreamPrice(cmd *cobra.Command, args []string) error {
 
 	for update := range ch {
 		if update == nil {
+			logger.Default.Debug("stream price: received nil update")
 			continue
 		}
+		logger.Default.Debug("stream price: received update", "price", update.Price, "symbol", update.ID)
+
 		change := "-"
 		if update.Change24h != nil {
 			change = fmt.Sprintf("%.2f%%", *update.Change24h)
