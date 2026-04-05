@@ -180,8 +180,9 @@ func (p *bitgetProtocol) Parse(ctx context.Context, raw []byte) (any, error) {
 			Kind:     model.KindPrice,
 			Provider: p.providerID,
 			Data: model.CoinPrice{
-				ID:        d.InstID,
-				Symbol:    d.InstID,
+				ID:             d.InstID,
+				Symbol:         model.NormalizeSymbol(d.InstID),
+				OriginalSymbol: d.InstID,
 				Price:     price,
 				Change24h: &changePct,
 				High24h:   &high24h,
@@ -252,7 +253,8 @@ func (p *bitgetProtocol) Parse(ctx context.Context, raw []byte) (any, error) {
 			Kind:     model.KindOrderBook,
 			Provider: p.providerID,
 			Data: model.OrderBook{
-				Symbol:       msg.Arg.InstID,
+				Symbol:         model.NormalizeSymbol(msg.Arg.InstID),
+				OriginalSymbol: msg.Arg.InstID,
 				Bids:         parseEntries(d.Bids),
 				Asks:         parseEntries(d.Asks),
 				Time:         ts,

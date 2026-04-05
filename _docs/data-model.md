@@ -249,21 +249,22 @@ const (
 )
 
 type Symbol struct {
-    Symbol         string
-    BaseAsset      string        // e.g. "BTC"
-    QuoteAsset     string        // e.g. "USDT"
-    Status         SymbolStatus
-    Market         MarketType
-    PricePrecision *int
-    QtyPrecision   *int
-    MinPrice       *float64
-    MaxPrice       *float64
-    MinQty         *float64
-    MaxQty         *float64
-    StepSize       *float64      // quantity increment
-    MakerFee       *float64
-    TakerFee       *float64
-    Extra          map[string]any
+    Symbol           string        // provider-native format (e.g. "BTCUSDT", "BTC_USDT")
+    NormalizedSymbol string        // normalized form: BaseAsset + "-" + QuoteAsset (e.g. "BTC-USDT")
+    BaseAsset        string        // e.g. "BTC"
+    QuoteAsset       string        // e.g. "USDT"
+    Status           SymbolStatus
+    Market           MarketType
+    PricePrecision   *int
+    QtyPrecision     *int
+    MinPrice         *float64
+    MaxPrice         *float64
+    MinQty           *float64
+    MaxQty           *float64
+    StepSize         *float64      // quantity increment
+    MakerFee         *float64
+    TakerFee         *float64
+    Extra            map[string]any
 }
 
 type ExchangeInfo struct {
@@ -304,11 +305,12 @@ type CandleOpts struct {
 
 ### Ticker24h
 
-Current type refined: optional fields become pointers; `Extra` added.
+Current type refined: optional fields become pointers; `Extra` added. Carries both normalized and provider-native symbol forms.
 
 ```go
 type Ticker24h struct {
-    Symbol             string
+    Symbol             string        // normalized: BASE-QUOTE (e.g. "BTC-USDT")
+    OriginalSymbol     string        // provider-native: BTCUSDT, BTC_USDT, etc.
     Market             MarketType
     LastPrice          float64
     PriceChange        *float64
@@ -331,17 +333,18 @@ type Ticker24h struct {
 
 ### OrderBook
 
-Current type refined: optional update ID and timestamp; `Market`; `Extra`.
+Current type refined: optional update ID and timestamp; `Market`; `Extra`. Carries both normalized and provider-native symbol forms.
 
 ```go
 type OrderBook struct {
-    Symbol       string
-    Market       MarketType
-    Bids         []OrderBookEntry
-    Asks         []OrderBookEntry
-    LastUpdateID *int64
-    Time         *time.Time
-    Extra        map[string]any
+    Symbol         string        // normalized: BASE-QUOTE (e.g. "BTC-USDT")
+    OriginalSymbol string        // provider-native: BTCUSDT, BTC_USDT, etc.
+    Market         MarketType
+    Bids           []OrderBookEntry
+    Asks           []OrderBookEntry
+    LastUpdateID   *int64
+    Time           *time.Time
+    Extra          map[string]any
 }
 
 type OrderBookEntry struct {
@@ -354,16 +357,17 @@ type OrderBookEntry struct {
 
 ### CoinPrice
 
-Replaces `PriceResponse map[string]map[string]float64`.
+Replaces `PriceResponse map[string]map[string]float64`. Carries both normalized and provider-native symbol forms.
 
 ```go
 type CoinPrice struct {
-    ID        string     // coin id (aggregators) or trading symbol (exchanges)
-    Symbol    string
-    Currency  string
-    Price     float64
-    Change24h *float64   // percent; optional
-    Extra     map[string]any
+    ID             string     // coin id (aggregators) or trading symbol (exchanges)
+    Symbol         string     // normalized: BASE-QUOTE (e.g. "BTC-USDT") for exchanges; coin symbol for aggregators
+    OriginalSymbol string     // provider-native: BTCUSDT, BTC_USDT, etc. (exchanges only)
+    Currency       string
+    Price          float64
+    Change24h      *float64   // percent; optional
+    Extra          map[string]any
 }
 ```
 

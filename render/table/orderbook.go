@@ -11,7 +11,11 @@ import (
 func RenderOrderBook(w io.Writer, res model.Response[model.OrderBook]) error {
 	printHeader(w, res)
 	ob := res.Data
-	_, _ = fmt.Fprintf(w, "Order Book: %s (%s)\n\n", NormalizeSymbol(ob.Symbol), ob.Market)
+	header := ob.Symbol
+	if ob.OriginalSymbol != "" && ob.OriginalSymbol != ob.Symbol {
+		header = ob.Symbol + " [" + ob.OriginalSymbol + "]"
+	}
+	_, _ = fmt.Fprintf(w, "Order Book: %s (%s)\n\n", header, ob.Market)
 	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
 	_, _ = fmt.Fprintln(tw, "BIDS\t\tASKS")
 	_, _ = fmt.Fprintln(tw, "PRICE\tQTY\tPRICE\tQTY")

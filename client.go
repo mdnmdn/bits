@@ -21,6 +21,7 @@ package bits
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"github.com/mdnmdn/bits/capability"
@@ -209,7 +210,13 @@ func (c *Client) CandleProvider() provider.CandleProvider {
 
 // Candles retrieves OHLCV candle data.
 func (c *Client) Candles(ctx context.Context, symbol string, market model.MarketType, interval string, opts model.CandleOpts) (model.Response[[]model.Candle], error) {
-	resolved := c.resolveSymbolIfNeeded(ctx, symbol, market)
+	resolved, err := c.resolveSymbolOrError(ctx, symbol, market)
+	if err != nil {
+		return model.Response[[]model.Candle]{
+			Provider: c.ID(),
+			Errors:   []model.ItemError{{Symbol: symbol, Err: model.WrapError(c.ID(), err)}},
+		}, err
+	}
 	cp := c.CandleProvider()
 	if _, ok := cp.(*nullCandleProvider); ok {
 		return model.Response[[]model.Candle]{
@@ -230,7 +237,13 @@ func (c *Client) TickerProvider() provider.TickerProvider {
 
 // Ticker24h retrieves 24h rolling ticker statistics.
 func (c *Client) Ticker24h(ctx context.Context, symbol string, market model.MarketType) (model.Response[model.Ticker24h], error) {
-	resolved := c.resolveSymbolIfNeeded(ctx, symbol, market)
+	resolved, err := c.resolveSymbolOrError(ctx, symbol, market)
+	if err != nil {
+		return model.Response[model.Ticker24h]{
+			Provider: c.ID(),
+			Errors:   []model.ItemError{{Symbol: symbol, Err: model.WrapError(c.ID(), err)}},
+		}, err
+	}
 	tp := c.TickerProvider()
 	if _, ok := tp.(*nullTickerProvider); ok {
 		return model.Response[model.Ticker24h]{
@@ -251,7 +264,13 @@ func (c *Client) OrderBookProvider() provider.OrderBookProvider {
 
 // OrderBook retrieves order book depth snapshot.
 func (c *Client) OrderBook(ctx context.Context, symbol string, market model.MarketType, depth int) (model.Response[model.OrderBook], error) {
-	resolved := c.resolveSymbolIfNeeded(ctx, symbol, market)
+	resolved, err := c.resolveSymbolOrError(ctx, symbol, market)
+	if err != nil {
+		return model.Response[model.OrderBook]{
+			Provider: c.ID(),
+			Errors:   []model.ItemError{{Symbol: symbol, Err: model.WrapError(c.ID(), err)}},
+		}, err
+	}
 	obp := c.OrderBookProvider()
 	if _, ok := obp.(*nullOrderBookProvider); ok {
 		return model.Response[model.OrderBook]{
@@ -278,7 +297,11 @@ func (c *Client) StartPriceStream(ctx context.Context, ids []string) (<-chan *mo
 	}
 	resolved := make([]string, len(ids))
 	for i, id := range ids {
-		resolved[i] = c.resolveSymbolIfNeeded(ctx, id, model.MarketSpot)
+		r, err := c.resolveSymbolOrError(ctx, id, model.MarketSpot)
+		if err != nil {
+			return nil, err
+		}
+		resolved[i] = r
 	}
 	return psp.StartPriceStream(ctx, resolved)
 }
@@ -289,7 +312,15 @@ func (c *Client) SubscribePrice(ctx context.Context, ids []string) (<-chan *mode
 	if _, ok := psp.(*nullPriceStreamProvider); ok {
 		return nil, errNotImplemented
 	}
-	return psp.SubscribePrice(ctx, ids)
+	resolved := make([]string, len(ids))
+	for i, id := range ids {
+		r, err := c.resolveSymbolOrError(ctx, id, model.MarketSpot)
+		if err != nil {
+			return nil, err
+		}
+		resolved[i] = r
+	}
+	return psp.SubscribePrice(ctx, resolved)
 }
 
 // UnsubscribePrice removes symbols from the price stream.
@@ -298,7 +329,11 @@ func (c *Client) UnsubscribePrice(ctx context.Context, ids []string) error {
 	if _, ok := psp.(*nullPriceStreamProvider); ok {
 		return errNotImplemented
 	}
-	return psp.UnsubscribePrice(ctx, ids)
+	resolved := make([]string, len(ids))
+	for i, id := range ids {
+		resolved[i] = c.resolveSymbolIfNeeded(ctx, id, model.MarketSpot)
+	}
+	return psp.UnsubscribePrice(ctx, resolved)
 }
 
 // SubscribedPrices returns the list of currently subscribed symbol IDs.
@@ -373,7 +408,11 @@ func (c *Client) StartOrderBookStream(ctx context.Context, symbols []string, mar
 	}
 	resolved := make([]string, len(symbols))
 	for i, sym := range symbols {
-		resolved[i] = c.resolveSymbolIfNeeded(ctx, sym, market)
+		r, err := c.resolveSymbolOrError(ctx, sym, market)
+		if err != nil {
+			return nil, err
+		}
+		resolved[i] = r
 		logger.Default.Debug("client: resolved symbol", "input", sym, "resolved", resolved[i])
 	}
 	return obsp.StartOrderBookStream(ctx, resolved, market, depth)
@@ -385,7 +424,15 @@ func (c *Client) SubscribeOrderBook(ctx context.Context, symbols []string, marke
 	if _, ok := obsp.(*nullOrderBookStreamProvider); ok {
 		return nil, errNotImplemented
 	}
-	return obsp.SubscribeOrderBook(ctx, symbols, market, depth)
+	resolved := make([]string, len(symbols))
+	for i, sym := range symbols {
+		r, err := c.resolveSymbolOrError(ctx, sym, market)
+		if err != nil {
+			return nil, err
+		}
+		resolved[i] = r
+	}
+	return obsp.SubscribeOrderBook(ctx, resolved, market, depth)
 }
 
 // UnsubscribeOrderBook removes symbols from the order book stream.
@@ -394,7 +441,11 @@ func (c *Client) UnsubscribeOrderBook(ctx context.Context, symbols []string) err
 	if _, ok := obsp.(*nullOrderBookStreamProvider); ok {
 		return errNotImplemented
 	}
-	return obsp.UnsubscribeOrderBook(ctx, symbols)
+	resolved := make([]string, len(symbols))
+	for i, sym := range symbols {
+		resolved[i] = c.resolveSymbolIfNeeded(ctx, sym, model.MarketSpot)
+	}
+	return obsp.UnsubscribeOrderBook(ctx, resolved)
 }
 
 // SubscribedOrderBooks returns the list of currently subscribed symbols.
@@ -642,6 +693,28 @@ func (c *Client) resolveSymbolIfNeeded(ctx context.Context, symbol string, marke
 		return symbol
 	}
 	return resolved
+}
+
+// resolveSymbolOrError resolves a symbol using the symbol engine and returns an error
+// if the symbol is not found for the given provider and market. If the symbol engine
+// is not active, the original symbol is returned unchanged.
+func (c *Client) resolveSymbolOrError(ctx context.Context, sym string, market model.MarketType) (string, error) {
+	if c.symbolEngine == nil || sym == "" {
+		return sym, nil
+	}
+	resolved, err := c.symbolEngine.ResolveToModel(ctx, c.ID(), sym, market)
+	if err != nil {
+		// Preserve the original error kind (network, auth, etc.) rather than masking it as NotFound.
+		return "", model.WrapError(c.ID(), err)
+	}
+	if resolved == nil {
+		return "", &model.ProviderError{
+			Kind:            model.ErrKindNotFound,
+			ProviderID:      c.ID(),
+			ProviderMessage: fmt.Sprintf("%s not found in %s %s symbol list", sym, c.ID(), market),
+		}
+	}
+	return resolved.Symbol, nil
 }
 
 // GetPrice retrieves the price for a symbol from a specific provider.

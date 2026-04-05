@@ -179,3 +179,11 @@ The _docs folder contains all the documentation:
 - See `_docs/renderers.md` for output format specifications (table, json, yaml, toon, markdown)
 - See `_docs/architecture.md` for full architecture and provider capability matrix
 - See `_docs/error-handling.md` for error handling design (`ProviderError`, `ErrorKind`, provider helpers)
+
+
+# Rules
+
+- build in `./bin/`
+- simplicity is the ultimate perfection
+- when possible delegate grunt works to subagents (maybe with simpler model as haiku)
+- if you need a spare folder user `/tmp/bits/`

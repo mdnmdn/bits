@@ -19,26 +19,27 @@ The symbol engine handles:
 ```
 User Input: "btc_usdt"
        ↓
-Symbol Resolver (in-memory)
+Symbol Engine (lookup tables per {provider, market})
   - Parse: btc → BTC, usdt → USDT
-  - Load cached ExchangeInfo (or fetch fresh)
+  - Load provider-specific, market-specific lookup table
   - Find symbol with BaseAsset=BTC, QuoteAsset=USDT
        ↓
 Provider Native: "BTC_USDT" (WhiteBit) or "BTCUSDT" (Binance)
        ↓
-Output: "BTC-USDT" (normalized)
+Output: Symbol = "BTC-USDT" (normalized)
+        OriginalSymbol = "BTC_USDT" or "BTCUSDT" (provider-native)
 ```
+
+Input resolution is only active when `bits.WithSymbolEngine()` option is used when creating a client. Without it, input symbols are passed directly to the provider.
 
 ## Files
 
 | File | Purpose |
 |------|---------|
-| `pkg/resolve/symbol/normalize.go` | Input parsing (`BTC-USDT` → `base=BTC, quote=USDT`) |
-| `pkg/resolve/symbol/resolver.go` | Symbol resolution with in-memory cache |
-| `pkg/resolve/symbol/lookup.go` | Efficient symbol lookup by base/quote |
-| `pkg/resolve/symbol/cache.go` | Disk cache with TTL support |
-| `pkg/resolve/symbol/engine.go` | Advanced engine with provider-specific translators |
-| `pkg/resolve/symbol/translators/` | Provider-specific symbol translation |
+| `resolve/symbol/normalize.go` | Symbol normalization utility: `NormalizeSymbol(s)` → `BASE-QUOTE` form |
+| `resolve/symbol/engine.go` | Symbol engine with provider-specific, market-specific lookup tables |
+| `resolve/symbol/translators/` | Provider-specific symbol translation |
+| `model/normalize.go` | Core normalization function used by providers in output structs |
 
 ## Provider Patterns
 
@@ -79,14 +80,23 @@ bits ticker btc-usdt -p whitebit
 # BTC-USDT
 ```
 
+## Symbol Fields in Output
+
+All provider output structs carrying a symbol (`Ticker24h`, `OrderBook`, `CoinPrice`) now include both:
+
+- **`Symbol string`** — normalized form in `BASE-QUOTE` (e.g., `BTC-USDT`), set by calling `model.NormalizeSymbol(nativeSymbol)`
+- **`OriginalSymbol string`** — provider-native form exactly as received from the exchange API (e.g., `BTCUSDT`, `BTC_USDT`)
+
+The `model.Symbol` type in `ExchangeInfo` carries:
+
+- **`NormalizedSymbol string`** — always `BaseAsset + "-" + QuoteAsset` (e.g., `BTC-USDT`)
+- **`Symbol string`** — provider-native format (used by the symbol engine for API calls)
+
 ## API
 
 ```go
-// Resolve input to provider-specific symbol
-func (r *SymbolResolver) Resolve(ctx context.Context, input string, market model.MarketType) (string, error)
-
 // Normalize symbol for output display
-func NormalizeSymbol(symbol string) string
+func NormalizeSymbol(symbol string) string  // in model/normalize.go
 ```
 
 ## Disk Cache

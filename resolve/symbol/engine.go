@@ -1,12 +1,8 @@
 // Package symbol provides symbol resolution and normalization.
 //
-// There are two entry points:
-//
-// 1. SymbolEngine (engine.go) - Newer, used by pkg/bits library, has disk caching
-// 2. SymbolResolver (resolver.go) - Older, used by CLI commands, in-memory only
-//
-// The SymbolEngine is the recommended entry point for library users.
-// SymbolResolver is kept for CLI compatibility.
+// Entry point: SymbolEngine (engine.go) — resolves user-friendly symbols to
+// provider-native format using per-{provider, market} lookup tables backed by
+// ExchangeInfo and optional disk caching.
 package symbol
 
 import (

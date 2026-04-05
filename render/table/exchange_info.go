@@ -27,8 +27,12 @@ func RenderExchangeInfo(w io.Writer, res model.Response[model.ExchangeInfo]) err
 	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
 	_, _ = fmt.Fprintln(tw, "SYMBOL\tORIGINAL\tBASE\tQUOTE\tSTATUS\tMARKET\tPRICE_PREC\tQTY_PREC\tMIN_PRICE\tMAX_PRICE\tMIN_QTY\tMAX_QTY\tSTEPSIZE\tMAKER_FEE\tTAKER_FEE")
 	for _, s := range info.Symbols {
+		norm := s.NormalizedSymbol
+		if norm == "" {
+			norm = NormalizeSymbol(s.Symbol)
+		}
 		_, _ = fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
-			NormalizeSymbol(s.Symbol), s.Symbol, s.BaseAsset, s.QuoteAsset, s.Status, s.Market,
+			norm, s.Symbol, s.BaseAsset, s.QuoteAsset, s.Status, s.Market,
 			ptrToStr(s.PricePrecision), ptrToStr(s.QtyPrecision),
 			ptrToStr(s.MinPrice), ptrToStr(s.MaxPrice),
 			ptrToStr(s.MinQty), ptrToStr(s.MaxQty),
@@ -41,7 +45,11 @@ func RenderExchangeInfo(w io.Writer, res model.Response[model.ExchangeInfo]) err
 
 func renderSymbolDetails(w io.Writer, s model.Symbol) {
 	_, _ = fmt.Fprintln(w, "---")
-	_, _ = fmt.Fprintf(w, "Symbol        : %s\n", NormalizeSymbol(s.Symbol))
+	norm := s.NormalizedSymbol
+	if norm == "" {
+		norm = NormalizeSymbol(s.Symbol)
+	}
+	_, _ = fmt.Fprintf(w, "Symbol        : %s\n", norm)
 	_, _ = fmt.Fprintf(w, "Original      : %s\n", s.Symbol)
 	_, _ = fmt.Fprintf(w, "Base Asset    : %s\n", s.BaseAsset)
 	_, _ = fmt.Fprintf(w, "Quote Asset   : %s\n", s.QuoteAsset)

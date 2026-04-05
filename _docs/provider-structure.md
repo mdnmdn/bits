@@ -452,9 +452,11 @@ func (c *Client) Ticker24h(ctx context.Context, symbol string, market model.Mark
     if envelope.Code != "0" {
         return model.Response[model.Ticker24h]{}, apiErr(envelope.Code, envelope.Msg)
     }
+    ticker := convertTicker(envelope.Data, market)
+    ticker.Symbol = model.NormalizeSymbol(ticker.OriginalSymbol)
     return model.Response[model.Ticker24h]{
         Kind:     model.KindTicker,
-        Data:     convertTicker(envelope.Data, market),
+        Data:     ticker,
         Provider: providerID,
         Market:   market,
     }, nil
@@ -465,6 +467,8 @@ Rules for all methods:
 - Always set `Response.Provider = providerID`
 - Always set `Response.Market = market` (or `model.MarketSpot` for spot-only)
 - Always set `Response.Kind = model.KindXxx`
+- Always set `OriginalSymbol = nativeSymbol` (the symbol exactly as received from the provider API)
+- Always set `Symbol = model.NormalizeSymbol(nativeSymbol)` for `Ticker24h`, `OrderBook`, `CoinPrice`
 - Use `strconv.ParseFloat(s, 64)` for string-encoded numbers
 - Use `time.UnixMilli(ms)` for millisecond timestamps
 - Map standard intervals (`1m`, `5m`, `1h`, `4h`, `1d`) to the provider's format in `Candles`
@@ -493,6 +497,9 @@ func (c *Client) ServerTime(ctx context.Context) (model.Response[model.ServerTim
 func (c *Client) ExchangeInfo(ctx context.Context, market model.MarketType) (model.Response[model.ExchangeInfo], error) {
     // Route to spot/futures/margin sub-method based on market.
     // Map provider status strings to model.SymbolStatus constants.
+    // For each Symbol:
+    //   - Set Symbol = provider-native format (used for API calls)
+    //   - Set NormalizedSymbol = BaseAsset + "-" + QuoteAsset (e.g. "BTC-USDT")
     // Set PricePrecision, QtyPrecision, MinQty, MaxQty where available.
 }
 ```
@@ -702,6 +709,8 @@ go run . book BTC_USDT -p myexchange
 | Linter: `func httpErr is unused` | Remove helpers not called anywhere — only define what is actually used |
 | HTTP 500 silently parsed as success | Check `resp.StatusCode` in `doRequest` and return `httpErr(status, body)` |
 | `ItemError.Err` compile error | `Err` field is `*model.ProviderError`, not `error` — use `model.WrapError` to adapt |
+| Symbol shows provider-native format | Set `Symbol = model.NormalizeSymbol(native)`, `OriginalSymbol = native` in `Ticker24h`, `OrderBook`, `CoinPrice` |
+| ExchangeInfo symbols missing NormalizedSymbol | Set `Symbol` to provider-native, `NormalizedSymbol = BaseAsset + "-" + QuoteAsset` in each `model.Symbol` |
 
 ---
 
@@ -721,8 +730,13 @@ go run . book BTC_USDT -p myexchange
   □ client.go     — Client struct, NewClient, defaultBaseURL, ID, SetUserAgent, Capabilities, doRequest (with HTTP status check)
   □ errors.go     — providerErr, httpErr, httpStatusToKind; add apiErr/apiCodeToKind if provider has structured error codes
   □ types.go      — private JSON response structs (prefixed names, string fields for quoted numbers)
-  □ market.go     — Price / Ticker24h / Candles / OrderBook (set Kind, Provider, Market on every Response; use error helpers, not fmt.Errorf)
-  □ exchange.go   — (optional) ServerTime (with Latency) + ExchangeInfo (with SymbolStatus mapping)
+  □ market.go     — Price / Ticker24h / Candles / OrderBook
+    □ Set Kind, Provider, Market on every Response
+    □ Set OriginalSymbol = native, Symbol = model.NormalizeSymbol(native) for Ticker24h, OrderBook, CoinPrice
+    □ Use error helpers, not fmt.Errorf
+  □ exchange.go   — (optional) ServerTime (with Latency) + ExchangeInfo
+    □ For each Symbol: set Symbol = provider-native, NormalizedSymbol = BaseAsset + "-" + QuoteAsset
+    □ Include SymbolStatus mapping
   □ stream.go     — (optional) WatchPrices / WatchOrderBook via ws.NewBaseClient
   □ client_test.go — httptest mocks for each capability method
 

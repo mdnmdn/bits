@@ -5,6 +5,10 @@
 //   - Runs validity checks for each capability against known reference values
 //   - Shows compact dashboard-style results: OK / WARNING / ERROR
 //   - Provides detailed failure descriptions when checks don't pass
+//   - Symbol normalization is validated for every response that carries a symbol:
+//     OriginalSymbol must be non-empty (ERROR if missing) and Symbol must be in
+//     BASE-QUOTE format containing "-" (WARNING if not normalized).
+//     ExchangeInfo symbols are checked for a non-empty NormalizedSymbol field.
 //
 // Raw Mode:
 //   - Shows the raw API responses without validation
@@ -326,7 +330,7 @@ func testExchangeInfo(ctx context.Context, client *bits.Client, providerID strin
 		return []TestResult{{Provider: providerID, Market: string(market), Feature: "exchange_info", Status: StatusError, Message: "no symbols returned"}}
 	}
 
-	var noStatus, noBase, noQuote, invalidPrec int
+	var noStatus, noBase, noQuote, invalidPrec, noNormSym int
 	for _, sym := range res.Data.Symbols {
 		if sym.Status == "" {
 			noStatus++
@@ -340,10 +344,17 @@ func testExchangeInfo(ctx context.Context, client *bits.Client, providerID strin
 		if sym.PricePrecision != nil && *sym.PricePrecision < 0 {
 			invalidPrec++
 		}
+		if sym.NormalizedSymbol == "" {
+			noNormSym++
+		}
 	}
 
 	if noStatus > len(res.Data.Symbols)/2 || noBase > len(res.Data.Symbols)/2 || noQuote > len(res.Data.Symbols)/2 {
 		return []TestResult{{Provider: providerID, Market: string(market), Feature: "exchange_info", Status: StatusWarning, Message: "many symbols missing critical fields", Details: fmt.Sprintf("noStatus: %d, noBase: %d, noQuote: %d", noStatus, noBase, noQuote)}}
+	}
+
+	if noNormSym > 0 {
+		return []TestResult{{Provider: providerID, Market: string(market), Feature: "exchange_info", Status: StatusError, Message: "symbols missing NormalizedSymbol", Details: fmt.Sprintf("%d/%d symbols have no NormalizedSymbol", noNormSym, len(res.Data.Symbols))}}
 	}
 
 	return []TestResult{{Provider: providerID, Market: string(market), Feature: "exchange_info", Status: StatusOK, Message: fmt.Sprintf("%d symbols valid", len(res.Data.Symbols)), Details: fmt.Sprintf("noStatus: %d, noBase: %d, noQuote: %d", noStatus, noBase, noQuote)}}
@@ -368,16 +379,21 @@ func testPrice(ctx context.Context, client *bits.Client, providerID string, symb
 
 	var results []TestResult
 	for _, p := range res.Data {
+		if r := checkSymbolFields(providerID, "spot", "price", p.Symbol, p.OriginalSymbol); r != nil {
+			results = append(results, *r)
+			continue
+		}
+
 		priceRatio := math.Abs(p.Price-ref.lastPrice) / ref.lastPrice
 		if priceRatio > priceTolerance {
-			results = append(results, TestResult{Provider: providerID, Market: "spot", Symbol: symbol, Feature: "price", Status: StatusWarning, Message: "price deviation exceeds 10%", Details: fmt.Sprintf("%s: got %.2f, ref %.2f (%.1f%%)", p.Symbol, p.Price, ref.lastPrice, priceRatio*100)})
+			results = append(results, TestResult{Provider: providerID, Market: "spot", Symbol: p.Symbol, Feature: "price", Status: StatusWarning, Message: "price deviation exceeds 10%", Details: fmt.Sprintf("got %.2f, ref %.2f (%.1f%%)", p.Price, ref.lastPrice, priceRatio*100)})
 			continue
 		}
 
 		if p.Volume24h != nil && ref.volume > 0 {
 			volRatio := math.Log10(*p.Volume24h+1) - math.Log10(ref.volume+1)
 			if math.Abs(volRatio) > 1 {
-				results = append(results, TestResult{Provider: providerID, Market: "spot", Symbol: symbol, Feature: "price", Status: StatusWarning, Message: "volume order of magnitude differs", Details: fmt.Sprintf("%s: got %.2f, ref %.2f", p.Symbol, *p.Volume24h, ref.volume)})
+				results = append(results, TestResult{Provider: providerID, Market: "spot", Symbol: p.Symbol, Feature: "price", Status: StatusWarning, Message: "volume order of magnitude differs", Details: fmt.Sprintf("got %.2f, ref %.2f", *p.Volume24h, ref.volume)})
 				continue
 			}
 		}
@@ -386,7 +402,7 @@ func testPrice(ctx context.Context, client *bits.Client, providerID string, symb
 		if p.Volume24h != nil {
 			vol = *p.Volume24h
 		}
-		results = append(results, TestResult{Provider: providerID, Market: "spot", Symbol: symbol, Feature: "price", Status: StatusOK, Message: "price and volume valid", Details: fmt.Sprintf("price: %.2f, vol: %.2f", p.Price, vol)})
+		results = append(results, TestResult{Provider: providerID, Market: "spot", Symbol: p.Symbol, Feature: "price", Status: StatusOK, Message: "price and volume valid", Details: fmt.Sprintf("price: %.2f, vol: %.2f", p.Price, vol)})
 	}
 
 	return results
@@ -435,6 +451,10 @@ func testTicker24h(ctx context.Context, client *bits.Client, providerID string, 
 		return []TestResult{{Provider: providerID, Market: string(market), Feature: "ticker_24h", Status: StatusError, Message: "API call failed", Details: err.Error()}}
 	}
 
+	if r := checkSymbolFields(providerID, string(market), "ticker_24h", res.Data.Symbol, res.Data.OriginalSymbol); r != nil {
+		return []TestResult{*r}
+	}
+
 	priceRatio := math.Abs(res.Data.LastPrice-ref.lastPrice) / ref.lastPrice
 	if priceRatio > priceTolerance {
 		return []TestResult{{Provider: providerID, Market: string(market), Feature: "ticker_24h", Status: StatusWarning, Message: "price deviation exceeds 10%", Details: fmt.Sprintf("got %.2f, ref %.2f", res.Data.LastPrice, ref.lastPrice)}}
@@ -447,7 +467,7 @@ func testTicker24h(ctx context.Context, client *bits.Client, providerID string, 
 		}
 	}
 
-	return []TestResult{{Provider: providerID, Market: string(market), Feature: "ticker_24h", Status: StatusOK, Message: "ticker data valid"}}
+	return []TestResult{{Provider: providerID, Market: string(market), Feature: "ticker_24h", Status: StatusOK, Message: fmt.Sprintf("ticker valid: %s [%s]", res.Data.Symbol, res.Data.OriginalSymbol)}}
 }
 
 // testOrderBook validates order book has bids < asks, reasonable spread, non-negative quantities.
@@ -460,6 +480,10 @@ func testOrderBook(ctx context.Context, client *bits.Client, providerID string, 
 
 	if len(res.Data.Bids) == 0 || len(res.Data.Asks) == 0 {
 		return []TestResult{{Provider: providerID, Market: string(market), Feature: "order_book", Status: StatusError, Message: "empty order book"}}
+	}
+
+	if r := checkSymbolFields(providerID, string(market), "order_book", res.Data.Symbol, res.Data.OriginalSymbol); r != nil {
+		return []TestResult{*r}
 	}
 
 	bestBid := res.Data.Bids[0].Price
@@ -522,8 +546,9 @@ func testMarketsList(ctx context.Context, client *bits.Client, providerID string
 	return []TestResult{{Provider: providerID, Market: "spot", Feature: "markets_list", Status: StatusOK, Message: fmt.Sprintf("%d markets valid", len(res.Data))}}
 }
 
-// testStreamPrice validates price stream delivers updates with increasing timestamps.
-// Logic: Collects ticks, verifies timestamps increase, prices reasonable.
+// testStreamPrice validates price stream delivers updates with increasing timestamps and
+// normalized symbol fields (Symbol in BASE-QUOTE format, OriginalSymbol non-empty).
+// Logic: Collects ticks, verifies timestamps increase, prices reasonable, symbols normalized.
 func testStreamPrice(ctx context.Context, client *bits.Client, providerID string, symbols []string, count int) []TestResult {
 	ch, err := client.StartPriceStream(ctx, symbols)
 	if err != nil {
@@ -534,6 +559,7 @@ func testStreamPrice(ctx context.Context, client *bits.Client, providerID string
 	var lastTS int64
 	var lastPrice float64
 	var ticks int
+	var symChecked bool
 
 	for i := 0; i < count; i++ {
 		select {
@@ -545,6 +571,12 @@ func testStreamPrice(ctx context.Context, client *bits.Client, providerID string
 				break
 			}
 			ticks++
+			if !symChecked {
+				if r := checkSymbolFields(providerID, "spot", "stream_price", tick.Symbol, tick.OriginalSymbol); r != nil {
+					return []TestResult{*r}
+				}
+				symChecked = true
+			}
 			if tick.Time != nil {
 				ts := tick.Time.UnixMilli()
 				if ts > lastTS {
@@ -568,8 +600,9 @@ func testStreamPrice(ctx context.Context, client *bits.Client, providerID string
 	return []TestResult{{Provider: providerID, Market: "spot", Feature: "stream_price", Status: StatusOK, Message: fmt.Sprintf("%d ticks received", ticks), Details: fmt.Sprintf("last price: %.2f", lastPrice)}}
 }
 
-// testStreamOrderBook validates order book stream delivers updates with reasonable data.
-// Logic: Collects ticks, verifies bid < ask, quantities positive.
+// testStreamOrderBook validates order book stream delivers updates with reasonable data
+// and normalized symbol fields (Symbol in BASE-QUOTE format, OriginalSymbol non-empty).
+// Logic: Collects ticks, verifies bid < ask, quantities positive, symbols normalized.
 func testStreamOrderBook(ctx context.Context, client *bits.Client, providerID string, market capability.MarketType, symbols []string, count int) []TestResult {
 	ch, err := client.StartOrderBookStream(ctx, symbols, model.MarketType(market), 5)
 	if err != nil {
@@ -579,6 +612,7 @@ func testStreamOrderBook(ctx context.Context, client *bits.Client, providerID st
 
 	var ticks int
 	var invalidSpread bool
+	var symChecked bool
 
 	for i := 0; i < count; i++ {
 		select {
@@ -590,6 +624,12 @@ func testStreamOrderBook(ctx context.Context, client *bits.Client, providerID st
 				break
 			}
 			ticks++
+			if !symChecked {
+				if r := checkSymbolFields(providerID, string(market), "stream_order_book", tick.Symbol, tick.OriginalSymbol); r != nil {
+					return []TestResult{*r}
+				}
+				symChecked = true
+			}
 			if len(tick.Bids) > 0 && len(tick.Asks) > 0 {
 				if tick.Bids[0].Price >= tick.Asks[0].Price {
 					invalidSpread = true
@@ -659,6 +699,27 @@ func parseFloat(s string) (float64, error) {
 	var v float64
 	_, err := fmt.Sscanf(s, "%f", &v)
 	return v, err
+}
+
+// checkSymbolFields validates that a symbol field is normalized (contains "-") and
+// that OriginalSymbol is populated. Returns an error result if OriginalSymbol is
+// missing, a warning result if Symbol is not in BASE-QUOTE format, or nil if OK.
+func checkSymbolFields(providerID, market, feature, sym, origSym string) *TestResult {
+	if origSym == "" {
+		return &TestResult{
+			Provider: providerID, Market: market, Feature: feature,
+			Symbol: sym, Status: StatusError,
+			Message: "OriginalSymbol missing", Details: fmt.Sprintf("Symbol=%q", sym),
+		}
+	}
+	if !strings.Contains(sym, "-") {
+		return &TestResult{
+			Provider: providerID, Market: market, Feature: feature,
+			Symbol: sym, Status: StatusWarning,
+			Message: "Symbol not normalized (expected BASE-QUOTE)", Details: fmt.Sprintf("Symbol=%q OriginalSymbol=%q", sym, origSym),
+		}
+	}
+	return nil
 }
 
 // renderDashboard displays test results in compact dashboard format or JSON.

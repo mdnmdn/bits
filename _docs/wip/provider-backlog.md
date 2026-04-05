@@ -33,19 +33,19 @@ Legend: `OK` = passing · `WARN` = warning · `WARN*` = same symbol count across
 | Provider | Market | server_time | exchange_info | price | candles | ticker_24h | order_book | markets_list | stream_price | stream_order_book |
 |----------|--------|:-----------:|:-------------:|:-----:|:-------:|:----------:|:----------:|:------------:|:------------:|:-----------------:|
 | **coingecko** | spot | - | - | KO | KO | - | - | OK | KO | - |
-| **binance** | spot | OK | WARN* | OK | OK | OK | OK | - | WARN | OK |
+| **binance** | spot | OK | WARN* | OK | OK | OK | OK | - | KO | OK |
 | **binance** | futures | - | OK | - | OK | WARN | OK | - | - | OK |
 | **binance** | margin | - | WARN* | - | OK | OK | OK | - | - | - |
-| **bitget** | spot | OK | OK | OK | OK | OK | OK | - | WARN | OK |
-| **bitget** | futures | - | OK | - | OK | WARN | OK | - | WARN | WARN |
+| **bitget** | spot | OK | OK | OK | OK | OK | OK | - | KO | OK |
+| **bitget** | futures | - | OK | - | OK | WARN | OK | - | WARN | KO |
 | **bitget** | margin | - | OK | - | - | KO | - | - | - | - |
-| **whitebit** | spot | OK | OK | OK | OK | OK | OK | - | WARN | OK |
-| **whitebit** | futures | - | OK | - | OK | WARN | OK | - | - | WARN |
+| **whitebit** | spot | OK | OK | OK | OK | OK | OK | - | KO | OK |
+| **whitebit** | futures | - | OK | - | OK | WARN | OK | - | - | KO |
 | **cryptocom** | spot | OK | WARN* | OK | OK | OK | OK | - | OK | OK |
 | **cryptocom** | futures | - | WARN* | - | OK | OK | OK | - | - | - |
 | **cryptocom** | margin | - | OK | - | - | OK | OK | - | - | - |
-| **mexc** | spot | OK | WARN* | OK | OK | OK | OK | - | WARN | WARN |
-| **mexc** | futures | - | OK | - | OK | WARN | OK | - | - | - |
+| **mexc** | spot | OK | WARN* | OK | OK | OK | OK | - | KO | KO |
+| **mexc** | futures | - | OK | - | OK | WARN | OK | - | - | KO |
 | **mexc** | margin | - | WARN* | - | OK | OK | OK | - | - | - |
 
 ---
@@ -58,13 +58,13 @@ Legend: `OK` = passing · `WARN` = warning · `WARN*` = same symbol count across
 
 `bits price BTCUSDT` fails with "no price data returned". CoinGecko's `/coins/markets` and price endpoints expect CoinGecko coin IDs (e.g. `bitcoin`, `ethereum`), not exchange-style symbols like `BTCUSDT`. The symbol resolver does not currently translate `BTCUSDT` → `bitcoin` for CoinGecko.
 
-#### candles — KO: coin not found (HTTP 404)
+#### candles — KO: ExchangeInfo not supported
 
-Same root cause as price above. The candles endpoint also requires a CoinGecko coin ID. Request: `[coingecko] HTTP 404: {"error":"coin not found"}`.
+The symbol engine now validates symbols before calling the provider. For CoinGecko, loading the symbol list requires `ExchangeInfo`, which CoinGecko does not implement. Error: `provider coingecko does not support ExchangeInfo`. Root cause is unchanged: CoinGecko uses coin IDs (`bitcoin`), not exchange-style symbols (`BTCUSDT`), so the symbol engine cannot resolve them.
 
-#### stream_price — KO: plan restricted
+#### stream_price — KO: ExchangeInfo not supported
 
-Streaming requires a paid CoinGecko API key. Error: `plan restricted: requires paid CoinGecko API key`. This is a known limitation; the capability should either be gated on plan detection or documented as requiring Pro tier.
+Same root cause as candles: symbol resolution fails before the stream is started because CoinGecko does not implement `ExchangeInfo`. Previously the error was `plan restricted: requires paid CoinGecko API key` (from the stream itself); now it surfaces earlier at the symbol-engine stage. The stream still requires a paid plan, but that error is masked by the resolution failure.
 
 ---
 
@@ -76,9 +76,9 @@ Both spot and margin `exchange_info` return 3556 symbols, suggesting the margin 
 
 #### ticker_24h (futures) — WARN: volume order of magnitude differs
 
-Futures ticker volume is `170786.35` vs spot reference `2197.49`. This is expected: futures volume is expressed in contracts, not base-asset units. The reference comparison is not applicable to futures markets.
+Futures ticker volume is `176031.56` vs spot reference `2181.56`. This is expected: futures volume is expressed in contracts, not base-asset units. The reference comparison is not applicable to futures markets.
 
-#### stream_price (spot) — WARN: stream timeout (symbol issue)
+#### stream_price (spot) — KO: stream timeout (symbol issue)
 
 `BTCUSDT` stream times out on spot. Likely a symbol translation issue — the symbol engine may not be mapping `BTCUSDT` to the correct Binance WebSocket stream name. See [`_docs/symbol-engine.md`](../symbol-engine.md).
 
@@ -88,19 +88,23 @@ Futures ticker volume is `170786.35` vs spot reference `2197.49`. This is expect
 
 #### ticker_24h (futures) — WARN: volume order of magnitude differs
 
-Futures ticker volume is `50957.24` vs spot reference `2197.49`. Same expected behaviour as binance futures (contract denomination).
+Futures ticker volume is `52627.03` vs spot reference `2181.58`. Same expected behaviour as binance futures (contract denomination).
 
 #### ticker_24h (margin) — KO: HTTP 404
 
 `[bitget] HTTP 404: {"code":"40404","msg":"Request URL NOT FOUND"}`. The margin ticker endpoint either does not exist or uses a different URL path. The capability is registered but the underlying API call is hitting an invalid route.
 
+#### stream_price (spot) — KO: partial receive then stream timeout (symbol issue)
+
+Stream initially succeeds (3 ticks received) then times out. Bitget spot WebSocket accepts the subscription but drops the connection after a few updates. May be a keepalive or symbol format issue causing the stream to close. See [`_docs/symbol-engine.md`](../symbol-engine.md).
+
 #### stream_price (futures) — WARN: stream timeout (symbol issue)
 
 `BTCUSDT` on futures times out. Bitget futures use a different symbol format (e.g. `BTCUSDT_PERP`). The symbol engine must translate the input symbol to the futures native format before opening the stream. See [`_docs/symbol-engine.md`](../symbol-engine.md).
 
-#### stream_order_book (futures) — WARN: stream timeout (symbol issue)
+#### stream_order_book (futures) — KO: stream timeout (symbol issue)
 
-Same root cause as `stream_price` on futures: symbol not translated to Bitget futures native format.
+Same root cause as `stream_price` on futures: symbol not translated to Bitget futures native format. Previously a WARN (timeout), now consistently erroring.
 
 ---
 
@@ -108,19 +112,15 @@ Same root cause as `stream_price` on futures: symbol not translated to Bitget fu
 
 #### ticker_24h (futures) — WARN: volume order of magnitude differs
 
-Futures ticker volume is `34261.26` vs spot reference `2197.62`. Same expected behaviour as other exchanges (contract denomination).
+Futures ticker volume is `34198.23` vs spot reference `2181.58`. Same expected behaviour as other exchanges (contract denomination).
 
-#### stream_price (spot) — WARN: timestamp not increasing
+#### stream_price (spot) — KO: timestamp not increasing + stream timeout
 
-Received ticks but their timestamps do not increase monotonically. The WhiteBit spot WebSocket may deliver updates without server-side timestamps, or the timestamp field is not populated correctly.
+Received ticks but their timestamps do not increase monotonically, followed by a stream timeout. The WhiteBit spot WebSocket may deliver updates without server-side timestamps, or the timestamp field is not populated correctly. The connection also drops, suggesting `BTCUSDT` is not resolved to `BTC_USDT` (WhiteBit native format) for the WebSocket subscription. See [`_docs/symbol-engine.md`](../symbol-engine.md).
 
-#### stream_price (spot) — WARN: stream timeout (symbol issue)
+#### stream_order_book (futures) — KO: stream timeout (symbol issue)
 
-The stream eventually times out after the non-monotonic timestamp warning, suggesting `BTCUSDT` is not resolved to `BTC_USDT` (WhiteBit native format) for the WebSocket subscription. See [`_docs/symbol-engine.md`](../symbol-engine.md).
-
-#### stream_order_book (futures) — WARN: stream timeout (symbol issue)
-
-`BTCUSDT` on futures times out. WhiteBit futures use a `BTC_PERP`-style symbol. Symbol translation to the native futures format is needed for stream subscriptions.
+`BTCUSDT` on futures times out. WhiteBit futures use a `BTC_PERP`-style symbol. Symbol translation to the native futures format is needed for stream subscriptions. Previously a WARN, now consistently erroring.
 
 ---
 
@@ -140,12 +140,16 @@ Both spot and margin return 2388 symbols, indicating the margin endpoint routes 
 
 #### ticker_24h (futures) — WARN: volume order of magnitude differs
 
-Futures ticker volume is `192,309,418` vs spot reference `2197.63` — a difference of five orders of magnitude. This is much larger than other exchanges and may indicate the volume field is in a different unit (e.g. USDT notional rather than base-asset volume), or there is a field mapping error.
+Futures ticker volume is `194,047,975` vs spot reference `2181.66` — a difference of five orders of magnitude. This is much larger than other exchanges and may indicate the volume field is in a different unit (e.g. USDT notional rather than base-asset volume), or there is a field mapping error.
 
-#### stream_price (spot) — WARN: stream timeout (symbol issue)
+#### stream_price (spot) — KO: OriginalSymbol missing + stream timeout
 
-`BTCUSDT` stream times out after successfully receiving 3 ticks. Suggests the symbol is accepted initially but the subscription drops or the connection closes. May be a keepalive or reconnect issue in addition to or instead of a symbol problem.
+Two errors: `OriginalSymbol missing (Symbol="BTCUSDT")` followed by stream timeout. The symbol engine fails to resolve `BTCUSDT` back to an original symbol for MEXC spot, causing a hard error before the stream is even established. This is a symbol-engine mapping error, not just a timeout.
 
-#### stream_order_book (spot) — WARN: stream timeout (symbol issue)
+#### stream_order_book (spot) — KO: stream timeout (symbol issue)
 
-Order book stream for `BTCUSDT` on MEXC spot times out. Same likely root cause as `stream_price`.
+Order book stream for `BTCUSDT` on MEXC spot times out. Same likely root cause as `stream_price` — symbol not correctly resolved for MEXC WebSocket subscriptions.
+
+#### stream_order_book (futures) — KO: stream timeout (symbol issue)
+
+Order book stream for `BTCUSDT` on MEXC futures times out. Symbol translation to MEXC futures native format is needed for stream subscriptions.

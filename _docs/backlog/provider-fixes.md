@@ -98,4 +98,12 @@ cryptocom       | OK: 14 | FAILED:  2 | SKIPPED:  0
 mexc            | OK: 16 | FAILED:  2 | SKIPPED:  0
 whitebit        | OK: 13 | FAILED:  0 | SKIPPED:  0
 ----------------------------------------
-TOTAL           | OK: 74 | FAILED:  7 | SKIPPED:  1
+TOTAL           | OK: 74 | FAILED:  7 | SKIPPED:  
+
+
+
+
+bitget
+- future candles don't show last hour
+- margin candles => spot
+

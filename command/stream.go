@@ -117,8 +117,12 @@ func runStreamPrice(cmd *cobra.Command, args []string) error {
 			if update.Volume24h != nil {
 				vol = fmt.Sprintf(" | vol:%.2f", *update.Volume24h)
 			}
+			sym := update.Symbol
+			if update.OriginalSymbol != "" && update.OriginalSymbol != update.Symbol {
+				sym = update.Symbol + " [" + update.OriginalSymbol + "]"
+			}
 			_, _ = fmt.Fprintf(os.Stdout, "%s  %.6f %s  %s%s%s\n",
-				update.ID, update.Price, update.Currency, change, bidAsk, vol)
+				sym, update.Price, update.Currency, change, bidAsk, vol)
 		}
 	}
 	return nil
@@ -165,8 +169,12 @@ func runStreamBook(cmd *cobra.Command, args []string) error {
 			_ = enc.Close()
 
 		default:
+			sym := update.Symbol
+			if update.OriginalSymbol != "" && update.OriginalSymbol != update.Symbol {
+				sym = update.Symbol + " [" + update.OriginalSymbol + "]"
+			}
 			_, _ = fmt.Fprintf(os.Stdout, "%s | bids:%d asks:%d\n",
-				update.Symbol, len(update.Bids), len(update.Asks))
+				sym, len(update.Bids), len(update.Asks))
 		}
 	}
 	return nil
