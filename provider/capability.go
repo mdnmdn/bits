@@ -20,6 +20,12 @@ type CandleProvider interface {
 	Candles(ctx context.Context, symbol string, market model.MarketType, interval string, opts model.CandleOpts) (model.Response[[]model.Candle], error)
 }
 
+// FundingRateProvider fetches perpetual-futures funding-rate history
+// (FeatureFundingRates, MarketFutures only). Results are ascending by time.
+type FundingRateProvider interface {
+	FundingRates(ctx context.Context, symbol string, opts model.FundingRateOpts) (model.Response[[]model.FundingRate], error)
+}
+
 // TickerProvider fetches 24h rolling ticker statistics.
 // Single-symbol: the resolver fans out for multi-symbol calls.
 type TickerProvider interface {

@@ -103,6 +103,7 @@ func (c *Client) Capabilities() capability.CapabilityMatrix {
 			capability.CapabilityKey{Market: f, Feature: capability.FeatureTicker24h},
 			capability.CapabilityKey{Market: f, Feature: capability.FeatureOrderBook},
 			capability.CapabilityKey{Market: f, Feature: capability.FeatureStreamOrderBook},
+			capability.CapabilityKey{Market: f, Feature: capability.FeatureFundingRates},
 		)
 	}
 

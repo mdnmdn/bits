@@ -34,8 +34,8 @@ Pick a provider with `-p`, a market with `-m`, an output format with `-o`. That'
 | Provider | Markets | What it gives you |
 |---|---|---|
 | **CoinGecko** | — | Prices, candles, ranked markets, live price stream |
-| **Binance** | spot · futures | Server time, exchange info, prices, candles, ticker, order book, live book stream |
-| **Bitget** | spot · futures | Server time, exchange info, prices, candles, ticker |
+| **Binance** | spot · futures | Server time, exchange info, prices, candles, ticker, order book, live book stream, futures funding-rate history (library) |
+| **Bitget** | spot · futures | Server time, exchange info, prices, candles, ticker, futures funding-rate history (library) |
 | **WhiteBit** | spot · futures | Server time, exchange info, prices, candles, ticker, price stream, order book stream |
 | **Crypto.com** | spot | Prices, ticker, price stream, order book stream |
 | **MEXC** | spot | Prices, ticker, price stream, order book stream |

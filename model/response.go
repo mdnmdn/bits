@@ -2,6 +2,7 @@ package model
 
 const (
 	KindCandle       = "candle"
+	KindFundingRate  = "funding_rate"
 	KindTicker       = "ticker"
 	KindPrice        = "price"
 	KindOrderBook    = "orderbook"

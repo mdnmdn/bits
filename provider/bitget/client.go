@@ -104,6 +104,7 @@ func (c *Client) Capabilities() capability.CapabilityMatrix {
 		matrix[capability.CapabilityKey{Market: f, Feature: capability.FeatureOrderBook}] = true
 		matrix[capability.CapabilityKey{Market: f, Feature: capability.FeatureStreamPrice}] = true
 		matrix[capability.CapabilityKey{Market: f, Feature: capability.FeatureStreamOrderBook}] = true
+		matrix[capability.CapabilityKey{Market: f, Feature: capability.FeatureFundingRates}] = true
 	}
 
 	if marginEnabled {
