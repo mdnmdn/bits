@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/mdnmdn/bits/internal/logger"
 	"github.com/mdnmdn/bits/model"
 )
 
@@ -30,6 +29,9 @@ type bitgetSpotSymbol struct {
 	QuantityPrecision string `json:"quantityPrecision"`
 	MinTradeAmount    string `json:"minTradeAmount"`
 	MaxTradeAmount    string `json:"maxTradeAmount"`
+	MinTradeUSDT      string `json:"minTradeUSDT"`
+	MakerFeeRate      string `json:"makerFeeRate"`
+	TakerFeeRate      string `json:"takerFeeRate"`
 }
 
 // bitgetSpotSymbolsResponse is the API response for /api/v2/spot/public/symbols.
@@ -49,6 +51,10 @@ type bitgetFuturesContract struct {
 	VolumePlace    string `json:"volumePlace"`
 	MinTradeNum    string `json:"minTradeNum"`
 	MaxOrderQty    string `json:"maxOrderQty"`
+	MinTradeUSDT   string `json:"minTradeUSDT"`
+	SizeMultiplier string `json:"sizeMultiplier"`
+	MakerFeeRate   string `json:"makerFeeRate"`
+	TakerFeeRate   string `json:"takerFeeRate"`
 }
 
 // bitgetFuturesContractsResponse is the API response for /api/v2/mix/market/contracts.
@@ -207,19 +213,15 @@ func (c *Client) spotExchangeInfo(market model.MarketType) (model.Response[model
 		return model.Response[model.ExchangeInfo]{}, apiErr(symbolsResp.Code, symbolsResp.Msg)
 	}
 
-	feeRates, err := c.getSpotFeeRates()
-	if err != nil {
-		return model.Response[model.ExchangeInfo]{}, fmt.Errorf("failed to get fee rates: %w", err)
-	}
-
 	symbols := make([]model.Symbol, 0, len(symbolsResp.Data))
 	for _, s := range symbolsResp.Data {
 		pp, _ := strconv.Atoi(s.PricePrecision)
 		qp, _ := strconv.Atoi(s.QuantityPrecision)
 		minQty, _ := strconv.ParseFloat(s.MinTradeAmount, 64)
 		maxQty, _ := strconv.ParseFloat(s.MaxTradeAmount, 64)
-
-		makerFee, takerFee := getDefaultFees(feeRates)
+		minPrice, _ := strconv.ParseFloat(s.MinTradeUSDT, 64)
+		makerFee, _ := strconv.ParseFloat(s.MakerFeeRate, 64)
+		takerFee, _ := strconv.ParseFloat(s.TakerFeeRate, 64)
 
 		symbols = append(symbols, model.Symbol{
 			Symbol:           s.Symbol,
@@ -232,6 +234,7 @@ func (c *Client) spotExchangeInfo(market model.MarketType) (model.Response[model
 			QtyPrecision:     &qp,
 			MinQty:           &minQty,
 			MaxQty:           &maxQty,
+			MinPrice:         &minPrice,
 			MakerFee:         &makerFee,
 			TakerFee:         &takerFee,
 		})
@@ -250,11 +253,6 @@ func (c *Client) spotExchangeInfo(market model.MarketType) (model.Response[model
 }
 
 func (c *Client) futuresExchangeInfo(market model.MarketType) (model.Response[model.ExchangeInfo], error) {
-	feeRates, err := c.getFuturesFeeRates()
-	if err != nil {
-		return model.Response[model.ExchangeInfo]{}, fmt.Errorf("failed to get futures fee rates: %w", err)
-	}
-
 	body, err := c.doRequest("GET", "/api/v2/mix/market/contracts", "productType=USDT-FUTURES")
 	if err != nil {
 		return model.Response[model.ExchangeInfo]{}, err
@@ -268,14 +266,16 @@ func (c *Client) futuresExchangeInfo(market model.MarketType) (model.Response[mo
 		return model.Response[model.ExchangeInfo]{}, apiErr(resp.Code, resp.Msg)
 	}
 
-	makerFee, takerFee := getDefaultFees(feeRates)
-
 	symbols := make([]model.Symbol, 0, len(resp.Data))
 	for _, s := range resp.Data {
 		pp, _ := strconv.Atoi(s.PricePlace)
 		qp, _ := strconv.Atoi(s.VolumePlace)
 		minQty, _ := strconv.ParseFloat(s.MinTradeNum, 64)
 		maxQty, _ := strconv.ParseFloat(s.MaxOrderQty, 64)
+		minPrice, _ := strconv.ParseFloat(s.MinTradeUSDT, 64)
+		stepSize, _ := strconv.ParseFloat(s.SizeMultiplier, 64)
+		makerFee, _ := strconv.ParseFloat(s.MakerFeeRate, 64)
+		takerFee, _ := strconv.ParseFloat(s.TakerFeeRate, 64)
 
 		symbols = append(symbols, model.Symbol{
 			Symbol:           s.Symbol,
@@ -288,6 +288,8 @@ func (c *Client) futuresExchangeInfo(market model.MarketType) (model.Response[mo
 			QtyPrecision:     &qp,
 			MinQty:           &minQty,
 			MaxQty:           &maxQty,
+			MinPrice:         &minPrice,
+			StepSize:         &stepSize,
 			MakerFee:         &makerFee,
 			TakerFee:         &takerFee,
 		})
@@ -331,57 +333,5 @@ func convertFuturesStatus(status string) model.SymbolStatus {
 	}
 }
 
-func (c *Client) getSpotFeeRates() ([]bitgetVIPFeeRate, error) {
-	logger.Default.Debug("fetching VIP fee rates from Bitget")
-	body, err := c.doRequest("GET", "/api/v2/spot/market/vip-fee-rate", "")
-	if err != nil {
-		logger.Default.Debug("failed to fetch fee rates", "error", err)
-		return nil, err
-	}
-
-	var resp bitgetVIPFeeRateResponse
-	if err := json.Unmarshal(body, &resp); err != nil {
-		logger.Default.Debug("failed to parse fee rate response", "error", err)
-		return nil, fmt.Errorf("failed to parse VIP fee rate response: %w", err)
-	}
-	if resp.Code != "00000" {
-		logger.Default.Debug("API error fetching fee rates", "code", resp.Code, "msg", resp.Msg)
-		return nil, apiErr(resp.Code, resp.Msg)
-	}
-
-	logger.Default.Debug("fetched VIP fee rates", "levels", len(resp.Data))
-	return resp.Data, nil
-}
-
-func getDefaultFees(rates []bitgetVIPFeeRate) (makerFee, takerFee float64) {
-	for _, r := range rates {
-		if r.Level == "0" {
-			makerFee, _ = strconv.ParseFloat(r.MakerFeeRate, 64)
-			takerFee, _ = strconv.ParseFloat(r.TakerFeeRate, 64)
-			return makerFee, takerFee
-		}
-	}
-	return 0.001, 0.001
-}
-
-func (c *Client) getFuturesFeeRates() ([]bitgetVIPFeeRate, error) {
-	logger.Default.Debug("fetching VIP fee rates from Bitget (futures)")
-	body, err := c.doRequest("GET", "/api/v2/mix/market/vip-fee-rate", "")
-	if err != nil {
-		logger.Default.Debug("failed to fetch futures fee rates", "error", err)
-		return nil, err
-	}
-
-	var resp bitgetVIPFeeRateResponse
-	if err := json.Unmarshal(body, &resp); err != nil {
-		logger.Default.Debug("failed to parse futures fee rate response", "error", err)
-		return nil, fmt.Errorf("failed to parse futures VIP fee rate response: %w", err)
-	}
-	if resp.Code != "00000" {
-		logger.Default.Debug("API error fetching futures fee rates", "code", resp.Code, "msg", resp.Msg)
-		return nil, apiErr(resp.Code, resp.Msg)
-	}
-
-	logger.Default.Debug("fetched futures VIP fee rates", "levels", len(resp.Data))
-	return resp.Data, nil
-}
+// TODO: In the future, consider using GET /api/v2/common/trade-rate for more accurate
+// user-specific fee rates based on account level and trading volume.

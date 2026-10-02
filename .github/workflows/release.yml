@@ -27,6 +27,12 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HOMEBREW_TAP_TOKEN: ${{ secrets.BITS_BREW_TOKEN }}
 
+      - name: Publish to Go Proxy
+        run: |
+          TAG=$(git describe --tags --abbrev=0)
+          echo "Publishing module to Go Proxy with tag: $TAG"
+          GOPROXY=proxy.golang.org go list -m github.com/mdnmdn/bits@$TAG
+
   # godoc:
   #   needs: release
   #   runs-on: ubuntu-latest

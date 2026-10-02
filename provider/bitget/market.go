@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"strconv"
 	"time"
 
@@ -118,8 +119,14 @@ func (c *Client) Candles(_ context.Context, symbol string, market model.MarketTy
 
 	switch market {
 	case model.MarketFutures:
-		path = "/api/v2/mix/market/history-candles"
 		granularity = convertGranularityFutures(interval)
+		// history-candles requires startTime; use the plain candles endpoint when
+		// no time range is requested so that limit-based fetching works.
+		if opts.From != nil {
+			path = "/api/v2/mix/market/history-candles"
+		} else {
+			path = "/api/v2/mix/market/candles"
+		}
 	default:
 		granularity = convertGranularitySpot(interval)
 		// history-candles requires startTime; use the plain candles endpoint when
@@ -327,6 +334,7 @@ func (c *Client) fetchTicker(symbol string, market model.MarketType) (*bitgetTic
 	case model.MarketFutures:
 		path = "/api/v2/mix/market/ticker"
 		query = fmt.Sprintf("symbol=%s&productType=USDT-FUTURES", symbol)
+		slog.Debug("fetchTicker - future", "symbol", symbol, "market", market, "path", path, "query", query)
 	case model.MarketMargin:
 		return c.fetchMarginTicker(symbol)
 	default:
@@ -334,6 +342,7 @@ func (c *Client) fetchTicker(symbol string, market model.MarketType) (*bitgetTic
 		query = fmt.Sprintf("symbol=%s", symbol)
 	}
 
+	slog.Debug("fetchTicker", "symbol", symbol, "market", market, "path", path, "query", query)
 	body, err := c.doRequest("GET", path, query)
 	if err != nil {
 		return nil, err
