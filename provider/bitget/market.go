@@ -173,13 +173,19 @@ func (c *Client) Candles(_ context.Context, symbol string, market model.MarketTy
 			return model.Response[[]model.Candle]{}, fmt.Errorf("invalid candle data at index %d: expected at least 6 fields, got %d", i, len(row))
 		}
 
-		tsMs, _ := strconv.ParseInt(row[0], 10, 64)
+		tsMs, err := strconv.ParseInt(row[0], 10, 64)
+		if err != nil {
+			return model.Response[[]model.Candle]{}, providerErr(model.ErrKindParse, fmt.Sprintf("invalid candle timestamp at index %d: %q", i, row[0]), err)
+		}
 		openTime := time.UnixMilli(tsMs)
-		open, _ := strconv.ParseFloat(row[1], 64)
-		high, _ := strconv.ParseFloat(row[2], 64)
-		low, _ := strconv.ParseFloat(row[3], 64)
-		close, _ := strconv.ParseFloat(row[4], 64)
-		vol, _ := strconv.ParseFloat(row[5], 64)
+		var f [5]float64
+		for j := range f {
+			f[j], err = strconv.ParseFloat(row[j+1], 64)
+			if err != nil {
+				return model.Response[[]model.Candle]{}, providerErr(model.ErrKindParse, fmt.Sprintf("invalid candle value at index %d field %d: %q", i, j+1, row[j+1]), err)
+			}
+		}
+		open, high, low, close, vol := f[0], f[1], f[2], f[3], f[4]
 
 		candles = append(candles, model.Candle{
 			OpenTime: openTime,
@@ -378,7 +384,7 @@ func convertGranularitySpot(interval string) string {
 	case "4h":
 		return "4h"
 	case "1d":
-		return "1day"
+		return "1Dutc" // UTC day; plain 1day/1D open at 16:00 UTC (UTC+8)
 	default:
 		return interval
 	}
@@ -435,7 +441,7 @@ func convertGranularityFutures(interval string) string {
 	case "4h":
 		return "4H"
 	case "1d":
-		return "1D"
+		return "1Dutc" // UTC day; plain 1D opens at 16:00 UTC (UTC+8)
 	default:
 		return interval
 	}
