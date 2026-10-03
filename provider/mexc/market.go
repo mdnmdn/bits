@@ -175,6 +175,10 @@ func (c *Client) Ticker24h(ctx context.Context, symbol string, market model.Mark
 // maxSpotKlines is the largest limit the spot klines endpoint accepts.
 const maxSpotKlines = 1000
 
+// maxFuturesKlines is the largest data-point count the contract kline endpoint
+// returns per request (see _docs/providers/mexc/mexc-market.md).
+const maxFuturesKlines = 2000
+
 // Candles implements provider.CandleProvider.
 func (c *Client) Candles(ctx context.Context, symbol string, market model.MarketType, interval string, opts model.CandleOpts) (model.Response[[]model.Candle], error) {
 	resp := model.Response[[]model.Candle]{
@@ -186,8 +190,8 @@ func (c *Client) Candles(ctx context.Context, symbol string, market model.Market
 	if market == model.MarketFutures {
 		mexcInterval := mapInterval(interval, true)
 		query := fmt.Sprintf("interval=%s", mexcInterval)
-		if opts.Limit != nil {
-			query += fmt.Sprintf("&limit=%d", *opts.Limit)
+		if opts.Limit != nil && *opts.Limit > 0 {
+			query += fmt.Sprintf("&limit=%d", min(*opts.Limit, maxFuturesKlines))
 		}
 		if opts.From != nil && !opts.From.IsZero() {
 			query += fmt.Sprintf("&start=%d", opts.From.Unix())
@@ -218,7 +222,7 @@ func (c *Client) Candles(ctx context.Context, symbol string, market model.Market
 		for i := 0; i < n; i++ {
 			v := d.Vol[i]
 			candles = append(candles, model.Candle{
-				OpenTime: time.Unix(d.Time[i], 0),
+				OpenTime: time.Unix(d.Time[i], 0).UTC(),
 				Open:     d.Open[i],
 				High:     d.High[i],
 				Low:      d.Low[i],
@@ -322,7 +326,7 @@ func parseSpotCandles(raw [][]interface{}) []model.Candle {
 		v := parseFloat(rc[5])
 
 		candles = append(candles, model.Candle{
-			OpenTime: time.UnixMilli(t),
+			OpenTime: time.UnixMilli(t).UTC(),
 			Open:     o,
 			High:     h,
 			Low:      l,

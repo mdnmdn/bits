@@ -43,7 +43,7 @@ func (c *Client) ServerTime(_ context.Context) (model.Response[model.ServerTime]
 	}
 
 	serverTimeMs := result.Data[0].T
-	serverTime := time.UnixMilli(serverTimeMs)
+	serverTime := time.UnixMilli(serverTimeMs).UTC()
 	latency := after.Sub(before)
 
 	return model.Response[model.ServerTime]{

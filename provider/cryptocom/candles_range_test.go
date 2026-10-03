@@ -101,3 +101,20 @@ func TestCandles_NoRangeKeepsQuery(t *testing.T) {
 		t.Errorf("unexpected range params: %s", reqs[0])
 	}
 }
+
+func TestCandles_UTC(t *testing.T) {
+	base := time.Date(2026, 9, 3, 0, 0, 0, 0, time.UTC)
+	var reqs []string
+	srv := fakeCandleServer(t, base.UnixMilli(), base.UnixMilli(), &reqs)
+	defer srv.Close()
+	c := newTestClient(srv.URL)
+	to := base.Add(time.Minute)
+	limit := 10
+	resp, err := c.Candles(context.Background(), "BTC_USDT", model.MarketSpot, "1m", model.CandleOpts{From: &base, To: &to, Limit: &limit})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(resp.Data) != 1 || resp.Data[0].OpenTime.Location() != time.UTC {
+		t.Fatalf("candle not in UTC: %+v", resp.Data)
+	}
+}

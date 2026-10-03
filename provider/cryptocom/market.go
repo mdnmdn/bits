@@ -34,12 +34,12 @@ func (c *Client) Price(_ context.Context, ids []string, currency string) (model.
 		}
 
 		prices = append(prices, model.CoinPrice{
-			ID:               symbol,
-			Symbol:           model.NormalizeSymbol(symbol),
-			OriginalSymbol:   symbol,
-			Currency:         currency,
-			Price:            price,
-			Change24h:        changePct,
+			ID:             symbol,
+			Symbol:         model.NormalizeSymbol(symbol),
+			OriginalSymbol: symbol,
+			Currency:       currency,
+			Price:          price,
+			Change24h:      changePct,
 		})
 	}
 
@@ -149,7 +149,7 @@ func (c *Client) OrderBook(_ context.Context, symbol string, market model.Market
 		bids = row.Bids
 		asks = row.Asks
 		if row.T > 0 {
-			t := time.UnixMilli(row.T)
+			t := time.UnixMilli(row.T).UTC()
 			snapshotTime = &t
 		}
 	}
@@ -263,7 +263,7 @@ func (c *Client) Candles(_ context.Context, symbol string, market model.MarketTy
 		vol, _ := strconv.ParseFloat(d.V, 64)
 
 		candle := model.Candle{
-			OpenTime: time.UnixMilli(d.T),
+			OpenTime: time.UnixMilli(d.T).UTC(),
 			Open:     open,
 			High:     high,
 			Low:      low,

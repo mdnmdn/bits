@@ -72,4 +72,3 @@ func apiCodeToKind(code int) model.ErrorKind {
 		return model.ErrKindUnknown
 	}
 }
-

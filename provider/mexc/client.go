@@ -7,9 +7,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mdnmdn/bits/internal/ws"
 	"github.com/mdnmdn/bits/capability"
 	"github.com/mdnmdn/bits/config"
+	"github.com/mdnmdn/bits/internal/ws"
 	"github.com/mdnmdn/bits/model"
 	"github.com/mdnmdn/bits/provider"
 )

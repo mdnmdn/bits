@@ -145,7 +145,7 @@ func (h *cryptocomHandler) handleBook(result wsResult) (any, error) {
 
 	var ts *time.Time
 	if d.T > 0 {
-		t := time.UnixMilli(d.T)
+		t := time.UnixMilli(d.T).UTC()
 		ts = &t
 	}
 

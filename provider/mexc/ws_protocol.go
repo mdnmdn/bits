@@ -186,7 +186,7 @@ func (p *mexcProtocol) parseSpot(raw []byte) (any, error) {
 		var ts *time.Time
 		if spotMsg.SendTime != "" {
 			if ms, err := strconv.ParseInt(spotMsg.SendTime, 10, 64); err == nil {
-				t := time.UnixMilli(ms)
+				t := time.UnixMilli(ms).UTC()
 				ts = &t
 			}
 		}
@@ -276,7 +276,7 @@ func (p *mexcProtocol) parseSpotMiniTickerData(symbol string, data []byte, ts *t
 	open24h := priceVal - (priceVal * rateVal / 100)
 
 	if sendTime > 0 {
-		t := time.UnixMilli(sendTime)
+		t := time.UnixMilli(sendTime).UTC()
 		ts = &t
 	}
 
@@ -335,7 +335,7 @@ func (p *mexcProtocol) parseSpotDepthData(symbol string, data []byte, ts *time.T
 			case 6: // sendTime
 				if len(fieldData) <= 20 {
 					if ms, err := strconv.ParseInt(string(fieldData), 10, 64); err == nil {
-						t := time.UnixMilli(ms)
+						t := time.UnixMilli(ms).UTC()
 						ts = &t
 					}
 				}
@@ -551,7 +551,7 @@ func (p *mexcProtocol) parseFutures(raw []byte) (any, error) {
 
 		var ts *time.Time
 		if data.Timestamp > 0 {
-			t := time.UnixMilli(data.Timestamp)
+			t := time.UnixMilli(data.Timestamp).UTC()
 			ts = &t
 		}
 
@@ -604,7 +604,7 @@ func (p *mexcProtocol) parseFutures(raw []byte) (any, error) {
 
 		var ts *time.Time
 		if msg.Ts > 0 {
-			t := time.UnixMilli(msg.Ts)
+			t := time.UnixMilli(msg.Ts).UTC()
 			ts = &t
 		}
 
