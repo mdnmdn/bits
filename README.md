@@ -39,8 +39,12 @@ Pick a provider with `-p`, a market with `-m`, an output format with `-o`. That'
 | **WhiteBit** | spot · futures | Server time, exchange info, prices, candles, ticker, price stream, order book stream |
 | **Crypto.com** | spot | Prices, ticker, price stream, order book stream |
 | **MEXC** | spot | Prices, ticker, price stream, order book stream |
+| **OKX** | spot · futures (swap) | Public data only: exchange info, candles (ranged paging), ticker. Default host `eea.okx.com` |
+| **Bitvavo** | spot | Public data only: exchange info, candles (1m-1d, minutes without trades are missing), 24h ticker. Alias `bv` |
+| **Bybit EU** | spot | Public data only: exchange info, candles, ticker. Default host `api.bybit.eu`. Alias `bybit` |
+| **Kraken** | futures (PF_ perpetuals) | Public data only: exchange info (first-tier fees), candles, 24h ticker. Alias `kraken-futures` |
 
-Switch providers with `-p coingecko / -p binance / -p bitget / -p whitebit / -p cryptocom / -p mexc`.
+Switch providers with `-p coingecko / -p binance / -p bitget / -p whitebit / -p cryptocom / -p mexc / -p okx / -p bitvavo / -p bybiteu / -p kraken`.
 
 **Fallback is controlled by whether you use `-p`:**
 - No `-p` → fallback allowed; `bits` auto-routes to a capable provider.

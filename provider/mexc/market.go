@@ -172,6 +172,9 @@ func (c *Client) Ticker24h(ctx context.Context, symbol string, market model.Mark
 	return resp, nil
 }
 
+// maxSpotKlines is the largest limit the spot klines endpoint accepts.
+const maxSpotKlines = 1000
+
 // Candles implements provider.CandleProvider.
 func (c *Client) Candles(ctx context.Context, symbol string, market model.MarketType, interval string, opts model.CandleOpts) (model.Response[[]model.Candle], error) {
 	resp := model.Response[[]model.Candle]{
@@ -228,32 +231,22 @@ func (c *Client) Candles(ctx context.Context, symbol string, market model.Market
 	}
 
 	// Spot / Margin
-	// MEXC API klines endpoint (/api/v3/klines) hasquirks that require workarounds:
-	//
-	// #1 Without any time filters:
-	//    curl "https://api.mexc.com/api/v3/klines?symbol=SOLUSDT&interval=1d"
-	//    -> Returns NEWEST 500 candles (correct)
-	//
-	// #2 With only startTime:
-	//    curl "https://api.mexc.com/api/v3/klines?symbol=SOLUSDT&interval=1d&startTime=1774656000000"
-	//    -> Returns OLDEST 500 candles (unexpected - should return newest from that time)
-	//
-	// #3 With only endTime:
-	//    curl "https://api.mexc.com/api/v3/klines?symbol=SOLUSDT&interval=1d&endTime=1774828800000"
-	//    -> Returns OLDEST candles up to that time (unexpected - should return newest)
-	//
-	// #4 With endTime + limit:
-	//    curl "https://api.mexc.com/api/v3/klines?symbol=SOLUSDT&interval=1d&endTime=1774828800000&limit=10"
-	//    -> Returns NEWEST 10 candles up to endTime (works correctly!)
-	//
-	// #5 With startTime + endTime:
-	//    curl "https://api.mexc.com/api/v3/klines?symbol=SOLUSDT&interval=1d&startTime=1774656000000&endTime=1774828800000"
-	//    -> Returns correct range (works correctly!)
-	//
-	// Workaround: Always fetch all (newest 500) and filter client-side.
-	// This is the most reliable approach given the API quirks.
+	// /api/v3/klines returns the newest 500 candles without time bounds, but
+	// with only one bound it anchors at the oldest side. Verified against the
+	// live API: startTime together with endTime returns exactly that window
+	// (limit up to 1000), so both bounds are sent when both are set. With a
+	// single bound the response is filtered client-side below. The venue keeps
+	// about 30 days of 1m candles: older windows return an empty list.
 	mexcInterval := mapInterval(interval, false)
 	query := fmt.Sprintf("symbol=%s&interval=%s", symbol, mexcInterval)
+	hasFrom := opts.From != nil && !opts.From.IsZero()
+	hasTo := opts.To != nil && !opts.To.IsZero()
+	if hasFrom && hasTo {
+		query += fmt.Sprintf("&startTime=%d&endTime=%d", opts.From.UnixMilli(), opts.To.UnixMilli())
+	}
+	if opts.Limit != nil && *opts.Limit > 0 {
+		query += fmt.Sprintf("&limit=%d", min(*opts.Limit, maxSpotKlines))
+	}
 
 	data, err := c.doRequest(ctx, market, "/klines", query)
 	if err != nil {

@@ -15,7 +15,7 @@ var logLevel string
 func init() {
 	Root.PersistentFlags().StringVarP(&logLevel, "log", "l", "info", "Log level (debug, info, warn, error)")
 	Root.PersistentFlags().StringP("output", "o", "table", "Output format (table, json, markdown, yaml, toon)")
-	Root.PersistentFlags().StringP("provider", "p", "", "Data provider (coingecko, binance, bitget, whitebit, cryptocom, mexc)")
+	Root.PersistentFlags().StringP("provider", "p", "", "Data provider (coingecko, binance, bitget, whitebit, cryptocom, mexc, okx, bitvavo, bybiteu, kraken)")
 	Root.PersistentFlags().StringP("market", "m", "spot", "Market type (spot, futures/future, margin)")
 
 	Root.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {

@@ -12,9 +12,13 @@ import (
 	"github.com/mdnmdn/bits/provider"
 	"github.com/mdnmdn/bits/provider/binance"
 	"github.com/mdnmdn/bits/provider/bitget"
+	"github.com/mdnmdn/bits/provider/bitvavo"
+	"github.com/mdnmdn/bits/provider/bybiteu"
 	"github.com/mdnmdn/bits/provider/coingecko"
 	"github.com/mdnmdn/bits/provider/cryptocom"
+	"github.com/mdnmdn/bits/provider/kraken"
 	"github.com/mdnmdn/bits/provider/mexc"
+	"github.com/mdnmdn/bits/provider/okx"
 	"github.com/mdnmdn/bits/provider/whitebit"
 )
 
@@ -35,6 +39,14 @@ var providerAliases = map[string]string{
 	// mexc aliases
 	"mx": "mexc",
 	"mxc": "mexc",
+	// okx aliases
+	"okex": "okx",
+	// bitvavo aliases
+	"bv": "bitvavo",
+	// bybiteu aliases
+	"bybit": "bybiteu",
+	// kraken aliases
+	"kraken-futures": "kraken",
 }
 
 // ResolveProvider resolves an alias to the canonical provider name.
@@ -66,6 +78,14 @@ func NewProvider(name string, cfg *config.Config) (provider.Provider, error) {
 		return cryptocom.NewClient(cfg.CryptoCom), nil
 	case "mexc":
 		return mexc.NewClient(cfg.MEXC), nil
+	case "okx":
+		return okx.NewClient(cfg.OKX), nil
+	case "bitvavo":
+		return bitvavo.NewClient(bitvavo.Config{BaseURL: cfg.Bitvavo.BaseURL}), nil
+	case "bybiteu":
+		return bybiteu.NewClient(bybiteu.Config{BaseURL: cfg.BybitEU.BaseURL}), nil
+	case "kraken":
+		return kraken.NewClient(kraken.Config{BaseURL: cfg.Kraken.BaseURL}), nil
 	default:
 		return nil, fmt.Errorf("unknown provider %q", name)
 	}
@@ -73,7 +93,7 @@ func NewProvider(name string, cfg *config.Config) (provider.Provider, error) {
 
 // AllProviderIDs returns the IDs of all registered providers.
 func AllProviderIDs() []string {
-	return []string{"coingecko", "binance", "bitget", "whitebit", "cryptocom", "mexc"}
+	return []string{"coingecko", "binance", "bitget", "whitebit", "cryptocom", "mexc", "okx", "bitvavo", "bybiteu", "kraken"}
 }
 
 // AllProviderIDsWithAliases returns all provider IDs including aliases.
@@ -85,5 +105,9 @@ func AllProviderIDsWithAliases() []string {
 		"whitebit", "wb",
 		"cryptocom", "cdc", "cro",
 		"mexc", "mx",
+		"okx", "okex",
+		"bitvavo", "bv",
+		"bybiteu", "bybit",
+		"kraken", "kraken-futures",
 	}
 }

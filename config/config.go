@@ -129,6 +129,48 @@ func (c MEXCConfig) IsSpotEnabled() bool    { return c.Spot.Enabled }
 func (c MEXCConfig) IsMarginEnabled() bool  { return c.Margin.Enabled }
 func (c MEXCConfig) IsFuturesEnabled() bool { return c.Futures.Enabled }
 
+// OKXConfig holds OKX settings. Only public market data is supported, so
+// there are no credentials. BaseURL defaults to the EEA host (https://eea.okx.com).
+// Futures means perpetual swaps (SWAP).
+type OKXConfig struct {
+	BaseURL string       `mapstructure:"base_url"`
+	Spot    MarketConfig `mapstructure:"spot"`
+	Futures MarketConfig `mapstructure:"futures"`
+}
+
+func (c OKXConfig) IsSpotEnabled() bool    { return c.Spot.Enabled }
+func (c OKXConfig) IsFuturesEnabled() bool { return c.Futures.Enabled }
+
+// BitvavoConfig holds Bitvavo settings. Only public spot market data is
+// supported, so there are no credentials. BaseURL defaults to
+// https://api.bitvavo.com/v2.
+type BitvavoConfig struct {
+	BaseURL string       `mapstructure:"base_url"`
+	Spot    MarketConfig `mapstructure:"spot"`
+}
+
+func (c BitvavoConfig) IsSpotEnabled() bool { return c.Spot.Enabled }
+
+// BybitEUConfig holds Bybit EU settings. Only public spot market data is
+// supported, so there are no credentials. BaseURL defaults to
+// https://api.bybit.eu.
+type BybitEUConfig struct {
+	BaseURL string       `mapstructure:"base_url"`
+	Spot    MarketConfig `mapstructure:"spot"`
+}
+
+func (c BybitEUConfig) IsSpotEnabled() bool { return c.Spot.Enabled }
+
+// KrakenConfig holds Kraken Futures settings. Only public perpetual market
+// data is supported, so there are no credentials. BaseURL defaults to
+// https://futures.kraken.com.
+type KrakenConfig struct {
+	BaseURL string       `mapstructure:"base_url"`
+	Futures MarketConfig `mapstructure:"futures"`
+}
+
+func (c KrakenConfig) IsFuturesEnabled() bool { return c.Futures.Enabled }
+
 // SymbolConfig holds symbol resolution settings.
 type SymbolConfig struct {
 	CacheTTL time.Duration `mapstructure:"cache_ttl"`
@@ -170,6 +212,10 @@ type Config struct {
 	WhiteBit        WhiteBitConfig  `mapstructure:"whitebit"`
 	CryptoCom       CryptoComConfig `mapstructure:"cryptocom"`
 	MEXC            MEXCConfig      `mapstructure:"mexc"`
+	OKX             OKXConfig       `mapstructure:"okx"`
+	Bitvavo         BitvavoConfig   `mapstructure:"bitvavo"`
+	BybitEU         BybitEUConfig   `mapstructure:"bybiteu"`
+	Kraken          KrakenConfig    `mapstructure:"kraken"`
 	Symbol          SymbolConfig    `mapstructure:"symbol"`
 }
 
@@ -366,6 +412,37 @@ enabled = false
 enabled = false
 # maker_fee = 0.002
 # taker_fee = 0.002
+
+# OKX configuration (public market data only, no credentials)
+[okx]
+# base_url = "https://eea.okx.com"   # EEA users must use eea.okx.com
+
+[okx.spot]
+enabled = false
+
+[okx.futures]
+enabled = false   # perpetual swaps
+
+# Bitvavo configuration (public spot market data only, no credentials)
+[bitvavo]
+# base_url = "https://api.bitvavo.com/v2"
+
+[bitvavo.spot]
+enabled = false
+
+# Bybit EU configuration (public spot market data only, no credentials)
+[bybiteu]
+# base_url = "https://api.bybit.eu"
+
+[bybiteu.spot]
+enabled = false
+
+# Kraken Futures configuration (public perpetual market data only, no credentials)
+[kraken]
+# base_url = "https://futures.kraken.com"
+
+[kraken.futures]
+enabled = false
 
 # Symbol resolution cache settings
 [symbol]
@@ -571,6 +648,33 @@ func applyEnvMap(envVars map[string]string, cfg *Config) {
 	if v, ok := envVars["mexc.futures.enabled"]; ok {
 		cfg.MEXC.Futures.Enabled = v == "true" || v == "1"
 	}
+	if v, ok := envVars["okx.base_url"]; ok {
+		cfg.OKX.BaseURL = v
+	}
+	if v, ok := envVars["okx.spot.enabled"]; ok {
+		cfg.OKX.Spot.Enabled = v == "true" || v == "1"
+	}
+	if v, ok := envVars["okx.futures.enabled"]; ok {
+		cfg.OKX.Futures.Enabled = v == "true" || v == "1"
+	}
+	if v, ok := envVars["bitvavo.base_url"]; ok {
+		cfg.Bitvavo.BaseURL = v
+	}
+	if v, ok := envVars["bitvavo.spot.enabled"]; ok {
+		cfg.Bitvavo.Spot.Enabled = v == "true" || v == "1"
+	}
+	if v, ok := envVars["bybiteu.base_url"]; ok {
+		cfg.BybitEU.BaseURL = v
+	}
+	if v, ok := envVars["bybiteu.spot.enabled"]; ok {
+		cfg.BybitEU.Spot.Enabled = v == "true" || v == "1"
+	}
+	if v, ok := envVars["kraken.base_url"]; ok {
+		cfg.Kraken.BaseURL = v
+	}
+	if v, ok := envVars["kraken.futures.enabled"]; ok {
+		cfg.Kraken.Futures.Enabled = v == "true" || v == "1"
+	}
 	// Symbol config
 	if v, ok := envVars["symbol.cache_ttl"]; ok {
 		if d, err := time.ParseDuration(v); err == nil {
@@ -696,6 +800,37 @@ func applyEnvOverrides(cfg *Config) {
 	if v := os.Getenv("BITS_MEXC_FUTURES_ENABLED"); v != "" {
 		cfg.MEXC.Futures.Enabled = v == "true" || v == "1"
 	}
+	// OKX
+	if v := os.Getenv("BITS_OKX_BASE_URL"); v != "" {
+		cfg.OKX.BaseURL = v
+	}
+	if v := os.Getenv("BITS_OKX_SPOT_ENABLED"); v != "" {
+		cfg.OKX.Spot.Enabled = v == "true" || v == "1"
+	}
+	if v := os.Getenv("BITS_OKX_FUTURES_ENABLED"); v != "" {
+		cfg.OKX.Futures.Enabled = v == "true" || v == "1"
+	}
+	// Bitvavo
+	if v := os.Getenv("BITS_BITVAVO_BASE_URL"); v != "" {
+		cfg.Bitvavo.BaseURL = v
+	}
+	if v := os.Getenv("BITS_BITVAVO_SPOT_ENABLED"); v != "" {
+		cfg.Bitvavo.Spot.Enabled = v == "true" || v == "1"
+	}
+	// Bybit EU
+	if v := os.Getenv("BITS_BYBITEU_BASE_URL"); v != "" {
+		cfg.BybitEU.BaseURL = v
+	}
+	if v := os.Getenv("BITS_BYBITEU_SPOT_ENABLED"); v != "" {
+		cfg.BybitEU.Spot.Enabled = v == "true" || v == "1"
+	}
+	// Kraken Futures
+	if v := os.Getenv("BITS_KRAKEN_BASE_URL"); v != "" {
+		cfg.Kraken.BaseURL = v
+	}
+	if v := os.Getenv("BITS_KRAKEN_FUTURES_ENABLED"); v != "" {
+		cfg.Kraken.Futures.Enabled = v == "true" || v == "1"
+	}
 	// Symbol resolution cache
 	if v := os.Getenv("BITS_SYMBOL_CACHE_TTL"); v != "" {
 		if d, err := time.ParseDuration(v); err == nil {
@@ -746,6 +881,15 @@ func Save(cfg *Config) error {
 	v.Set("mexc.spot.enabled", cfg.MEXC.Spot.Enabled)
 	v.Set("mexc.margin.enabled", cfg.MEXC.Margin.Enabled)
 	v.Set("mexc.futures.enabled", cfg.MEXC.Futures.Enabled)
+	v.Set("okx.base_url", cfg.OKX.BaseURL)
+	v.Set("okx.spot.enabled", cfg.OKX.Spot.Enabled)
+	v.Set("okx.futures.enabled", cfg.OKX.Futures.Enabled)
+	v.Set("bitvavo.base_url", cfg.Bitvavo.BaseURL)
+	v.Set("bitvavo.spot.enabled", cfg.Bitvavo.Spot.Enabled)
+	v.Set("bybiteu.base_url", cfg.BybitEU.BaseURL)
+	v.Set("bybiteu.spot.enabled", cfg.BybitEU.Spot.Enabled)
+	v.Set("kraken.base_url", cfg.Kraken.BaseURL)
+	v.Set("kraken.futures.enabled", cfg.Kraken.Futures.Enabled)
 
 	path := filepath.Join(dir, "config.yaml")
 	if err := v.WriteConfigAs(path); err != nil {
@@ -820,6 +964,14 @@ func (c *Config) Redacted() *Config {
 			Margin:    c.MEXC.Margin,
 			Futures:   c.MEXC.Futures,
 		},
+		OKX: OKXConfig{
+			BaseURL: c.OKX.BaseURL,
+			Spot:    c.OKX.Spot,
+			Futures: c.OKX.Futures,
+		},
+		Bitvavo: BitvavoConfig{BaseURL: c.Bitvavo.BaseURL, Spot: c.Bitvavo.Spot},
+		BybitEU: BybitEUConfig{BaseURL: c.BybitEU.BaseURL, Spot: c.BybitEU.Spot},
+		Kraken:  KrakenConfig{BaseURL: c.Kraken.BaseURL, Futures: c.Kraken.Futures},
 		Symbol: SymbolConfig{
 			CacheTTL: c.Symbol.CacheTTL,
 			CacheDir: c.Symbol.CacheDir,

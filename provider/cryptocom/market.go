@@ -206,6 +206,9 @@ func (c *Client) fetchTicker(symbol string) (*apiTickerData, error) {
 	return &result.Data[0], nil
 }
 
+// maxCandleCount is the largest count the candlestick endpoint accepts.
+const maxCandleCount = 300
+
 func (c *Client) Candles(_ context.Context, symbol string, market model.MarketType, interval string, opts model.CandleOpts) (model.Response[[]model.Candle], error) {
 	resp := model.Response[[]model.Candle]{
 		Provider: providerID,
@@ -217,6 +220,18 @@ func (c *Client) Candles(_ context.Context, symbol string, market model.MarketTy
 	timeframe := mapInterval(interval)
 
 	query := fmt.Sprintf("instrument_name=%s&timeframe=%s", instName, timeframe)
+	// The endpoint returns the newest count candles (default 25) unless a
+	// range is given; start_ts and end_ts (ms, end exclusive) select a window,
+	// count is capped at 300. Callers page through a range with these bounds.
+	if opts.From != nil && !opts.From.IsZero() {
+		query += fmt.Sprintf("&start_ts=%d", opts.From.UnixMilli())
+	}
+	if opts.To != nil && !opts.To.IsZero() {
+		query += fmt.Sprintf("&end_ts=%d", opts.To.UnixMilli())
+	}
+	if opts.Limit != nil && *opts.Limit > 0 {
+		query += fmt.Sprintf("&count=%d", min(*opts.Limit, maxCandleCount))
+	}
 	body, err := c.doRequest("public/get-candlestick", query)
 	if err != nil {
 		return resp, err
