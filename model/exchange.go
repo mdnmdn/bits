@@ -26,6 +26,7 @@ type Symbol struct {
 	MinQty         *float64       `json:"min_q,omitempty"  yaml:"min_q,omitempty"  toon:"min_q,omitempty"`
 	MaxQty         *float64       `json:"max_q,omitempty"  yaml:"max_q,omitempty"  toon:"max_q,omitempty"`
 	StepSize       *float64       `json:"step,omitempty"   yaml:"step,omitempty"   toon:"step,omitempty"` // quantity increment
+	MinNotional    *float64       `json:"min_notional,omitempty" yaml:"min_notional,omitempty" toon:"min_notional,omitempty"` // minimum order value in quote asset
 	MakerFee       *float64       `json:"maker,omitempty"  yaml:"maker,omitempty"  toon:"maker,omitempty"`
 	TakerFee       *float64       `json:"taker,omitempty"  yaml:"taker,omitempty"  toon:"taker,omitempty"`
 	Extra          map[string]any `json:"extra,omitempty"  yaml:"extra,omitempty"  toon:"extra,omitempty"`

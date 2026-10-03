@@ -25,14 +25,14 @@ func RenderExchangeInfo(w io.Writer, res model.Response[model.ExchangeInfo]) err
 	}
 
 	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
-	_, _ = fmt.Fprintln(tw, "SYMBOL\tORIGINAL\tBASE\tQUOTE\tSTATUS\tMARKET\tPRICE_PREC\tQTY_PREC\tMIN_PRICE\tMAX_PRICE\tMIN_QTY\tMAX_QTY\tSTEPSIZE\tMAKER_FEE\tTAKER_FEE")
+	_, _ = fmt.Fprintln(tw, "SYMBOL\tORIGINAL\tBASE\tQUOTE\tSTATUS\tMARKET\tPRICE_PREC\tQTY_PREC\tMIN_PRICE\tMAX_PRICE\tMIN_QTY\tMAX_QTY\tSTEPSIZE\tMIN_NOTIONAL\tMAKER_FEE\tTAKER_FEE")
 	for _, s := range info.Symbols {
-		_, _ = fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
+		_, _ = fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
 			NormalizeSymbol(s.Symbol), s.Symbol, s.BaseAsset, s.QuoteAsset, s.Status, s.Market,
 			ptrToStr(s.PricePrecision), ptrToStr(s.QtyPrecision),
 			ptrToStr(s.MinPrice), ptrToStr(s.MaxPrice),
 			ptrToStr(s.MinQty), ptrToStr(s.MaxQty),
-			ptrToStr(s.StepSize), ptrToStr(s.MakerFee), ptrToStr(s.TakerFee))
+			ptrToStr(s.StepSize), ptrToStr(s.MinNotional), ptrToStr(s.MakerFee), ptrToStr(s.TakerFee))
 	}
 	_ = tw.Flush()
 	printFooter(w, res)
@@ -67,6 +67,9 @@ func renderSymbolDetails(w io.Writer, s model.Symbol) {
 	}
 	if s.StepSize != nil {
 		_, _ = fmt.Fprintf(w, "Step Size     : %v\n", *s.StepSize)
+	}
+	if s.MinNotional != nil {
+		_, _ = fmt.Fprintf(w, "Min Notional  : %v\n", *s.MinNotional)
 	}
 	if s.MakerFee != nil {
 		_, _ = fmt.Fprintf(w, "Maker Fee     : %v\n", *s.MakerFee)

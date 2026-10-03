@@ -168,7 +168,7 @@ func (c *Client) marginExchangeInfo(market model.MarketType) (model.Response[mod
 
 		pp, _ := strconv.Atoi(s.PricePrecision)
 		qp, _ := strconv.Atoi(s.QuantityPrecision)
-		minPrice, _ := strconv.ParseFloat(s.MinTradeUSDT, 64)
+		minNotional, _ := strconv.ParseFloat(s.MinTradeUSDT, 64)
 		makerFee, _ := strconv.ParseFloat(s.MakerFeeRate, 64)
 		takerFee, _ := strconv.ParseFloat(s.TakerFeeRate, 64)
 
@@ -181,7 +181,7 @@ func (c *Client) marginExchangeInfo(market model.MarketType) (model.Response[mod
 			Market:           market,
 			PricePrecision:   &pp,
 			QtyPrecision:     &qp,
-			MinPrice:         &minPrice,
+			MinNotional:      &minNotional,
 			MakerFee:         &makerFee,
 			TakerFee:         &takerFee,
 		})
@@ -219,7 +219,7 @@ func (c *Client) spotExchangeInfo(market model.MarketType) (model.Response[model
 		qp, _ := strconv.Atoi(s.QuantityPrecision)
 		minQty, _ := strconv.ParseFloat(s.MinTradeAmount, 64)
 		maxQty, _ := strconv.ParseFloat(s.MaxTradeAmount, 64)
-		minPrice, _ := strconv.ParseFloat(s.MinTradeUSDT, 64)
+		minNotional, _ := strconv.ParseFloat(s.MinTradeUSDT, 64)
 		makerFee, _ := strconv.ParseFloat(s.MakerFeeRate, 64)
 		takerFee, _ := strconv.ParseFloat(s.TakerFeeRate, 64)
 
@@ -234,7 +234,7 @@ func (c *Client) spotExchangeInfo(market model.MarketType) (model.Response[model
 			QtyPrecision:     &qp,
 			MinQty:           &minQty,
 			MaxQty:           &maxQty,
-			MinPrice:         &minPrice,
+			MinNotional:      &minNotional,
 			MakerFee:         &makerFee,
 			TakerFee:         &takerFee,
 		})
@@ -272,7 +272,7 @@ func (c *Client) futuresExchangeInfo(market model.MarketType) (model.Response[mo
 		qp, _ := strconv.Atoi(s.VolumePlace)
 		minQty, _ := strconv.ParseFloat(s.MinTradeNum, 64)
 		maxQty, _ := strconv.ParseFloat(s.MaxOrderQty, 64)
-		minPrice, _ := strconv.ParseFloat(s.MinTradeUSDT, 64)
+		minNotional, _ := strconv.ParseFloat(s.MinTradeUSDT, 64)
 		stepSize, _ := strconv.ParseFloat(s.SizeMultiplier, 64)
 		makerFee, _ := strconv.ParseFloat(s.MakerFeeRate, 64)
 		takerFee, _ := strconv.ParseFloat(s.TakerFeeRate, 64)
@@ -288,7 +288,7 @@ func (c *Client) futuresExchangeInfo(market model.MarketType) (model.Response[mo
 			QtyPrecision:     &qp,
 			MinQty:           &minQty,
 			MaxQty:           &maxQty,
-			MinPrice:         &minPrice,
+			MinNotional:      &minNotional,
 			StepSize:         &stepSize,
 			MakerFee:         &makerFee,
 			TakerFee:         &takerFee,
