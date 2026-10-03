@@ -9,6 +9,8 @@ This document provides a comprehensive map of the features available in the Mult
 - **CoinGecko** (Default): Market listings, prices, OHLCV candles, and live price streaming.
 - **Binance**: Server time, exchange info, prices, candles, 24h ticker, order book, live order book streaming.
 - **Bitget**: Server time, exchange info, prices, candles, 24h ticker.
+- **WhiteBit, Crypto.com, MEXC**: see the capability matrix in `_docs/architecture.md`.
+- **OKX** (spot, margin, futures = perpetual swap), **Bitvavo** (spot), **Bybit EU** (spot, margin), **Kraken** (spot, margin, futures = `PF_` perpetuals): public data only (no credentials): server time, exchange info, price, order book, 24h ticker, candles; funding-rate history on OKX and Kraken futures. No stream or trading. Aliases `okex`, `bv`, `bybit`, `kraken-futures`.
 
 Use the `--provider` / `-p` flag to select a provider and `--market` / `-m` for market type:
 
@@ -45,7 +47,7 @@ When a fallback occurs the output always indicates it:
 Applied to every command:
 
 ```
--p, --provider       string    provider id: coingecko | binance | bitget  (default: from config)
+-p, --provider       string    provider id: coingecko | binance | bitget | whitebit | cryptocom | mexc | okx | bitvavo | bybiteu | kraken  (default: from config)
 -m, --market         string    market type: spot | futures | margin        (default: spot)
 -o, --output         string    output format: table | json | yaml | markdown | toon  (default: table)
 -f, --allow-fallback           allow fallback even when --provider is set
@@ -127,6 +129,7 @@ bits book BTCUSDT -p binance -m futures
 - `--interval` selects granularity (e.g. `1m`, `5m`, `1h`, `1d`).
 - `--from` / `--to` accept RFC3339 or `YYYY-MM-DD`.
 - `--limit` caps the number of candles returned.
+- Per-request page caps differ (okx 300, bitvavo 1440, bybiteu 1000, kraken futures 2000, kraken spot/margin 720 (latest only, no deeper history), cryptocom 300, mexc spot 1000): a provider returns at most one page unless it pages itself (okx does). See `_docs/providers/provider-index.md` for the ordering and bound semantics.
 
 ```bash
 bits candles BTCUSDT -p binance --interval 1h

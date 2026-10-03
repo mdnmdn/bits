@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-`bits` is a multi-provider crypto library and CLI tool written in Go. It supports CoinGecko, Binance, Bitget, WhiteBit, Crypto.com, MEXC, OKX, Bitvavo, Bybit EU and Kraken Futures (the last four public data only) as data providers through a unified capability-based interface. All provider responses are wrapped in a typed `Response[T]` envelope with provenance tracking and automatic fallback.
+`bits` is a multi-provider crypto library and CLI tool written in Go. It supports CoinGecko, Binance, Bitget, WhiteBit, Crypto.com, MEXC, OKX, Bitvavo, Bybit EU and Kraken (the last four public data only) as data providers through a unified capability-based interface. All provider responses are wrapped in a typed `Response[T]` envelope with provenance tracking and automatic fallback.
 
 **Architectural Principle**: The bits library (`github.com/mdnmdn/bits`) is the first citizen of this project. The CLI is a thin wrapper that uses the public library interface. External projects can import and extend the CLI commands.
 
@@ -52,10 +52,10 @@ bits/
 │   ├── whitebit/              # WhiteBit implementation
 │   ├── cryptocom/             # Crypto.com implementation
 │   ├── mexc/                  # MEXC implementation
-│   ├── okx/                   # OKX implementation (public spot + swap)
+│   ├── okx/                   # OKX implementation (public spot, margin + swap)
 │   ├── bitvavo/               # Bitvavo implementation (public spot)
-│   ├── bybiteu/               # Bybit EU implementation (public spot)
-│   ├── kraken/                # Kraken Futures implementation (public PF_ perpetuals)
+│   ├── bybiteu/               # Bybit EU implementation (public spot + margin)
+│   ├── kraken/                # Kraken implementation (public spot, margin + PF_ perpetuals)
 │   └── registry/              # NewProvider factory
 ├── resolve/                   # Resolver, symbol resolution
 ├── render/                    # Output renderers (exported)

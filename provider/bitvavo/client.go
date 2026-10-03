@@ -1,6 +1,7 @@
 // Package bitvavo implements the Bitvavo provider: public spot market data only
-// (server time, exchange info, 24h ticker, candles). It has no credentials and
-// no account or trading endpoints. Bitvavo markets are already in the canonical
+// (server time, exchange info, price, 24h ticker, order book, candles).
+// Bitvavo is a spot-only venue (no margin, no derivatives). It has no
+// credentials and no account or trading endpoints. Bitvavo markets are already in the canonical
 // bits form (BTC-EUR).
 //
 // Fees: Bitvavo publishes fees only through the authenticated /account/fees
@@ -61,6 +62,8 @@ func (c *Client) Capabilities() capability.CapabilityMatrix {
 		capability.CapabilityKey{Market: s, Feature: capability.FeatureExchangeInfo},
 		capability.CapabilityKey{Market: s, Feature: capability.FeatureTicker24h},
 		capability.CapabilityKey{Market: s, Feature: capability.FeatureCandles},
+		capability.CapabilityKey{Market: s, Feature: capability.FeaturePrice},
+		capability.CapabilityKey{Market: s, Feature: capability.FeatureOrderBook},
 	)
 }
 

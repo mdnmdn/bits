@@ -83,6 +83,9 @@ func num(s string) float64 {
 // page with windows of count candles. To is treated as exclusive.
 func (c *Client) Candles(ctx context.Context, symbol string, market model.MarketType, interval string, opts model.CandleOpts) (model.Response[[]model.Candle], error) {
 	resp := model.Response[[]model.Candle]{Provider: providerID, Market: model.MarketFutures, Kind: model.KindCandle}
+	if isSpotMarket(market) {
+		return c.spotCandles(ctx, symbol, market, interval, opts)
+	}
 	if err := requireFutures(market); err != nil {
 		return resp, err
 	}
@@ -142,6 +145,9 @@ func (c *Client) Candles(ctx context.Context, symbol string, market model.Market
 // volumeQuote.
 func (c *Client) Ticker24h(ctx context.Context, symbol string, market model.MarketType) (model.Response[model.Ticker24h], error) {
 	resp := model.Response[model.Ticker24h]{Provider: providerID, Market: model.MarketFutures, Kind: model.KindTicker}
+	if isSpotMarket(market) {
+		return c.spotTicker24h(ctx, symbol, market)
+	}
 	if err := requireFutures(market); err != nil {
 		return resp, err
 	}

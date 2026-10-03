@@ -331,3 +331,139 @@ func decimals(s string) int {
 	}
 	return len(strings.TrimRight(s[i+1:], "0"))
 }
+
+// Price returns the last traded price of each market in ids (BTC-EUR, BTCEUR
+// and BTC_EUR are accepted). With no ids it returns every market from one
+// call. The currency argument is ignored: a Bitvavo market names its own
+// quote, which is reported in CoinPrice.Currency. A market that fails is an
+// item error; the others still return.
+func (c *Client) Price(ctx context.Context, ids []string, _ string) (model.Response[[]model.CoinPrice], error) {
+	resp := model.Response[[]model.CoinPrice]{Kind: model.KindPrice, Provider: providerID, Market: model.MarketSpot}
+	type row struct {
+		Market string `json:"market"`
+		Price  string `json:"price"`
+	}
+	toPrice := func(r row, orig string) (model.CoinPrice, error) {
+		p, ok := parseFloat(r.Price)
+		if !ok {
+			return model.CoinPrice{}, providerErr(model.ErrKindParse, "bad price for "+r.Market, nil)
+		}
+		cp := model.CoinPrice{ID: r.Market, Symbol: r.Market, OriginalSymbol: orig, Price: p}
+		if _, quote, ok := strings.Cut(r.Market, "-"); ok {
+			cp.Currency = quote
+		}
+		return cp, nil
+	}
+
+	if len(ids) == 0 {
+		body, err := c.get(ctx, "/ticker/price", "")
+		if err != nil {
+			return resp, err
+		}
+		var rows []row
+		if err := json.Unmarshal(body, &rows); err != nil {
+			return resp, providerErr(model.ErrKindParse, "failed to parse prices", err)
+		}
+		for _, r := range rows {
+			cp, err := toPrice(r, r.Market)
+			if err != nil {
+				resp.Errors = append(resp.Errors, model.ItemError{Symbol: r.Market, Err: model.WrapError(providerID, err)})
+				continue
+			}
+			resp.Data = append(resp.Data, cp)
+		}
+		return resp, nil
+	}
+
+	for _, id := range ids {
+		sym, err := toMarket(id)
+		var r row
+		if err == nil {
+			var body []byte
+			if body, err = c.get(ctx, "/ticker/price", "market="+url.QueryEscape(sym)); err == nil {
+				if jerr := json.Unmarshal(body, &r); jerr != nil {
+					err = providerErr(model.ErrKindParse, "failed to parse price", jerr)
+				}
+			}
+		}
+		var cp model.CoinPrice
+		if err == nil {
+			cp, err = toPrice(r, id)
+		}
+		if err != nil {
+			resp.Errors = append(resp.Errors, model.ItemError{Symbol: id, Err: model.WrapError(providerID, err)})
+			continue
+		}
+		resp.Data = append(resp.Data, cp)
+	}
+	return resp, nil
+}
+
+// maxBookDepth is the largest depth the book endpoint accepts.
+const maxBookDepth = 1000
+
+// OrderBook returns a snapshot of /{market}/book. depth <= 0 means 20; depth
+// is clamped to 1000. LastUpdateID is the book nonce; Time comes from the
+// nanosecond timestamp when present.
+func (c *Client) OrderBook(ctx context.Context, symbol string, market model.MarketType, depth int) (model.Response[model.OrderBook], error) {
+	resp := model.Response[model.OrderBook]{Kind: model.KindOrderBook, Provider: providerID, Market: model.MarketSpot}
+	if market != model.MarketSpot {
+		return resp, model.ErrUnsupportedMarket
+	}
+	sym, err := toMarket(symbol)
+	if err != nil {
+		return resp, err
+	}
+	if depth <= 0 {
+		depth = 20
+	}
+	depth = min(depth, maxBookDepth)
+	body, err := c.get(ctx, "/"+url.PathEscape(sym)+"/book", "depth="+strconv.Itoa(depth))
+	if err != nil {
+		return resp, err
+	}
+	var b struct {
+		Nonce     int64      `json:"nonce"`
+		Bids      [][]string `json:"bids"`
+		Asks      [][]string `json:"asks"`
+		Timestamp int64      `json:"timestamp"`
+	}
+	if err := json.Unmarshal(body, &b); err != nil {
+		return resp, providerErr(model.ErrKindParse, "failed to parse book", err)
+	}
+	bids, err := parseLevels(b.Bids)
+	if err != nil {
+		return resp, err
+	}
+	asks, err := parseLevels(b.Asks)
+	if err != nil {
+		return resp, err
+	}
+	ob := model.OrderBook{Symbol: sym, OriginalSymbol: symbol, Market: model.MarketSpot, Bids: bids, Asks: asks}
+	if b.Nonce != 0 {
+		n := b.Nonce
+		ob.LastUpdateID = &n
+	}
+	if b.Timestamp > 0 {
+		t := time.Unix(0, b.Timestamp).UTC()
+		ob.Time = &t
+	}
+	resp.Data = ob
+	return resp, nil
+}
+
+func parseLevels(rows [][]string) ([]model.OrderBookEntry, error) {
+	out := make([]model.OrderBookEntry, 0, len(rows))
+	for _, r := range rows {
+		if len(r) < 2 {
+			return nil, providerErr(model.ErrKindParse, "short book level", nil)
+		}
+		p, ok1 := parseFloat(r[0])
+		q, ok2 := parseFloat(r[1])
+		if !ok1 || !ok2 {
+			return nil, providerErr(model.ErrKindParse, "bad book level", nil)
+		}
+		out = append(out, model.OrderBookEntry{Price: p, Quantity: q})
+	}
+	return out, nil
+}

@@ -75,7 +75,7 @@ bits config init --local      # Create in current directory
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `provider` | string | `"coingecko"` | Active provider (`coingecko`, `binance`, `bitget`) |
+| `provider` | string | `"coingecko"` | Active provider (`coingecko`, `binance`, `bitget`, `whitebit`, `cryptocom`, `mexc`, `okx`, `bitvavo`, `bybiteu`, `kraken`) |
 | `check_new_version` | bool | `true` | Check for new releases on `bits version` |
 
 ### Version Check
@@ -154,6 +154,40 @@ base_url = ""          # Optional custom endpoint (default: https://whitebit.com
 enabled = false        # Enable spot trading
 ```
 
+### OKX, Bitvavo, Bybit EU, Kraken
+
+Public market data only: no credentials. Only `base_url` reaches Bitvavo and Bybit EU (the registry passes nothing else), so their `enabled` flags have no effect: Bitvavo is spot, Bybit EU is spot plus margin, always. OKX uses the spot and futures flags and falls back to spot when none is set; its margin market follows the spot flag (no margin key). Kraken uses `spot`, `margin` and `futures` flags; with none set, all three markets are declared. Aliases: `okex`, `bv`, `bybit`, `kraken-futures`.
+
+```toml
+[okx]
+base_url = ""          # default https://eea.okx.com (EEA host; www.okx.com serves the same public data)
+
+[okx.spot]
+enabled = false
+[okx.futures]          # perpetual SWAP
+enabled = false
+
+[bitvavo]
+base_url = ""          # default https://api.bitvavo.com/v2
+[bitvavo.spot]
+enabled = false
+
+[bybiteu]
+base_url = ""          # default https://api.bybit.eu
+[bybiteu.spot]
+enabled = false
+
+[kraken]
+base_url = ""          # futures host, default https://futures.kraken.com
+spot_base_url = ""     # spot and margin host, default https://api.kraken.com
+[kraken.spot]
+enabled = false
+[kraken.margin]        # served from the spot endpoints
+enabled = false
+[kraken.futures]
+enabled = false
+```
+
 ### Symbol Resolution (Cache)
 
 ```toml
@@ -189,6 +223,15 @@ BITS_BINANCE__SPOT__ENABLED=true
 BITS_BITGET_API_KEY=your-key
 BITS_BITGET_API_SECRET=your-secret
 BITS_BITGET_PASSPHRASE=your-passphrase
+
+# OKX / Bitvavo / Bybit EU / Kraken (no credentials)
+BITS_OKX_BASE_URL=https://eea.okx.com
+BITS_OKX_SPOT_ENABLED=true
+BITS_OKX_FUTURES_ENABLED=true
+BITS_BITVAVO_BASE_URL=...      BITS_BITVAVO_SPOT_ENABLED=true
+BITS_BYBITEU_BASE_URL=...      BITS_BYBITEU_SPOT_ENABLED=true
+BITS_KRAKEN_BASE_URL=...       BITS_KRAKEN_SPOT_BASE_URL=...
+BITS_KRAKEN_SPOT_ENABLED=true  BITS_KRAKEN_MARGIN_ENABLED=true  BITS_KRAKEN_FUTURES_ENABLED=true
 
 # Symbol cache
 BITS_SYMBOL_CACHE_TTL=5m

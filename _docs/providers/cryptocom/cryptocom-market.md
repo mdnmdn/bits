@@ -71,6 +71,11 @@ GET /public/get-tickers?instrument_name=BTC_USDT
 |-----------|------|----------|-------------|
 | instrument_name | string | Yes | Instrument name |
 | timeframe | string | Yes | `1m`, `5m`, `15m`, `30m`, `1h`, `4h`, `6h`, `12h`, `1d`, `1w` |
+| count | int | No | Default 25, max 300 |
+| start_ts | long | No | Window start, ms |
+| end_ts | long | No | Window end, ms, exclusive |
+
+Without a range the endpoint returns the newest `count` candles. `start_ts` / `end_ts` select a window, so a caller pages a range with these bounds (the bits provider sends them from `From` / `To` and clamps `count` to 300).
 
 **Sample Request**:
 ```

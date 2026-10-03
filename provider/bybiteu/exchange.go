@@ -43,12 +43,14 @@ func decimals(s string) int {
 	return len(strings.TrimRight(frac, "0"))
 }
 
-// ExchangeInfo lists the spot instruments. Fees are not published by a public
+// ExchangeInfo lists the spot instruments; for margin only those whose
+// marginTrading is not "none". Fees are not published by a public
 // endpoint (/v5/account/fee-rate needs credentials), so MakerFee and TakerFee
 // stay nil. The tick size goes to Extra["tick_size"] (model.Symbol has no
 // tick field).
 func (c *Client) ExchangeInfo(ctx context.Context, market model.MarketType) (model.Response[model.ExchangeInfo], error) {
-	if err := requireSpot(market); err != nil {
+	mkt, err := spotMarket(market)
+	if err != nil {
 		return model.Response[model.ExchangeInfo]{}, err
 	}
 	var symbols []model.Symbol
@@ -68,6 +70,7 @@ func (c *Client) ExchangeInfo(ctx context.Context, market model.MarketType) (mod
 				BaseCoin      string `json:"baseCoin"`
 				QuoteCoin     string `json:"quoteCoin"`
 				Status        string `json:"status"`
+				MarginTrading string `json:"marginTrading"`
 				LotSizeFilter struct {
 					BasePrecision string `json:"basePrecision"`
 					MinOrderQty   string `json:"minOrderQty"`
@@ -84,6 +87,9 @@ func (c *Client) ExchangeInfo(ctx context.Context, market model.MarketType) (mod
 			return model.Response[model.ExchangeInfo]{}, providerErr(model.ErrKindParse, "parse instruments result: "+err.Error(), err)
 		}
 		for _, in := range res.List {
+			if mkt == model.MarketMargin && (in.MarginTrading == "" || in.MarginTrading == "none") {
+				continue
+			}
 			status := model.SymbolStatusHalt
 			if in.Status == "Trading" {
 				status = model.SymbolStatusTrading
@@ -94,8 +100,8 @@ func (c *Client) ExchangeInfo(ctx context.Context, market model.MarketType) (mod
 				BaseAsset:        in.BaseCoin,
 				QuoteAsset:       in.QuoteCoin,
 				Status:           status,
-				Market:           model.MarketSpot,
-				Extra:            map[string]any{"tick_size": num(in.PriceFilter.TickSize)},
+				Market:           mkt,
+				Extra:            map[string]any{"tick_size": num(in.PriceFilter.TickSize), "margin_trading": in.MarginTrading},
 			}
 			pp, qp := decimals(in.PriceFilter.TickSize), decimals(in.LotSizeFilter.BasePrecision)
 			s.PricePrecision, s.QtyPrecision = &pp, &qp
@@ -119,7 +125,7 @@ func (c *Client) ExchangeInfo(ctx context.Context, market model.MarketType) (mod
 		cursor = res.NextPageCursor
 	}
 	return model.Response[model.ExchangeInfo]{
-		Kind: model.KindExchangeInfo, Provider: providerID, Market: model.MarketSpot,
-		Data: model.ExchangeInfo{ExchangeID: providerID, Market: model.MarketSpot, Symbols: symbols},
+		Kind: model.KindExchangeInfo, Provider: providerID, Market: mkt,
+		Data: model.ExchangeInfo{ExchangeID: providerID, Market: mkt, Symbols: symbols},
 	}, nil
 }

@@ -50,6 +50,12 @@ Input resolution is only active when `bits.WithSymbolEngine()` option is used wh
 | Crypto.com | BTC_USDT | BTCUSD-PERP | Different symbols per market |
 | MEXC | BTCUSDT | BTC_USDT | Underscore differentiates futures |
 | Bitget | BTCUSDT | BTCUSDT_PERP | Suffix differentiates futures |
+| OKX | BTC-USDT | BTC-USDT-SWAP | `-SWAP` suffix; linear `BTC-USDT-SWAP`, inverse `BTC-USD-SWAP` |
+| Bitvavo | BTC-EUR | — | Already canonical; spot only |
+| Bybit EU | BTCUSDT | — | Spot only |
+| Kraken | — | PF_XBTUSD | `PF_` perpetual prefix, BTC is `XBT`; `BTC-USD` maps to `PF_XBTUSD` |
+
+OKX, Bitvavo, Bybit EU and Kraken have no translator in `resolve/symbol/translators/`: each provider converts any accepted spelling (`BTC-USDT`, `BTC_USDT`, `BTCUSDT`) to its native form itself, and returns `BASE-QUOTE` in `Symbol` with the native name in `OriginalSymbol`.
 
 ## Configuration
 

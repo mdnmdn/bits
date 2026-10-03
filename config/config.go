@@ -161,14 +161,20 @@ type BybitEUConfig struct {
 
 func (c BybitEUConfig) IsSpotEnabled() bool { return c.Spot.Enabled }
 
-// KrakenConfig holds Kraken Futures settings. Only public perpetual market
-// data is supported, so there are no credentials. BaseURL defaults to
-// https://futures.kraken.com.
+// KrakenConfig holds Kraken settings (futures, spot, margin). Only public
+// market data is supported, so there are no credentials. BaseURL defaults to
+// https://futures.kraken.com, SpotBaseURL to https://api.kraken.com. Margin is
+// served from the spot endpoints. With no market enabled, all are.
 type KrakenConfig struct {
-	BaseURL string       `mapstructure:"base_url"`
-	Futures MarketConfig `mapstructure:"futures"`
+	BaseURL     string       `mapstructure:"base_url"`
+	SpotBaseURL string       `mapstructure:"spot_base_url"`
+	Spot        MarketConfig `mapstructure:"spot"`
+	Margin      MarketConfig `mapstructure:"margin"`
+	Futures     MarketConfig `mapstructure:"futures"`
 }
 
+func (c KrakenConfig) IsSpotEnabled() bool    { return c.Spot.Enabled }
+func (c KrakenConfig) IsMarginEnabled() bool  { return c.Margin.Enabled }
 func (c KrakenConfig) IsFuturesEnabled() bool { return c.Futures.Enabled }
 
 // SymbolConfig holds symbol resolution settings.
@@ -437,9 +443,16 @@ enabled = false
 [bybiteu.spot]
 enabled = false
 
-# Kraken Futures configuration (public perpetual market data only, no credentials)
+# Kraken configuration (public market data only, no credentials)
 [kraken]
 # base_url = "https://futures.kraken.com"
+# spot_base_url = "https://api.kraken.com"
+
+[kraken.spot]
+enabled = false
+
+[kraken.margin]
+enabled = false
 
 [kraken.futures]
 enabled = false
@@ -672,6 +685,15 @@ func applyEnvMap(envVars map[string]string, cfg *Config) {
 	if v, ok := envVars["kraken.base_url"]; ok {
 		cfg.Kraken.BaseURL = v
 	}
+	if v, ok := envVars["kraken.spot_base_url"]; ok {
+		cfg.Kraken.SpotBaseURL = v
+	}
+	if v, ok := envVars["kraken.spot.enabled"]; ok {
+		cfg.Kraken.Spot.Enabled = v == "true" || v == "1"
+	}
+	if v, ok := envVars["kraken.margin.enabled"]; ok {
+		cfg.Kraken.Margin.Enabled = v == "true" || v == "1"
+	}
 	if v, ok := envVars["kraken.futures.enabled"]; ok {
 		cfg.Kraken.Futures.Enabled = v == "true" || v == "1"
 	}
@@ -828,6 +850,15 @@ func applyEnvOverrides(cfg *Config) {
 	if v := os.Getenv("BITS_KRAKEN_BASE_URL"); v != "" {
 		cfg.Kraken.BaseURL = v
 	}
+	if v := os.Getenv("BITS_KRAKEN_SPOT_BASE_URL"); v != "" {
+		cfg.Kraken.SpotBaseURL = v
+	}
+	if v := os.Getenv("BITS_KRAKEN_SPOT_ENABLED"); v != "" {
+		cfg.Kraken.Spot.Enabled = v == "true" || v == "1"
+	}
+	if v := os.Getenv("BITS_KRAKEN_MARGIN_ENABLED"); v != "" {
+		cfg.Kraken.Margin.Enabled = v == "true" || v == "1"
+	}
 	if v := os.Getenv("BITS_KRAKEN_FUTURES_ENABLED"); v != "" {
 		cfg.Kraken.Futures.Enabled = v == "true" || v == "1"
 	}
@@ -889,6 +920,9 @@ func Save(cfg *Config) error {
 	v.Set("bybiteu.base_url", cfg.BybitEU.BaseURL)
 	v.Set("bybiteu.spot.enabled", cfg.BybitEU.Spot.Enabled)
 	v.Set("kraken.base_url", cfg.Kraken.BaseURL)
+	v.Set("kraken.spot_base_url", cfg.Kraken.SpotBaseURL)
+	v.Set("kraken.spot.enabled", cfg.Kraken.Spot.Enabled)
+	v.Set("kraken.margin.enabled", cfg.Kraken.Margin.Enabled)
 	v.Set("kraken.futures.enabled", cfg.Kraken.Futures.Enabled)
 
 	path := filepath.Join(dir, "config.yaml")
@@ -971,7 +1005,7 @@ func (c *Config) Redacted() *Config {
 		},
 		Bitvavo: BitvavoConfig{BaseURL: c.Bitvavo.BaseURL, Spot: c.Bitvavo.Spot},
 		BybitEU: BybitEUConfig{BaseURL: c.BybitEU.BaseURL, Spot: c.BybitEU.Spot},
-		Kraken:  KrakenConfig{BaseURL: c.Kraken.BaseURL, Futures: c.Kraken.Futures},
+		Kraken:  KrakenConfig{BaseURL: c.Kraken.BaseURL, SpotBaseURL: c.Kraken.SpotBaseURL, Spot: c.Kraken.Spot, Margin: c.Kraken.Margin, Futures: c.Kraken.Futures},
 		Symbol: SymbolConfig{
 			CacheTTL: c.Symbol.CacheTTL,
 			CacheDir: c.Symbol.CacheDir,

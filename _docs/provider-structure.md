@@ -28,6 +28,12 @@ Reference implementations:
 | CoinGecko | `provider/coingecko/` | Aggregator, paid/demo tiers, streaming |
 | Crypto.com | `provider/cryptocom/` | Raw HTTP, spot only, streaming |
 | MEXC | `provider/mexc/` | Raw HTTP, spot only, protobuf parsing |
+| OKX | `provider/okx/` | Raw HTTP, public data only, spot + swap, cursor-paged candles |
+| Bitvavo | `provider/bitvavo/` | Raw HTTP, public spot only, minimal (client.go + market.go) |
+| Bybit EU | `provider/bybiteu/` | Raw HTTP, public spot and margin only, V5 envelope |
+| Kraken | `provider/kraken/` | Raw HTTP, public spot, margin and futures (PF_ perpetuals), charts API candles for futures, OHLC for spot |
+
+The last four are the smallest complete examples of a public-data-only provider (`ServerTime`, `ExchangeInfo`, `Ticker24h`, `Candles`; no credentials, `Config{BaseURL}` only except OKX).
 
 ---
 

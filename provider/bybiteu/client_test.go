@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -11,7 +12,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mdnmdn/bits/capability"
 	"github.com/mdnmdn/bits/model"
+	"github.com/mdnmdn/bits/provider"
 )
 
 func TestDefaultBaseURL(t *testing.T) {
@@ -183,5 +186,107 @@ func TestServerTime(t *testing.T) {
 	resp, err := NewClient(Config{BaseURL: srv.URL}).ServerTime(context.Background())
 	if err != nil || resp.Data.Time.Unix() != 1791028509 || resp.Data.Time.Location() != time.UTC {
 		t.Fatalf("bad time %v %v", resp.Data.Time, err)
+	}
+}
+
+var _ provider.PriceProvider = (*Client)(nil)
+var _ provider.OrderBookProvider = (*Client)(nil)
+var _ provider.TickerProvider = (*Client)(nil)
+var _ provider.CandleProvider = (*Client)(nil)
+var _ provider.ExchangeProvider = (*Client)(nil)
+
+func TestCapabilities(t *testing.T) {
+	m := NewClient(Config{}).Capabilities()
+	for _, mk := range []capability.MarketType{capability.MarketSpot, capability.MarketMargin} {
+		for _, f := range []capability.Feature{capability.FeatureServerTime, capability.FeatureExchangeInfo, capability.FeaturePrice, capability.FeatureTicker24h, capability.FeatureOrderBook, capability.FeatureCandles} {
+			if !m[capability.CapabilityKey{Market: mk, Feature: f}] {
+				t.Errorf("%v %v missing", mk, f)
+			}
+		}
+	}
+	if m[capability.CapabilityKey{Market: capability.MarketFutures, Feature: capability.FeatureCandles}] || m[capability.CapabilityKey{Market: capability.MarketFutures, Feature: capability.FeatureFundingRates}] {
+		t.Error("futures must not be supported")
+	}
+}
+
+const tickerJSON = `{"retCode":0,"retMsg":"OK","result":{"category":"spot","list":[{"symbol":"BTCUSDT","bid1Price":"84760.6","bid1Size":"0.6","ask1Price":"84760.7","ask1Size":"0.06","lastPrice":"84760.7","prevPrice24h":"84000","price24hPcnt":"0.0090","highPrice24h":"85000","lowPrice24h":"83000","turnover24h":"1000","volume24h":"12.5"}]},"time":1791029915078}`
+
+func TestPrice(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		q := r.URL.Query()
+		if r.URL.Path != "/v5/market/tickers" || q.Get("category") != "spot" {
+			t.Errorf("bad request %s", r.URL)
+		}
+		if q.Get("symbol") != "BTCUSDT" {
+			fmt.Fprint(w, `{"retCode":0,"result":{"list":[]},"time":1}`)
+			return
+		}
+		fmt.Fprint(w, tickerJSON)
+	}))
+	defer srv.Close()
+	resp, err := NewClient(Config{BaseURL: srv.URL}).Price(context.Background(), []string{"btc-usdt", "NOPEUSDT"}, "usd")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(resp.Data) != 1 || len(resp.Errors) != 1 {
+		t.Fatalf("data=%d errors=%d", len(resp.Data), len(resp.Errors))
+	}
+	p := resp.Data[0]
+	if p.ID != "BTCUSDT" || p.Symbol != "BTC-USDT" || p.OriginalSymbol != "btc-usdt" || p.Price != 84760.7 || math.Abs(*p.Change24h-0.9) > 1e-9 || *p.BidSize != 0.6 || p.Time.Location() != time.UTC {
+		t.Errorf("bad price %+v", p)
+	}
+}
+
+func TestOrderBook(t *testing.T) {
+	var query string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		query = r.URL.RawQuery
+		if r.URL.Path != "/v5/market/orderbook" {
+			t.Errorf("path %s", r.URL.Path)
+		}
+		fmt.Fprint(w, `{"retCode":0,"retMsg":"OK","result":{"s":"BTCUSDT","a":[["84760.7","0.06"]],"b":[["84760.6","0.6"],["84760.4","0.1"]],"ts":1791029914954,"u":55987382,"seq":1,"cts":1791029914950},"time":1}`)
+	}))
+	defer srv.Close()
+	c := NewClient(Config{BaseURL: srv.URL})
+	for _, mk := range []model.MarketType{model.MarketSpot, model.MarketMargin} {
+		resp, err := c.OrderBook(context.Background(), "BTC-USDT", mk, 1000)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(query, "category=spot") || !strings.Contains(query, "limit=200") || !strings.Contains(query, "symbol=BTCUSDT") {
+			t.Errorf("bad query %s", query)
+		}
+		d := resp.Data
+		if resp.Market != mk || d.Market != mk || len(d.Bids) != 2 || len(d.Asks) != 1 || d.Bids[0].Price != 84760.6 || *d.LastUpdateID != 55987382 {
+			t.Errorf("bad book %+v", d)
+		}
+		if d.Time == nil || d.Time.UnixMilli() != 1791029914950 || d.Time.Location() != time.UTC {
+			t.Errorf("bad time %v", d.Time)
+		}
+	}
+	if _, err := c.OrderBook(context.Background(), "BTCUSDT", "", 0); err != nil || !strings.Contains(query, "limit=20") {
+		t.Errorf("default depth: %s %v", query, err)
+	}
+	if _, err := c.OrderBook(context.Background(), "BTCUSDT", model.MarketFutures, 5); err == nil {
+		t.Error("futures must fail")
+	}
+}
+
+func TestMarginExchangeInfo(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, `{"retCode":0,"result":{"list":[{"symbol":"BTCUSDT","baseCoin":"BTC","quoteCoin":"USDT","status":"Trading","marginTrading":"utaOnly","lotSizeFilter":{"basePrecision":"0.000001","minOrderQty":"0.000001","maxOrderQty":"230","minOrderAmt":"5"},"priceFilter":{"tickSize":"0.1"}},{"symbol":"XYZUSDT","baseCoin":"XYZ","quoteCoin":"USDT","status":"Trading","marginTrading":"none","lotSizeFilter":{"basePrecision":"1"},"priceFilter":{"tickSize":"0.01"}}]},"time":1}`)
+	}))
+	defer srv.Close()
+	c := NewClient(Config{BaseURL: srv.URL})
+	m, err := c.ExchangeInfo(context.Background(), model.MarketMargin)
+	if err != nil || len(m.Data.Symbols) != 1 || m.Data.Symbols[0].Market != model.MarketMargin || m.Data.Market != model.MarketMargin {
+		t.Fatalf("margin: %+v %v", m.Data, err)
+	}
+	s, err := c.ExchangeInfo(context.Background(), model.MarketSpot)
+	if err != nil || len(s.Data.Symbols) != 2 {
+		t.Fatalf("spot: %v", err)
+	}
+	if _, err := c.ExchangeInfo(context.Background(), model.MarketFutures); err == nil {
+		t.Error("futures must fail")
 	}
 }

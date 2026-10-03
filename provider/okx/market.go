@@ -210,23 +210,32 @@ type okxTicker struct {
 	Ts        string `json:"ts"`
 }
 
-// Ticker24h fetches the 24-hour rolling statistics for a symbol. For SWAP the
-// base volume is volCcy24h (vol24h is in contracts) and the quote volume is
-// derived as base volume times last price (an approximation).
-func (c *Client) Ticker24h(ctx context.Context, symbol string, market model.MarketType) (model.Response[model.Ticker24h], error) {
-	id := instID(symbol, market)
+// fetchTicker fetches the ticker of one native instId.
+func (c *Client) fetchTicker(ctx context.Context, id string) (okxTicker, error) {
 	data, err := c.get(ctx, "/api/v5/market/ticker", "instId="+id)
 	if err != nil {
-		return model.Response[model.Ticker24h]{}, err
+		return okxTicker{}, err
 	}
 	var rows []okxTicker
 	if err := json.Unmarshal(data, &rows); err != nil {
-		return model.Response[model.Ticker24h]{}, providerErr(model.ErrKindParse, "failed to parse ticker", err)
+		return okxTicker{}, providerErr(model.ErrKindParse, "failed to parse ticker", err)
 	}
 	if len(rows) == 0 {
-		return model.Response[model.Ticker24h]{}, providerErr(model.ErrKindNotFound, "no ticker for "+id, nil)
+		return okxTicker{}, providerErr(model.ErrKindNotFound, "no ticker for "+id, nil)
 	}
-	r := rows[0]
+	return rows[0], nil
+}
+
+// Ticker24h fetches the 24-hour rolling statistics for a symbol. For SWAP the
+// base volume is volCcy24h (vol24h is in contracts) and the quote volume is
+// derived as base volume times last price (an approximation). Margin uses the
+// spot ticker of the same instId.
+func (c *Client) Ticker24h(ctx context.Context, symbol string, market model.MarketType) (model.Response[model.Ticker24h], error) {
+	id := instID(symbol, market)
+	r, err := c.fetchTicker(ctx, id)
+	if err != nil {
+		return model.Response[model.Ticker24h]{}, err
+	}
 
 	last, err := strconv.ParseFloat(r.Last, 64)
 	if err != nil {

@@ -1,6 +1,7 @@
 package bybiteu
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"net/url"
@@ -35,11 +36,17 @@ func mapInterval(interval string) (string, error) {
 	return "", providerErr(model.ErrKindInvalidRequest, "unsupported interval "+interval, nil)
 }
 
-func requireSpot(market model.MarketType) error {
-	if market != model.MarketSpot && market != "" {
-		return model.ErrUnsupportedMarket
+// spotMarket validates a market. Bybit EU has spot and spot margin; both read
+// the same category=spot data, so margin only changes the Market label of the
+// result. Futures (linear) are not offered by the EU entity.
+func spotMarket(market model.MarketType) (model.MarketType, error) {
+	switch market {
+	case model.MarketSpot, "":
+		return model.MarketSpot, nil
+	case model.MarketMargin:
+		return model.MarketMargin, nil
 	}
-	return nil
+	return "", model.ErrUnsupportedMarket
 }
 
 func num(s string) float64 {
@@ -53,9 +60,11 @@ func num(s string) float64 {
 // candles. To is treated as exclusive. Results are ascending.
 func (c *Client) Candles(ctx context.Context, symbol string, market model.MarketType, interval string, opts model.CandleOpts) (model.Response[[]model.Candle], error) {
 	resp := model.Response[[]model.Candle]{Provider: providerID, Market: model.MarketSpot, Kind: model.KindCandle}
-	if err := requireSpot(market); err != nil {
+	mkt, err := spotMarket(market)
+	if err != nil {
 		return resp, err
 	}
+	resp.Market = mkt
 	iv, err := mapInterval(interval)
 	if err != nil {
 		return resp, err
@@ -112,9 +121,11 @@ func (c *Client) Candles(ctx context.Context, symbol string, market model.Market
 // Ticker24h fetches the 24h statistics of one spot symbol.
 func (c *Client) Ticker24h(ctx context.Context, symbol string, market model.MarketType) (model.Response[model.Ticker24h], error) {
 	resp := model.Response[model.Ticker24h]{Provider: providerID, Market: model.MarketSpot, Kind: model.KindTicker}
-	if err := requireSpot(market); err != nil {
+	mkt, err := spotMarket(market)
+	if err != nil {
 		return resp, err
 	}
+	resp.Market = mkt
 	native := toNative(symbol)
 	env, err := c.get(ctx, "/v5/market/tickers", url.Values{"category": {"spot"}, "symbol": {native}})
 	if err != nil {
@@ -149,7 +160,7 @@ func (c *Client) Ticker24h(ctx context.Context, symbol string, market model.Mark
 	resp.Data = model.Ticker24h{
 		Symbol:             model.NormalizeSymbol(native),
 		OriginalSymbol:     native,
-		Market:             model.MarketSpot,
+		Market:             mkt,
 		LastPrice:          last,
 		PriceChange:        &chg,
 		PriceChangePercent: &pct,
@@ -162,4 +173,126 @@ func (c *Client) Ticker24h(ctx context.Context, symbol string, market model.Mark
 		AskPrice:           &ask,
 	}
 	return resp, nil
+}
+
+// Price returns the last price of each symbol in ids (BTCUSDT, BTC-USDT,
+// BTC_USDT) from /v5/market/tickers (category=spot), one call per symbol. The
+// currency argument is ignored: the quote asset of the symbol is not split
+// from the native name, so CoinPrice.Currency stays empty. A failing symbol is
+// an item error; the others still return.
+func (c *Client) Price(ctx context.Context, ids []string, _ string) (model.Response[[]model.CoinPrice], error) {
+	resp := model.Response[[]model.CoinPrice]{Kind: model.KindPrice, Provider: providerID, Market: model.MarketSpot}
+	for _, id := range ids {
+		cp, err := c.fetchPrice(ctx, id)
+		if err != nil {
+			resp.Errors = append(resp.Errors, model.ItemError{Symbol: id, Err: model.WrapError(providerID, err)})
+			continue
+		}
+		resp.Data = append(resp.Data, *cp)
+	}
+	return resp, nil
+}
+
+func (c *Client) fetchPrice(ctx context.Context, id string) (*model.CoinPrice, error) {
+	native := toNative(id)
+	env, err := c.get(ctx, "/v5/market/tickers", url.Values{"category": {"spot"}, "symbol": {native}})
+	if err != nil {
+		return nil, err
+	}
+	var res struct {
+		List []struct {
+			Bid     string `json:"bid1Price"`
+			BidSize string `json:"bid1Size"`
+			Ask     string `json:"ask1Price"`
+			AskSize string `json:"ask1Size"`
+			Last    string `json:"lastPrice"`
+			Prev24h string `json:"prevPrice24h"`
+			Pcnt    string `json:"price24hPcnt"`
+			High    string `json:"highPrice24h"`
+			Low     string `json:"lowPrice24h"`
+			Volume  string `json:"volume24h"`
+		} `json:"list"`
+	}
+	if err := json.Unmarshal(env.Result, &res); err != nil {
+		return nil, providerErr(model.ErrKindParse, "parse tickers result: "+err.Error(), err)
+	}
+	if len(res.List) == 0 {
+		return nil, providerErr(model.ErrKindNotFound, "no ticker for "+native, nil)
+	}
+	t := res.List[0]
+	pct := num(t.Pcnt) * 100 // the venue gives a fraction
+	bid, bidSz, ask, askSz := num(t.Bid), num(t.BidSize), num(t.Ask), num(t.AskSize)
+	hi, lo, open, vol := num(t.High), num(t.Low), num(t.Prev24h), num(t.Volume)
+	ts := time.UnixMilli(env.Time).UTC()
+	return &model.CoinPrice{
+		ID: native, Symbol: model.NormalizeSymbol(native), OriginalSymbol: id,
+		Price: num(t.Last), Change24h: &pct, Volume24h: &vol, High24h: &hi, Low24h: &lo, Open24h: &open,
+		BidPrice: &bid, BidSize: &bidSz, AskPrice: &ask, AskSize: &askSz, Time: &ts,
+	}, nil
+}
+
+// maxBookDepth is the largest spot depth /v5/market/orderbook accepts (1-200).
+const maxBookDepth = 200
+
+// OrderBook returns a snapshot from /v5/market/orderbook (category=spot).
+// depth <= 0 means 20; depth is clamped to 200. LastUpdateID is the venue
+// update id "u"; Time is the matching-engine timestamp "cts" (the system "ts"
+// when absent).
+func (c *Client) OrderBook(ctx context.Context, symbol string, market model.MarketType, depth int) (model.Response[model.OrderBook], error) {
+	resp := model.Response[model.OrderBook]{Kind: model.KindOrderBook, Provider: providerID, Market: model.MarketSpot}
+	mkt, err := spotMarket(market)
+	if err != nil {
+		return resp, err
+	}
+	resp.Market = mkt
+	if depth <= 0 {
+		depth = 20
+	}
+	depth = min(depth, maxBookDepth)
+	native := toNative(symbol)
+	env, err := c.get(ctx, "/v5/market/orderbook", url.Values{"category": {"spot"}, "symbol": {native}, "limit": {strconv.Itoa(depth)}})
+	if err != nil {
+		return resp, err
+	}
+	var res struct {
+		Symbol string     `json:"s"`
+		Bids   [][]string `json:"b"`
+		Asks   [][]string `json:"a"`
+		TS     int64      `json:"ts"`
+		CTS    int64      `json:"cts"`
+		U      int64      `json:"u"`
+	}
+	if err := json.Unmarshal(env.Result, &res); err != nil {
+		return resp, providerErr(model.ErrKindParse, "parse orderbook result: "+err.Error(), err)
+	}
+	bids, err := parseLevels(res.Bids)
+	if err != nil {
+		return resp, err
+	}
+	asks, err := parseLevels(res.Asks)
+	if err != nil {
+		return resp, err
+	}
+	ob := model.OrderBook{Symbol: model.NormalizeSymbol(native), OriginalSymbol: native, Market: mkt, Bids: bids, Asks: asks}
+	if res.U != 0 {
+		u := res.U
+		ob.LastUpdateID = &u
+	}
+	if ms := cmp.Or(res.CTS, res.TS); ms > 0 {
+		t := time.UnixMilli(ms).UTC()
+		ob.Time = &t
+	}
+	resp.Data = ob
+	return resp, nil
+}
+
+func parseLevels(rows [][]string) ([]model.OrderBookEntry, error) {
+	out := make([]model.OrderBookEntry, 0, len(rows))
+	for _, r := range rows {
+		if len(r) < 2 {
+			return nil, providerErr(model.ErrKindParse, "short book level", nil)
+		}
+		out = append(out, model.OrderBookEntry{Price: num(r[0]), Quantity: num(r[1])})
+	}
+	return out, nil
 }

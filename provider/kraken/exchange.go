@@ -32,7 +32,7 @@ func (c *Client) ServerTime(ctx context.Context) (model.Response[model.ServerTim
 	}, nil
 }
 
-// ExchangeInfo lists the futures instruments. Published per instrument: the
+// ExchangeInfo lists the futures instruments (spot and margin: see spotExchangeInfo). Published per instrument: the
 // tick size (Extra["tick_size"]; model.Symbol has no tick field) and the
 // contract size increment 10^-contractValueTradePrecision (StepSize,
 // QtyPrecision). The venue publishes no minimum quantity and no minimum
@@ -41,6 +41,9 @@ func (c *Client) ServerTime(ctx context.Context) (model.Response[model.ServerTim
 // to, as fractions (the venue gives percents); they are not account-specific
 // and are left nil if the schedule list cannot be read.
 func (c *Client) ExchangeInfo(ctx context.Context, market model.MarketType) (model.Response[model.ExchangeInfo], error) {
+	if isSpotMarket(market) {
+		return c.spotExchangeInfo(ctx, market)
+	}
 	if err := requireFutures(market); err != nil {
 		return model.Response[model.ExchangeInfo]{}, err
 	}

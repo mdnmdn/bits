@@ -1,5 +1,5 @@
-// Package okx implements the OKX provider (public market data only: spot and
-// perpetual swaps). EEA customers must use https://eea.okx.com, the default.
+// Package okx implements the OKX provider (public market data only: spot,
+// margin and perpetual swaps). EEA customers must use https://eea.okx.com, the default.
 package okx
 
 import (
@@ -64,15 +64,26 @@ func (c *Client) Capabilities() capability.CapabilityMatrix {
 
 	matrix := capability.CapabilityMatrix{}
 	matrix[capability.CapabilityKey{Market: s, Feature: capability.FeatureServerTime}] = true
+	features := []capability.Feature{
+		capability.FeatureExchangeInfo,
+		capability.FeaturePrice,
+		capability.FeatureCandles,
+		capability.FeatureTicker24h,
+		capability.FeatureOrderBook,
+	}
+	// Margin trades the spot instruments, so it is served by the spot
+	// endpoints (only the instruments listing differs) and follows the spot flag.
 	if spotEnabled {
-		matrix[capability.CapabilityKey{Market: s, Feature: capability.FeatureExchangeInfo}] = true
-		matrix[capability.CapabilityKey{Market: s, Feature: capability.FeatureCandles}] = true
-		matrix[capability.CapabilityKey{Market: s, Feature: capability.FeatureTicker24h}] = true
+		for _, feat := range features {
+			matrix[capability.CapabilityKey{Market: s, Feature: feat}] = true
+			matrix[capability.CapabilityKey{Market: capability.MarketMargin, Feature: feat}] = true
+		}
 	}
 	if futuresEnabled {
-		matrix[capability.CapabilityKey{Market: f, Feature: capability.FeatureExchangeInfo}] = true
-		matrix[capability.CapabilityKey{Market: f, Feature: capability.FeatureCandles}] = true
-		matrix[capability.CapabilityKey{Market: f, Feature: capability.FeatureTicker24h}] = true
+		for _, feat := range features {
+			matrix[capability.CapabilityKey{Market: f, Feature: feat}] = true
+		}
+		matrix[capability.CapabilityKey{Market: f, Feature: capability.FeatureFundingRates}] = true
 	}
 	return matrix
 }

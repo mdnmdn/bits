@@ -161,7 +161,7 @@ GET /api/v3/ticker/price?symbol=BTCUSDT
 | interval | string | Yes | `1m`, `5m`, `15m`, `30m`, `60m`, `4h`, `1d`, `1w`, `1M` |
 | startTime | long | No | Start time in ms |
 | endTime | long | No | End time in ms |
-| limit | int | No | Default 500, max 500 |
+| limit | int | No | Default 500, max 1000 |
 
 **Sample Request**:
 ```
@@ -186,15 +186,14 @@ GET /api/v3/klines?symbol=BTCUSDT&interval=1h&limit=100
 
 **Weight**: 1
 
-**Quirks** (documented in provider implementation):
+**Quirks** (verified against the live API):
 
-1. **No time filters**: Returns NEWEST 500 candles (correct)
-2. **Only startTime**: Returns OLDEST 500 candles (unexpected behavior)
-3. **Only endTime**: Returns OLDEST candles up to that time (unexpected)
-4. **endTime + limit**: Returns NEWEST N candles up to endTime (correct)
-5. **startTime + endTime**: Returns correct range (correct)
+1. **No time filters**: Returns the NEWEST 500 candles.
+2. **Only startTime or only endTime**: anchors at the OLDEST side (unexpected).
+3. **startTime + endTime**: Returns exactly that window, `limit` up to 1000. This is how ranges are paged.
+4. **History depth**: about 30 days of 1m candles; older windows return an empty list.
 
-**Workaround**: The bits provider fetches all 500 candles and filters client-side for reliability.
+**bits provider**: sends `startTime` + `endTime` when both `From` and `To` are set, clamps `limit` to 1000, and filters client-side on the open time when only one bound is given.
 
 ### Futures Candles
 

@@ -10,10 +10,14 @@ import (
 	"github.com/mdnmdn/bits/model"
 )
 
-// instType returns the OKX instType for a market. Futures means perpetual swaps.
+// instType returns the OKX instType for a market. Futures means perpetual
+// swaps. Margin trades the spot instIds; only the instruments listing differs.
 func instType(market model.MarketType) string {
-	if market == model.MarketFutures {
+	switch market {
+	case model.MarketFutures:
 		return "SWAP"
+	case model.MarketMargin:
+		return "MARGIN"
 	}
 	return "SPOT"
 }

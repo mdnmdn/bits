@@ -44,6 +44,18 @@ _docs/providers/
 │   ├── cryptocom-accounts.md     # Account REST APIs (balance, subaccounts, transfers)
 │   ├── cryptocom-spot-order.md   # Spot order REST APIs (place, cancel, query, history)
 │   └── cryptocom-future-order.md # N/A — spot only, no futures trading APIs
+├── okx/
+│   ├── okx-general.md            # Base URL, products, exchange info mapping (public data only)
+│   └── okx-market.md             # Candles, 24h ticker, symbols
+├── bitvavo/
+│   ├── bitvavo-general.md        # Base URL, exchange info mapping (public spot only)
+│   └── bitvavo-market.md         # Candles, 24h ticker
+├── bybiteu/
+│   ├── bybiteu-general.md        # Base URL, exchange info mapping (public spot, margin)
+│   └── bybiteu-market.md         # Candles, 24h ticker, symbols
+├── kraken/
+│   ├── kraken-general.md         # Base URL, products, exchange info mapping (public spot, margin, futures)
+│   └── kraken-market.md          # Candles, 24h ticker, symbols
 └── mexc/
     ├── mexc-general.md           # Base URL, rate limits, auth, exchange info APIs
     ├── mexc-market.md            # Prices, orderbooks, candles, tickers, streams
@@ -139,6 +151,10 @@ APIs covered:
 | WhiteBit | [x] | [x] | done |
 | Crypto.com | [x] | [x] | done |
 | MEXC     | [x] | [x] | done |
+| OKX      | [x] | [x] | done (public data only, no orders/accounts/WS docs) |
+| Bitvavo  | [x] | [x] | done (public data only) |
+| Bybit EU | [x] | [x] | done (public data only) |
+| Kraken (spot, margin, futures) | [x] | [x] | done (public data only) |
 
 ### WebSocket Documentation (Spot Markets)
 
@@ -207,6 +223,26 @@ Based on `pkg/provider/` implementation:
 | WhiteBit | `whitebit` | spot | Price, Candles, Ticker24h, OrderBook |
 | Crypto.com | `cryptocom` | spot | Price, Candles, Ticker24h, OrderBook |
 | MEXC | `mexc` | spot, futures | Price, Candles, Ticker24h, OrderBook, StreamPrice, StreamOrderBook |
+| OKX | `okx` (alias `okex`) | spot, margin, futures (SWAP) | ServerTime, ExchangeInfo, Price, Candles, Ticker24h, OrderBook (cap 400); FundingRates (futures) |
+| Bitvavo | `bitvavo` (alias `bv`) | spot | ServerTime, ExchangeInfo, Price, Candles, Ticker24h, OrderBook (cap 1000) |
+| Bybit EU | `bybiteu` (alias `bybit`) | spot, margin | ServerTime, ExchangeInfo, Price, Candles, Ticker24h, OrderBook (cap 200) |
+| Kraken | `kraken` (alias `kraken-futures`) | spot, margin, futures | ServerTime, ExchangeInfo, Price, Candles, Ticker24h, OrderBook (spot/margin cap 500); FundingRates (futures, hourly) |
+
+### Candle paging by provider
+
+Candle requests are one page per call except OKX, which pages itself. Callers (for example a datasync) page ranges with windows of at most the page cap.
+
+| Provider | Page cap | Cursor / bounds | Venue order | Provider output |
+|----------|----------|-----------------|-------------|-----------------|
+| OKX | 300 | `after` cursor, `From` and `To` inclusive; pages backwards | newest first | oldest first |
+| Bitvavo | 1440 | `start` inclusive, `end` exclusive | newest first | oldest first |
+| Bybit EU | 1000 | `[start, end]`, `To` exclusive (end = To - 1 ms) | newest first | oldest first |
+| Kraken futures | 2000 | `from` inclusive, `to` seconds, `To` exclusive | oldest first | oldest first |
+| Kraken spot/margin | 720 | `since` exclusive; only the latest 720 candles per interval, no deeper history; no `12h` | oldest first | oldest first |
+| Crypto.com | 300 | `start_ts`, `end_ts` (ms, end exclusive) | | |
+| MEXC spot | 1000 | `startTime` + `endTime` together; about 30 days of 1m history | | |
+
+OKX, Bitvavo, Bybit EU and Kraken expose the tick size as `Extra["tick_size"]` (Bitvavo: `MinPrice`) and publish no fees, except Kraken (first tier of the public `/feeschedules`). Minimum notional is available for Bitvavo and Bybit EU only.
 
 ## Source References
 
@@ -216,6 +252,10 @@ Based on `pkg/provider/` implementation:
 - **WhiteBit**: Manual implementation. API docs: https://docs.zondacrypto.exchange/reference/introduction
 - **Crypto.com**: Manual implementation. API docs: https://exchange-docs.crypto.com
 - **MEXC**: Manual implementation. API docs: https://www.mexc.com/api-docs/spot-v3/introduction
+- **OKX**: Manual implementation. API docs: https://www.okx.com/docs-v5/en/ (survey in `_drafts/okx-apis.md`)
+- **Bitvavo**: Manual implementation. API docs: https://docs.bitvavo.com
+- **Bybit EU**: Manual implementation. API docs: https://bybit-exchange.github.io/docs/ (survey in `_drafts/bybit-apis.md`)
+- **Kraken**: Manual implementation. API docs: https://docs.kraken.com/api/docs/futures-api/ (futures), https://docs.kraken.com/api/docs/rest-api/get-ticker-information (spot; survey in `_drafts/kraken-apis.md`)
 
 ## Notes
 

@@ -85,7 +85,13 @@ func NewProvider(name string, cfg *config.Config) (provider.Provider, error) {
 	case "bybiteu":
 		return bybiteu.NewClient(bybiteu.Config{BaseURL: cfg.BybitEU.BaseURL}), nil
 	case "kraken":
-		return kraken.NewClient(kraken.Config{BaseURL: cfg.Kraken.BaseURL}), nil
+		return kraken.NewClient(kraken.Config{
+			BaseURL:        cfg.Kraken.BaseURL,
+			SpotBaseURL:    cfg.Kraken.SpotBaseURL,
+			SpotEnabled:    cfg.Kraken.Spot.Enabled,
+			MarginEnabled:  cfg.Kraken.Margin.Enabled,
+			FuturesEnabled: cfg.Kraken.Futures.Enabled,
+		}), nil
 	default:
 		return nil, fmt.Errorf("unknown provider %q", name)
 	}

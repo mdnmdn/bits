@@ -37,12 +37,12 @@ Pick a provider with `-p`, a market with `-m`, an output format with `-o`. That'
 | **Binance** | spot · futures | Server time, exchange info, prices, candles, ticker, order book, live book stream, futures funding-rate history (library) |
 | **Bitget** | spot · futures | Server time, exchange info, prices, candles, ticker, futures funding-rate history (library) |
 | **WhiteBit** | spot · futures | Server time, exchange info, prices, candles, ticker, price stream, order book stream |
-| **Crypto.com** | spot | Prices, ticker, price stream, order book stream |
-| **MEXC** | spot | Prices, ticker, price stream, order book stream |
-| **OKX** | spot · futures (swap) | Public data only: exchange info, candles (ranged paging), ticker. Default host `eea.okx.com` |
-| **Bitvavo** | spot | Public data only: exchange info, candles (1m-1d, minutes without trades are missing), 24h ticker. Alias `bv` |
-| **Bybit EU** | spot | Public data only: exchange info, candles, ticker. Default host `api.bybit.eu`. Alias `bybit` |
-| **Kraken** | futures (PF_ perpetuals) | Public data only: exchange info (first-tier fees), candles, 24h ticker. Alias `kraken-futures` |
+| **Crypto.com** | spot | Prices, candles (ranged paging, 300 per page), ticker, price stream, order book stream |
+| **MEXC** | spot | Prices, candles (`startTime` + `endTime`, 1000 per page, ~30 days of 1m), ticker, price stream, order book stream |
+| **OKX** | spot · margin · futures (swap) | Public data only: server time, exchange info (SWAP contract size in `Extra`), price, order book (cap 400), candles (300 per page, cursor paging), ticker; futures funding-rate history (~3 months). Margin follows the spot flag. Default host `eea.okx.com`. Alias `okex` |
+| **Bitvavo** | spot | Public data only: server time, exchange info (min notional), price, order book (cap 1000), candles (1440 per page, 1m-1d, minutes without trades are missing), 24h ticker. Alias `bv` |
+| **Bybit EU** | spot · margin | Public data only: server time, exchange info (min notional; margin lists only margin-enabled symbols), price, order book (cap 200), candles (1000 per page), ticker. No futures (the EU entity offers no derivatives). Default host `api.bybit.eu`. Alias `bybit` |
+| **Kraken** | spot · margin · futures (PF_ perpetuals) | Public data only: server time, exchange info (first-tier fees; futures lists PF_/PI_/FF_/FI_ instruments), price, order book (spot/margin cap 500), candles, 24h ticker; futures funding-rate history (hourly). Futures candles 2000 per page; spot/margin candles only the latest 720 per interval, no `12h`. Alias `kraken-futures` |
 
 Switch providers with `-p coingecko / -p binance / -p bitget / -p whitebit / -p cryptocom / -p mexc / -p okx / -p bitvavo / -p bybiteu / -p kraken`.
 
@@ -219,7 +219,7 @@ BITS_BITGET_API_KEY=your_key      BITS_BITGET_API_SECRET=your_secret   BITS_BITG
 ### Global flags
 
 ```
--p, --provider       string   coingecko | binance | bitget  (default: from config)
+-p, --provider       string   coingecko | binance | bitget | whitebit | cryptocom | mexc | okx | bitvavo | bybiteu | kraken  (default: from config)
 -m, --market         string   spot | futures | margin        (default: spot)
 -o, --output         string   table | json | yaml | markdown | toon  (default: table)
 -f, --allow-fallback          allow fallback even when --provider is set

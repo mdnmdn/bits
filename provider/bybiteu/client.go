@@ -1,5 +1,5 @@
-// Package bybiteu implements the Bybit EU provider (public spot market data
-// only, V5 REST API). EEA customers use https://api.bybit.eu, the default; the
+// Package bybiteu implements the Bybit EU provider (public spot and spot
+// margin market data, V5 REST API; the EU entity has no derivatives). EEA customers use https://api.bybit.eu, the default; the
 // base URL is configurable. No credentials, no trading, no account endpoints.
 package bybiteu
 
@@ -54,15 +54,20 @@ func (c *Client) ID() string { return providerID }
 // SetUserAgent sets the User-Agent header for API requests.
 func (c *Client) SetUserAgent(ua string) { c.userAgent = ua }
 
-// Capabilities returns the capability matrix: spot only.
+// Capabilities returns the capability matrix: spot and spot margin. Margin
+// reads the same category=spot data as spot. The EU entity offers no
+// derivatives, so there is no futures entry and no funding rates.
 func (c *Client) Capabilities() capability.CapabilityMatrix {
-	s := capability.MarketSpot
-	return capability.NewCapabilityMatrix(
-		capability.CapabilityKey{Market: s, Feature: capability.FeatureServerTime},
-		capability.CapabilityKey{Market: s, Feature: capability.FeatureExchangeInfo},
-		capability.CapabilityKey{Market: s, Feature: capability.FeatureTicker24h},
-		capability.CapabilityKey{Market: s, Feature: capability.FeatureCandles},
-	)
+	var keys []capability.CapabilityKey
+	for _, m := range []capability.MarketType{capability.MarketSpot, capability.MarketMargin} {
+		for _, f := range []capability.Feature{
+			capability.FeatureServerTime, capability.FeatureExchangeInfo, capability.FeaturePrice,
+			capability.FeatureTicker24h, capability.FeatureOrderBook, capability.FeatureCandles,
+		} {
+			keys = append(keys, capability.CapabilityKey{Market: m, Feature: f})
+		}
+	}
+	return capability.NewCapabilityMatrix(keys...)
 }
 
 // envelope is the common V5 response wrapper.

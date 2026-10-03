@@ -215,3 +215,81 @@ func TestCandles_BadRow(t *testing.T) {
 		t.Fatal("want error for row without volume")
 	}
 }
+
+var _ provider.PriceProvider = (*Client)(nil)
+var _ provider.OrderBookProvider = (*Client)(nil)
+
+func TestCapabilities_PriceBook(t *testing.T) {
+	m := newTestClient("").Capabilities()
+	for _, f := range []capability.Feature{capability.FeaturePrice, capability.FeatureOrderBook} {
+		if !m[capability.CapabilityKey{Market: capability.MarketSpot, Feature: f}] {
+			t.Errorf("spot %v missing", f)
+		}
+	}
+}
+
+func TestPrice(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/ticker/price" {
+			t.Errorf("path %s", r.URL.Path)
+		}
+		switch r.URL.Query().Get("market") {
+		case "BTC-EUR":
+			fmt.Fprint(w, `{"market":"BTC-EUR","price":"75403"}`)
+		case "":
+			fmt.Fprint(w, `[{"market":"BTC-EUR","price":"75403"},{"market":"ADA-USDC","price":"0.24559"}]`)
+		default:
+			w.WriteHeader(400)
+			fmt.Fprint(w, `{"errorCode":205,"error":"market parameter is invalid."}`)
+		}
+	}))
+	defer srv.Close()
+	c := newTestClient(srv.URL)
+	resp, err := c.Price(context.Background(), []string{"BTCEUR", "NOPE-EUR", "BAD"}, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(resp.Data) != 1 || resp.Data[0].Symbol != "BTC-EUR" || resp.Data[0].Price != 75403 || resp.Data[0].Currency != "EUR" || resp.Data[0].OriginalSymbol != "BTCEUR" {
+		t.Errorf("bad data %+v", resp.Data)
+	}
+	if len(resp.Errors) != 2 {
+		t.Errorf("want 2 item errors, got %d", len(resp.Errors))
+	}
+	all, err := c.Price(context.Background(), nil, "")
+	if err != nil || len(all.Data) != 2 || all.Data[1].Currency != "USDC" {
+		t.Errorf("bad all-markets %+v %v", all.Data, err)
+	}
+}
+
+func TestOrderBook(t *testing.T) {
+	var query string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		query = r.URL.RawQuery
+		if r.URL.Path != "/BTC-EUR/book" {
+			t.Errorf("path %s", r.URL.Path)
+		}
+		fmt.Fprint(w, `{"market":"BTC-EUR","nonce":422128637,"bids":[["75398","0.13"],["75397","0.12"]],"asks":[["75399","0.11"]],"timestamp":1791029916569559646}`)
+	}))
+	defer srv.Close()
+	c := newTestClient(srv.URL)
+	resp, err := c.OrderBook(context.Background(), "BTCEUR", model.MarketSpot, 5000)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if query != "depth=1000" {
+		t.Errorf("depth not clamped: %s", query)
+	}
+	d := resp.Data
+	if len(d.Bids) != 2 || len(d.Asks) != 1 || d.Bids[0].Price != 75398 || d.Asks[0].Quantity != 0.11 || *d.LastUpdateID != 422128637 {
+		t.Errorf("bad book %+v", d)
+	}
+	if d.Time == nil || d.Time.Location() != time.UTC || d.Time.UnixMilli() != 1791029916569 {
+		t.Errorf("bad time %v", d.Time)
+	}
+	if _, err := c.OrderBook(context.Background(), "BTC-EUR", model.MarketFutures, 5); err == nil {
+		t.Error("futures must fail")
+	}
+	if _, err := c.OrderBook(context.Background(), "BTCEUR", model.MarketSpot, 0); err != nil || query != "depth=20" {
+		t.Errorf("default depth: %s %v", query, err)
+	}
+}

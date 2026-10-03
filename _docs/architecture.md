@@ -4,7 +4,7 @@
 
 > ⚠️ **Status: Work in Progress** — The library API may change rapidly.
 
-`bits` is a multi-provider crypto library and CLI tool written in Go. It uses a capability-based provider architecture that allows different data sources (CoinGecko, Binance, Bitget, WhiteBit, Crypto.com, MEXC) to be used interchangeably through a unified command interface.
+`bits` is a multi-provider crypto library and CLI tool written in Go. It uses a capability-based provider architecture that allows different data sources (CoinGecko, Binance, Bitget, WhiteBit, Crypto.com, MEXC, OKX, Bitvavo, Bybit EU, Kraken) to be used interchangeably through a unified command interface.
 
 **Architectural Principle**: The bits library (`github.com/mdnmdn/bits`) is the first citizen of this project. The CLI is a thin wrapper that uses the public library interface. External projects can import and extend the CLI commands.
 
@@ -21,22 +21,26 @@ provider/
 ├── CandleProvider           → Candles(symbol, market, interval, opts)
 ├── TickerProvider           → Ticker24h(symbol, market)       [fan-out for multi]
 ├── OrderBookProvider        → OrderBook(symbol, market, depth)
+├── FundingRateProvider      → FundingRates(symbol, opts)    [futures only]
 ├── PriceStreamProvider      → StartPriceStream, SubscribePrice, StopPriceStream
 └── OrderBookStreamProvider  → StartOrderBookStream, SubscribeOrderBook, StopOrderBookStream
 ```
 
 ### Provider Capabilities
 
-| Interface              | CoinGecko | Binance spot | Binance futures | Bitget spot | Bitget futures | WhiteBit spot | WhiteBit futures | Crypto.com | MEXC |
-|------------------------|:---------:|:------------:|:---------------:|:-----------:|:--------------:|:-------------:|:----------------:|:----------:|:----:|
-| `ExchangeProvider`     | —         | Yes          | Yes             | Yes         | Yes            | Yes           | Yes              | Yes        | Yes  |
-| `AggregatorProvider`   | Yes       | —            | —               | —           | —              | —             | —                | —          | —    |
-| `PriceProvider`        | Yes       | Yes          | Yes             | Yes         | Yes            | Yes           | Yes              | Yes        | Yes  |
-| `CandleProvider`       | Yes       | Yes          | Yes             | Yes         | Yes            | Yes           | Yes              | —          | —    |
-| `TickerProvider`       | —         | Yes          | Yes             | Yes         | Yes            | Yes           | Yes              | Yes        | Yes  |
-| `OrderBookProvider`    | —         | Yes          | Yes             | —           | —              | —             | —                | —          | —    |
-| `PriceStreamProvider`  | Yes       | —            | —               | —           | —              | Yes           | Yes              | Yes        | Yes  |
-| `OrderBookStreamProvider` | —      | Yes          | —               | —           | —              | Yes           | Yes              | Yes        | Yes  |
+| Interface              | CoinGecko | Binance spot | Binance futures | Bitget spot | Bitget futures | WhiteBit spot | WhiteBit futures | Crypto.com | MEXC | OKX spot/margin | OKX futures | Bitvavo | Bybit EU spot/margin | Kraken spot/margin | Kraken futures |
+|------------------------|:---------:|:------------:|:---------------:|:-----------:|:--------------:|:-------------:|:----------------:|:----------:|:----:|:--------:|:-----------:|:-------:|:--------:|:--------------:|:--------------:|
+| `ExchangeProvider`     | —         | Yes          | Yes             | Yes         | Yes            | Yes           | Yes              | Yes        | Yes  | Yes      | Yes         | Yes     | Yes      | Yes            | Yes            |
+| `AggregatorProvider`   | Yes       | —            | —               | —           | —              | —             | —                | —          | —    | —        | —           | —       | —        | —              | —              |
+| `PriceProvider`        | Yes       | Yes          | Yes             | Yes         | Yes            | Yes           | Yes              | Yes        | Yes  | Yes      | Yes         | Yes     | Yes      | Yes            | Yes            |
+| `CandleProvider`       | Yes       | Yes          | Yes             | Yes         | Yes            | Yes           | Yes              | Yes        | Yes  | Yes      | Yes         | Yes     | Yes      | Yes            | Yes            |
+| `TickerProvider`       | —         | Yes          | Yes             | Yes         | Yes            | Yes           | Yes              | Yes        | Yes  | Yes      | Yes         | Yes     | Yes      | Yes            | Yes            |
+| `OrderBookProvider`    | —         | Yes          | Yes             | —           | —              | —             | —                | —          | —    | Yes      | Yes         | Yes     | Yes      | Yes            | Yes            |
+| `FundingRateProvider`  | —         | —            | Yes             | —           | Yes            | —             | —                | —          | —    | —        | Yes         | —       | —        | —              | Yes            |
+| `PriceStreamProvider`  | Yes       | —            | —               | —           | —              | Yes           | Yes              | Yes        | Yes  | —        | —           | —       | —        | —              | —              |
+| `OrderBookStreamProvider` | —      | Yes          | —               | —           | —              | Yes           | Yes              | Yes        | Yes  | —        | —           | —       | —        | —              | —              |
+
+OKX, Bitvavo, Bybit EU and Kraken are public-data only (no credentials, no trading, no account endpoints, no streams). Each declares `server_time`, `exchange_info`, `price`, `candles`, `ticker_24h` and `order_book` on its markets; `funding_rates` only on OKX futures and Kraken futures. OKX margin follows the spot flag; Bybit EU has no futures. Per-provider detail: `_docs/providers/<id>/`.
 
 Use `bits capabilities` or `bits caps -p <provider>` to inspect the matrix at runtime.
 
@@ -276,11 +280,34 @@ Available processors: `TimeEnricher` (latency + clock skew), `SpreadCalculator` 
 
 ### Crypto.com (`provider/cryptocom/`)
 - Raw HTTP client; spot only
-- Implements: `ExchangeProvider`, `PriceProvider`, `TickerProvider`, `PriceStreamProvider`, `OrderBookStreamProvider`
+- Implements: `ExchangeProvider`, `PriceProvider`, `CandleProvider`, `TickerProvider`, `PriceStreamProvider`, `OrderBookStreamProvider`
+- Candles: ranged paging with `start_ts` / `end_ts` (ms, end exclusive), count capped at 300
 
 ### MEXC (`provider/mexc/`)
 - Raw HTTP client; spot only with protobuf parsing for some endpoints
-- Implements: `ExchangeProvider`, `PriceProvider`, `TickerProvider`, `PriceStreamProvider`, `OrderBookStreamProvider`
+- Implements: `ExchangeProvider`, `PriceProvider`, `CandleProvider`, `TickerProvider`, `PriceStreamProvider`, `OrderBookStreamProvider`
+- Spot candles: `startTime` + `endTime` together select a window (limit cap 1000); the venue keeps about 30 days of 1m history
+
+### OKX (`provider/okx/`)
+- Raw HTTP, public data only. Markets: spot, margin (spot data, `instType=MARGIN` instruments; follows the spot flag) and perpetual SWAP (`futures`, linear and inverse). Default host `https://eea.okx.com`. Alias `okex`
+- Implements: `ExchangeProvider`, `PriceProvider`, `CandleProvider`, `TickerProvider`, `OrderBookProvider` (cap 400), `FundingRateProvider` (futures, ~3 months of history)
+- Candles: `/market/history-candles`, 300 per page, `after` cursor, pages backwards (paced 110 ms); unconfirmed (forming) candles dropped
+
+### Bitvavo (`provider/bitvavo/`)
+- Raw HTTP, public spot data only. Default host `https://api.bitvavo.com/v2`. Alias `bv`
+- Implements: `ExchangeProvider`, `PriceProvider`, `CandleProvider`, `TickerProvider`, `OrderBookProvider` (cap 1000)
+- Candles: 1440 per request, newest first, `start` inclusive and `end` exclusive; minutes without a trade have no candle
+
+### Bybit EU (`provider/bybiteu/`)
+- Raw HTTP, public data only (V5 REST). Markets: spot and margin (spot data; exchange info filtered to `marginTrading != none`). No futures: Bybit EU offers no derivatives. Default host `https://api.bybit.eu`. Alias `bybit`
+- Implements: `ExchangeProvider`, `PriceProvider`, `CandleProvider`, `TickerProvider`, `OrderBookProvider` (cap 200)
+- Candles: 1000 per request, newest first, `[start, end]` window
+
+### Kraken (`provider/kraken/`)
+- Raw HTTP, public data only. Markets: spot and margin (both from `https://api.kraken.com`: AssetPairs, OHLC, Ticker, Depth) and futures (`https://futures.kraken.com`). With no market flag set, all three are declared. Alias `kraken-futures`
+- Implements: `ExchangeProvider`, `PriceProvider`, `CandleProvider`, `TickerProvider`, `OrderBookProvider` (spot/margin cap 500), `FundingRateProvider` (futures, hourly)
+- Futures candles: charts API, 2000 per request, oldest first from `from`, `more_candles` flag
+- Spot/margin candles: OHLC returns only the latest 720 candles per interval (no deep history); no `12h`
 
 ## Registry (`provider/registry/`)
 
@@ -288,7 +315,7 @@ Lives in its own package to avoid import cycles (providers must not import the r
 
 ```go
 func NewProvider(name string, cfg *config.Config) (provider.Provider, error)
-func AllProviderIDs() []string  // ["coingecko", "binance", "bitget", "whitebit", "cryptocom"]
+func AllProviderIDs() []string  // ["coingecko", "binance", "bitget", "whitebit", "cryptocom", "mexc", "okx", "bitvavo", "bybiteu", "kraken"]
 ```
 
 ## Configuration (`config/`)
@@ -320,6 +347,7 @@ Environment variable overrides (`BITS_*` prefix):
 - `BITS_COINGECKO_API_KEY`, `BITS_COINGECKO_TIER`
 - `BITS_BINANCE_API_KEY`, `BITS_BINANCE_API_SECRET`
 - `BITS_BITGET_API_KEY`, `BITS_BITGET_API_SECRET`, `BITS_BITGET_PASSPHRASE`
+- `BITS_OKX_*`, `BITS_BITVAVO_*`, `BITS_BYBITEU_*`, `BITS_KRAKEN_*` — `BASE_URL` and `SPOT_ENABLED` / `FUTURES_ENABLED` only; Kraken also `SPOT_BASE_URL` and `MARGIN_ENABLED` (see `_docs/config.md`)
 
 CoinGecko-specific helpers (`GetBaseURL`, `GetAuthHeader`, `IsPaid`, `MaskedKey`, `ApplyAuth`) are methods on `CoinGeckoConfig`, not the root `Config`.
 
@@ -373,6 +401,10 @@ bits/
 │   ├── whitebit/             # WhiteBit implementation
 │   ├── cryptocom/            # Crypto.com implementation
 │   ├── mexc/                 # MEXC implementation
+│   ├── okx/                  # OKX implementation (public spot, margin + swap)
+│   ├── bitvavo/              # Bitvavo implementation (public spot)
+│   ├── bybiteu/              # Bybit EU implementation (public spot + margin)
+│   ├── kraken/               # Kraken implementation (public spot, margin + perpetuals)
 │   └── registry/             # NewProvider factory
 ├── resolve/                  # Resolver, symbol resolution
 ├── render/                   # Output renderers (exported)
