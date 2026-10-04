@@ -33,6 +33,7 @@ const (
 	FeatureStreamPrice     Feature = "stream_price"
 	FeatureStreamOrderBook Feature = "stream_order_book"
 	FeatureFundingRates    Feature = "funding_rates"
+	FeatureStreamTrades    Feature = "stream_trades"
 )
 
 // CapabilityKey uniquely identifies a (market, feature) combination.
@@ -76,6 +77,7 @@ func AllFeatures() []Feature {
 		FeatureStreamPrice,
 		FeatureStreamOrderBook,
 		FeatureFundingRates,
+		FeatureStreamTrades,
 	}
 }
 

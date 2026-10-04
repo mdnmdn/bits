@@ -93,6 +93,7 @@ func (c *Client) Capabilities() capability.CapabilityMatrix {
 			capability.CapabilityKey{Market: s, Feature: capability.FeatureOrderBook},
 			capability.CapabilityKey{Market: s, Feature: capability.FeatureStreamPrice},
 			capability.CapabilityKey{Market: s, Feature: capability.FeatureStreamOrderBook},
+			capability.CapabilityKey{Market: s, Feature: capability.FeatureStreamTrades},
 		)
 	}
 
@@ -103,6 +104,7 @@ func (c *Client) Capabilities() capability.CapabilityMatrix {
 			capability.CapabilityKey{Market: f, Feature: capability.FeatureTicker24h},
 			capability.CapabilityKey{Market: f, Feature: capability.FeatureOrderBook},
 			capability.CapabilityKey{Market: f, Feature: capability.FeatureStreamOrderBook},
+			capability.CapabilityKey{Market: f, Feature: capability.FeatureStreamTrades},
 			capability.CapabilityKey{Market: f, Feature: capability.FeatureFundingRates},
 		)
 	}

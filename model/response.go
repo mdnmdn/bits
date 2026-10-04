@@ -6,6 +6,7 @@ const (
 	KindTicker       = "ticker"
 	KindPrice        = "price"
 	KindOrderBook    = "orderbook"
+	KindTrade        = "trade"
 	KindExchangeInfo = "exchange_info"
 	KindServerTime   = "server_time"
 	KindCoinMarket   = "coin_market"

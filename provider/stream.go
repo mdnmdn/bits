@@ -94,3 +94,12 @@ type OrderBookStreamProvider interface {
 	// Returns nil if stream is not started.
 	GetDataChannelOrderBook() <-chan *model.OrderBook
 }
+
+// TradeStreamProvider streams the public trade tape.
+type TradeStreamProvider interface {
+	// StartTradeStream opens a public trade stream for the symbols on market.
+	// Returns a single channel where all trades flow, in exchange order per
+	// symbol. The channel closes when ctx ends or the stream fails
+	// permanently.
+	StartTradeStream(ctx context.Context, symbols []string, market model.MarketType) (<-chan *model.Trade, error)
+}
